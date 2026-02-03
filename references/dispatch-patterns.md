@@ -2,6 +2,41 @@
 
 GoopSpec supports multiple patterns for spawning and coordinating specialized agents. Choose the right pattern based on task characteristics.
 
+## The Dispatch Tool (CRITICAL)
+
+**ALWAYS use the native `task` tool to dispatch agents.**
+
+```typescript
+// Correct: Use task tool directly
+task({
+  subagent_type: "goop-executor",  // Agent to spawn
+  description: "Implement auth",    // 3-5 word summary
+  prompt: `[Detailed task...]`      // Full context and instructions
+})
+```
+
+### Do NOT Use
+
+| Tool | Why Not |
+|------|---------|
+| `delegate` | Different system (async delegation), not GoopSpec |
+| `goop_delegate` alone | Only composes prompts, doesn't execute |
+
+### Optional: goop_delegate for Prompt Composition
+
+If you need help composing a rich prompt with skills/references injected:
+
+```typescript
+// Step 1: Compose prompt (optional)
+goop_delegate({ agent: "goop-executor", prompt: "..." })
+// Returns: <goop_delegation> with composedPrompt
+
+// Step 2: Execute with task (REQUIRED)
+task({ subagent_type: "goop-executor", prompt: composedPrompt })
+```
+
+**Most cases: Just use `task` directly.**
+
 ## Dispatch Modes
 
 ### Sequential Dispatch

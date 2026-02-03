@@ -94,21 +94,68 @@ Don't pass:
 - Unrelated file contents
 - Completed task details
 
-## Using task Tool
+## The Dispatch Tool (CRITICAL)
+
+**ALWAYS use the native `task` tool to dispatch agents.**
 
 ```typescript
 task({
-  subagent_type: "general",
+  subagent_type: "goop-executor",  // Use goop-[agent-name]
   description: "Implement authentication",
   prompt: `
     ## TASK
     Implement user authentication
 
     ## CONTEXT
-    - SPEC: .goopspec/phases/phase-1/SPEC.md
+    - SPEC: .goopspec/SPEC.md
+    - BLUEPRINT: .goopspec/BLUEPRINT.md
+    
+    ## REQUIREMENTS
+    [Specific requirements from SPEC.md]
+    
+    ## VERIFICATION
+    [How to confirm task completion]
   `
 })
 ```
+
+### Available subagent_types
+
+| subagent_type | Use For |
+|---------------|---------|
+| `goop-executor` | Code implementation, features, fixes |
+| `goop-explorer` | Fast codebase mapping, pattern detection |
+| `goop-researcher` | Deep domain research, technology evaluation |
+| `goop-planner` | Architecture design, blueprint creation |
+| `goop-verifier` | Verification against spec, security audit |
+| `goop-debugger` | Bug investigation, scientific debugging |
+| `goop-tester` | Test writing, coverage analysis |
+| `goop-designer` | UI/UX design, component architecture |
+| `goop-writer` | Documentation, technical writing |
+| `goop-librarian` | Code/docs search, information retrieval |
+| `general` | Fallback for any task |
+
+### Do NOT Use These Tools for Delegation
+
+| Tool | Why NOT |
+|------|---------|
+| `delegate` | Different system (async delegation), NOT GoopSpec agents |
+| `goop_delegate` alone | Only composes prompts, doesn't execute - must follow with `task` |
+
+### Optional: goop_delegate for Rich Prompts
+
+Use `goop_delegate` only when you need skills/references auto-injected:
+
+```typescript
+// Step 1: Compose prompt with goop_delegate (optional)
+const result = goop_delegate({ agent: "goop-executor", prompt: "..." })
+// Returns: <goop_delegation> JSON with composedPrompt
+
+// Step 2: Execute with task (REQUIRED)
+task({ subagent_type: "goop-executor", prompt: composedPrompt })
+```
+
+**For most cases: Just use `task` directly.**
 
 ## Error Handling
 
