@@ -12,6 +12,7 @@ import { createGoopSpecTool } from "./goop-spec/index.js";
 import { createGoopCheckpointTool } from "./goop-checkpoint/index.js";
 import { createGoopSkillTool } from "./goop-skill/index.js";
 import { createGoopDelegateTool } from "./goop-delegate/index.js";
+import { createGoopReferenceTool } from "./goop-reference/index.js";
 import { createSlashcommandTool } from "./slashcommand/index.js";
 import { createGoopSetupTool } from "./goop-setup/index.js";
 
@@ -48,6 +49,7 @@ export function createTools(ctx: PluginContext): ToolsMap {
     goop_checkpoint: createGoopCheckpointTool(ctx),
     goop_skill: createGoopSkillTool(ctx),
     goop_delegate: createGoopDelegateTool(ctx),
+    goop_reference: createGoopReferenceTool(ctx),
     goop_setup: createGoopSetupTool(ctx),
     slashcommand: createSlashcommandTool(ctx),
     
@@ -70,6 +72,7 @@ export { createGoopSpecTool } from "./goop-spec/index.js";
 export { createGoopCheckpointTool } from "./goop-checkpoint/index.js";
 export { createGoopSkillTool } from "./goop-skill/index.js";
 export { createGoopDelegateTool } from "./goop-delegate/index.js";
+export { createGoopReferenceTool } from "./goop-reference/index.js";
 export { createGoopSetupTool } from "./goop-setup/index.js";
 export { createSlashcommandTool } from "./slashcommand/index.js";
 
