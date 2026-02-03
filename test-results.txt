@@ -1,0 +1,9 @@
+bun test v1.3.5 (1e86cebd)
+
+src/features/state-manager/manager.test.ts:
+[GoopSpec ERROR 2026-02-02T08:12:34.953Z] Invalid phase transition: idle -> execute undefined
+
+ 268 pass
+ 0 fail
+ 855 expect() calls
+Ran 268 tests across 14 files. [339.00ms]

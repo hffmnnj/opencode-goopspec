@@ -1,0 +1,73 @@
+{
+  "name": "opencode-goopspec",
+  "version": "0.1.0",
+  "description": "A spec-driven development plugin for OpenCode with user-guided planning, wave execution, and verification",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "commands",
+    "agents",
+    "references",
+    "templates",
+    "skills",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
+    "typecheck": "bunx tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "spec-driven",
+    "task-management",
+    "agent-orchestration",
+    "gsd",
+    "productivity",
+    "task-continuation",
+    "enforced-continuation"
+  ],
+  "author": "James (opencode-goopspec)",
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^0.8.2",
+    "@huggingface/transformers": "^3.8.1",
+    "@opencode-ai/plugin": "^1.1.44",
+    "@opencode-ai/sdk": "^1.1.44",
+    "hono": "^4.11.7",
+    "picocolors": "^1.1.1",
+    "sqlite-vec": "^0.1.7-alpha.2",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "typescript": "^5.8.2",
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.1.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hffmnnj/opencode-goopspec.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hffmnnj/opencode-goopspec/issues"
+  },
+  "homepage": "https://github.com/hffmnnj/opencode-goopspec#readme"
+}
