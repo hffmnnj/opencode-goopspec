@@ -1,6 +1,7 @@
 # GoopSpec local state (not part of the plugin)
 .goopspec/
 .references/
+test-results.txt
 
 # Logs
 logs
