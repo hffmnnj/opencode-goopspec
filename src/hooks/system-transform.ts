@@ -8,6 +8,7 @@
 import type { PluginContext } from "../core/types.js";
 import { log, logError } from "../shared/logger.js";
 import { createMemoryContextBuilder } from "../features/memory/context-builder.js";
+import { buildEnforcementContext } from "../features/enforcement/index.js";
 
 type SystemTransformInput = {
   sessionID: string;
@@ -33,47 +34,48 @@ export function createSystemTransformHook(ctx: PluginContext) {
     input: SystemTransformInput,
     output: SystemTransformOutput
   ): Promise<SystemTransformOutput> => {
-    // Skip if memory is disabled or not available
-    if (!ctx.memoryManager || ctx.config.memory?.injection?.enabled === false) {
-      return output;
-    }
-
     log("System transform hook triggered", {
       agent: input.agent,
       sessionID: input.sessionID,
     });
 
     try {
-      // Create context builder with config
-      const builder = createMemoryContextBuilder(ctx.memoryManager, {
-        budgetTokens: ctx.config.memory?.injection?.budgetTokens ?? 800,
-        format: (ctx.config.memory?.injection?.format ?? "structured") as "timeline" | "bullets" | "structured",
-        priorityTypes: ctx.config.memory?.injection?.priorityTypes ?? ["decision", "observation", "todo"],
-        includeDecisions: true,
-        includeRecentActivity: true,
-      });
+      const state = ctx.stateManager.getState();
+      const enforcementContext = buildEnforcementContext(state);
 
-      // Get the current phase for context
-      const currentPhase = ctx.stateManager.getState().workflow.phase;
+      let memoryContext = "";
+      if (ctx.memoryManager && ctx.config.memory?.injection?.enabled !== false) {
+        // Create context builder with config
+        const builder = createMemoryContextBuilder(ctx.memoryManager, {
+          budgetTokens: ctx.config.memory?.injection?.budgetTokens ?? 800,
+          format: (ctx.config.memory?.injection?.format ?? "structured") as "timeline" | "bullets" | "structured",
+          priorityTypes: ctx.config.memory?.injection?.priorityTypes ?? ["decision", "observation", "todo"],
+          includeDecisions: true,
+          includeRecentActivity: true,
+        });
 
-      // Build memory context
-      let memoryContext: string;
-      if (currentPhase) {
-        // Phase-aware context
-        memoryContext = await builder.buildPhaseContext(currentPhase);
-      } else {
-        // Recent context
-        memoryContext = await builder.buildRecentContext(10);
+        const currentPhase = state.workflow.phase;
+        if (currentPhase) {
+          memoryContext = await builder.buildPhaseContext(currentPhase);
+        } else {
+          memoryContext = await builder.buildRecentContext(10);
+        }
       }
 
-      // If no memory context, return unmodified
-      if (!memoryContext || memoryContext.trim().length === 0) {
-        log("No memory context to inject");
+      if (!enforcementContext && (!memoryContext || memoryContext.trim().length === 0)) {
+        log("No enforcement or memory context to inject");
         return output;
       }
 
-      // Inject memory context at the end of the system prompt
-      const enhancedSystem = `${output.system}
+      let enhancedSystem = output.system;
+      if (enforcementContext.trim().length > 0) {
+        enhancedSystem = `${enhancedSystem}
+
+${enforcementContext}`;
+      }
+
+      if (memoryContext.trim().length > 0) {
+        enhancedSystem = `${enhancedSystem}
 
 ## Persistent Memory Context
 
@@ -82,10 +84,12 @@ The following memories are relevant to this session. Use them to maintain contin
 ${memoryContext}
 
 Use the memory tools (memory_save, memory_search, memory_note, memory_decision) to store and retrieve information for future sessions.`;
+      }
 
-      log("Memory context injected", {
+      log("System context injected", {
         originalLength: output.system.length,
-        contextLength: memoryContext.length,
+        enforcementLength: enforcementContext.length,
+        memoryLength: memoryContext.length,
         enhancedLength: enhancedSystem.length,
       });
 
@@ -93,7 +97,7 @@ Use the memory tools (memory_save, memory_search, memory_note, memory_decision) 
         system: enhancedSystem,
       };
     } catch (error) {
-      logError("Failed to inject memory context", error);
+      logError("Failed to inject system context", error);
       // Return original on error - don't break the system
       return output;
     }
