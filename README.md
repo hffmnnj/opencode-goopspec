@@ -627,6 +627,6 @@ GoopSpec builds on ideas from:
 
 **Built with care by developers, for developers.**
 
-[Documentation](./docs) | [Issues](https://github.com/hffmnnj/opencode-goopspec/issues) | [Discussions](https://github.com/hffmnnj/opencode-goopspec/discussions)
+[Issues](https://github.com/hffmnnj/opencode-goopspec/issues)
 
 </div>
