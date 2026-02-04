@@ -81,6 +81,13 @@ interface BlockedOperation {
   sessionID: string;
 }
 
+interface BlockedResearchOperation {
+  tool: string;
+  category: BlockedToolCategory;
+  timestamp: number;
+  sessionID: string;
+}
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -177,6 +184,9 @@ const pendingDelegations = new Map<string, DelegationState>();
 // Track blocked operations per session (for injection)
 const blockedOperations = new Map<string, BlockedOperation>();
 
+// Track blocked research operations per session (for guidance injection)
+const blockedResearchOperations = new Map<string, BlockedResearchOperation>();
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -234,6 +244,26 @@ export function isOrchestrator(agentName: string | undefined): boolean {
   return lower === "goopspec" || 
          lower.includes("orchestrator") ||
          lower === "goop-orchestrator";
+}
+
+/**
+ * Check if a tool is a blocked research/search tool
+ */
+export function isBlockedTool(toolName: string): boolean {
+  return (RESEARCH_TOOLS as readonly string[]).includes(toolName);
+}
+
+/**
+ * Get the category of a blocked tool
+ */
+export function getToolCategory(toolName: string): BlockedToolCategory | null {
+  if ((RESEARCH_TOOLS as readonly string[]).includes(toolName)) {
+    return "research";
+  }
+  if ((EXPLORATION_TOOLS as readonly string[]).includes(toolName)) {
+    return "exploration";
+  }
+  return null;
 }
 
 /**
@@ -352,13 +382,51 @@ export function createOrchestratorEnforcementHooks(ctx: PluginContext) {
       input: PermissionInput,
       output: PermissionOutput
     ): Promise<void> => {
-      // Only check file modification tools
-      if (!config.codeBlockingEnabled || !FILE_TOOLS.includes(input.tool)) {
-        return;
-      }
-      
       // Only enforce for orchestrator agent
       if (!isOrchestrator(input.agent)) {
+        return;
+      }
+
+      // === RESEARCH TOOL BLOCKING ===
+      if (config.researchBlockingEnabled && isBlockedTool(input.tool)) {
+        const category = getToolCategory(input.tool);
+        if (!category) {
+          return;
+        }
+        
+        log("Blocking research tool for orchestrator", {
+          tool: input.tool,
+          category,
+          sessionID: input.sessionID,
+          agent: input.agent,
+        });
+        
+        // Store blocked operation for later guidance injection
+        blockedResearchOperations.set(input.sessionID, {
+          tool: input.tool,
+          category,
+          timestamp: Date.now(),
+          sessionID: input.sessionID,
+        });
+        
+        // Log to ADL
+        ctx.stateManager.appendADL({
+          timestamp: new Date().toISOString(),
+          type: "deviation",
+          description: "Orchestrator research tool blocked",
+          action: `Denied ${input.tool}. Should delegate to ${DELEGATION_MAPPINGS[category].agent}.`,
+          rule: 4,
+          files: [],
+        });
+        
+        // DENY the permission
+        output.status = "deny";
+        return;
+      }
+
+      // === EXISTING CODE FILE BLOCKING ===
+      // Only check file modification tools
+      if (!config.codeBlockingEnabled || !FILE_TOOLS.includes(input.tool)) {
         return;
       }
       
