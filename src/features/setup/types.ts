@@ -90,6 +90,8 @@ export interface SetupInput {
   agentModels?: Record<string, string>;
   /** Memory system configuration */
   memory?: MemorySetupInput;
+  /** Quick mode - skip prompts, use sensible defaults */
+  quick?: boolean;
 }
 
 /**
@@ -142,6 +144,8 @@ export interface SetupPlan {
   isInit?: boolean;
   /** Project name (for init) */
   projectName?: string;
+  /** Quick mode - skip prompts */
+  quick?: boolean;
 }
 
 /**
@@ -254,10 +258,37 @@ export interface InitResult {
   configsWritten: string[];
   /** MCPs installed */
   mcpsInstalled: string[];
+  /** Memory setup result */
+  memorySetup?: MemorySetupResult;
   /** Any errors */
   errors: string[];
   /** Any warnings */
   warnings: string[];
+}
+
+/**
+ * Memory setup result with feature status
+ */
+export interface MemorySetupResult {
+  /** Whether memory system is enabled */
+  enabled: boolean;
+  /** Vector search status */
+  vectorSearch: {
+    enabled: boolean;
+    error?: string;
+  };
+  /** Local embeddings status */
+  localEmbeddings: {
+    enabled: boolean;
+    error?: string;
+  };
+  /** Distillation status */
+  distillation: {
+    enabled: boolean;
+    model?: string;
+  };
+  /** List of features that are degraded (not available) */
+  degradedFeatures: string[];
 }
 
 // ============================================================================

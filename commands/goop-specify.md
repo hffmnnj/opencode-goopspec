@@ -341,5 +341,5 @@ Orchestrator:
 
 ---
 
-*Specification Lock Protocol v0.1.4*
+*Specification Lock Protocol v0.1.5*
 *"The spec is a contract. Lock it before you build."*

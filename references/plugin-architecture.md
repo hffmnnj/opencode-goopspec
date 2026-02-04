@@ -209,4 +209,4 @@ goop_adl({
 
 ## Version
 
-Plugin Architecture Reference v0.1.4
+Plugin Architecture Reference v0.1.5

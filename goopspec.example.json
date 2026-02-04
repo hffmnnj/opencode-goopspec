@@ -2,7 +2,7 @@
   "$schema": "./goopspec.schema.json",
   "_comment": "GoopSpec Configuration - Copy to .goopspec/config.json and customize",
 
-  "version": "0.1.0",
+  "version": "0.1.5",
   "project_name": "my-awesome-app",
 
   "models": {

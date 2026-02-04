@@ -27,6 +27,12 @@ export function createHooks(ctx: PluginContext, input?: PluginInput): Partial<Ho
   const enforcementHooks = createOrchestratorEnforcementHooks(ctx);
   const autoProgressionHooks = createAutoProgressionHook(ctx);
   const commentCheckerHooks = createCommentCheckerHooks();
+  const chatMessageHooks = [
+    createChatMessageHook(ctx),
+    enforcementHooks["chat.message"],
+  ].filter(
+    (hook): hook is NonNullable<Hooks["chat.message"]> => Boolean(hook)
+  );
   
   // Create continuation enforcer if we have client access
   const continuationEnforcer = input 
@@ -63,7 +69,11 @@ export function createHooks(ctx: PluginContext, input?: PluginInput): Partial<Ho
         await continuationEnforcer.handler(eventInput);
       }
     },
-    "chat.message": createChatMessageHook(ctx),
+    "chat.message": async (input, output) => {
+      for (const hook of chatMessageHooks) {
+        await hook(input, output);
+      }
+    },
     ...toolLifecycleHooks,
     ...commandProcessorHooks,
   };

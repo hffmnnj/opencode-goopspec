@@ -453,5 +453,5 @@ Orchestrator: Run `/goop-execute` to continue.
 
 ---
 
-*Acceptance Protocol v0.1.4*
+*Acceptance Protocol v0.1.5*
 *"Verify everything. Accept explicitly."*

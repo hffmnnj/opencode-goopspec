@@ -245,7 +245,7 @@ function createMinimalDocument(docType: DocumentType, context: TemplateContext):
 
 ---
 
-*GoopSpec v0.1.0*
+*GoopSpec v0.1.5*
 `;
 
     case "blueprint":
@@ -272,7 +272,7 @@ function createMinimalDocument(docType: DocumentType, context: TemplateContext):
 
 ---
 
-*GoopSpec v0.1.0*
+*GoopSpec v0.1.5*
 `;
 
     case "chronicle":
@@ -300,7 +300,7 @@ function createMinimalDocument(docType: DocumentType, context: TemplateContext):
 
 ---
 
-*GoopSpec v0.1.0*
+*GoopSpec v0.1.5*
 `;
 
     case "research":
@@ -329,7 +329,7 @@ function createMinimalDocument(docType: DocumentType, context: TemplateContext):
 
 ---
 
-*GoopSpec v0.1.0*
+*GoopSpec v0.1.5*
 `;
 
     default:

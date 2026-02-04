@@ -7,6 +7,7 @@
 import { Database } from "bun:sqlite";
 import * as sqliteVec from "sqlite-vec";
 import type { VectorSearchRow } from "../types.js";
+import { memLog, memWarn, memError } from "../logger.js";
 
 type NamedBindings = Record<string, string | bigint | NodeJS.TypedArray | number | boolean | null>;
 
@@ -40,7 +41,7 @@ export class VectorStorage {
         .get() as { version: string } | null;
 
       if (version) {
-        console.log(`[Memory] sqlite-vec loaded: v${version.version}`);
+        memLog(`[Memory] sqlite-vec loaded: v${version.version}`);
       }
 
       // Create vector table
@@ -53,7 +54,7 @@ export class VectorStorage {
 
       this.initialized = true;
     } catch (error) {
-      console.error("[Memory] Failed to initialize vector storage:", error);
+      memError("[Memory] Failed to initialize vector storage:", error);
       // Continue without vector support - FTS5 will still work
       this.initialized = false;
     }
@@ -71,7 +72,7 @@ export class VectorStorage {
    */
   storeEmbedding(memoryId: number, embedding: Float32Array): void {
     if (!this.initialized) {
-      console.warn("[Memory] Vector storage not initialized, skipping embedding");
+      memWarn("[Memory] Vector storage not initialized, skipping embedding");
       return;
     }
 
@@ -97,7 +98,7 @@ export class VectorStorage {
           $embedding: embedding,
         });
     } catch (error) {
-      console.error(`[Memory] Failed to store embedding for memory ${memoryId}:`, error);
+      memError(`[Memory] Failed to store embedding for memory ${memoryId}:`, error);
     }
   }
 
@@ -138,7 +139,7 @@ export class VectorStorage {
 
       return results;
     } catch (error) {
-      console.error("[Memory] Vector search failed:", error);
+      memError("[Memory] Vector search failed:", error);
       return [];
     }
   }
@@ -159,7 +160,7 @@ export class VectorStorage {
       if (!row) return null;
       return new Float32Array(row.embedding);
     } catch (error) {
-      console.error(`[Memory] Failed to get embedding for memory ${memoryId}:`, error);
+      memError(`[Memory] Failed to get embedding for memory ${memoryId}:`, error);
       return null;
     }
   }
@@ -175,7 +176,7 @@ export class VectorStorage {
         .query<unknown, NamedBindings>("DELETE FROM memory_vectors WHERE memory_id = $id")
         .run({ $id: memoryId });
     } catch (error) {
-      console.error(`[Memory] Failed to delete embedding for memory ${memoryId}:`, error);
+      memError(`[Memory] Failed to delete embedding for memory ${memoryId}:`, error);
     }
   }
 

@@ -162,11 +162,75 @@ Extract:
 memory_search({ query: "[feature] architecture decisions patterns", limit: 5 })
 ```
 
-**3.3 Load project knowledge:**
+**3.3 Create or load project knowledge:**
 
 ```
-Read(".goopspec/PROJECT_KNOWLEDGE_BASE.md")  # If exists
+Read(".goopspec/PROJECT_KNOWLEDGE_BASE.md")
 ```
+
+**If PROJECT_KNOWLEDGE_BASE.md does not exist, CREATE IT:**
+
+This file is required by subagents throughout the workflow. Extract stack/convention info from REQUIREMENTS.md constraints section and create a minimal knowledge base:
+
+```markdown
+# Project Knowledge Base
+
+**Last Updated:** [timestamp]
+**Updated By:** orchestrator (auto-generated from discovery)
+
+---
+
+## Project Identity
+
+**Name:** [From REQUIREMENTS.md vision]
+**Type:** [Inferred from constraints]
+**Stage:** Active
+
+---
+
+## Stack (Non-Negotiable)
+
+[Extract from REQUIREMENTS.md Constraints section]
+
+### Runtime & Language
+- **Runtime:** [e.g., Node.js / Bun / Browser]
+- **Language:** [e.g., TypeScript]
+
+### Frameworks & Libraries
+- **Framework:** [From constraints]
+- **Testing:** [From constraints or infer from package.json]
+
+---
+
+## Conventions
+
+[Extract from REQUIREMENTS.md or infer from codebase]
+
+### File Naming
+- **Files:** [kebab-case / camelCase]
+- **Tests:** [*.test.ts / *.spec.ts]
+
+### Code Style
+- **Exports:** [Named / Default]
+
+---
+
+## Architecture Decisions
+
+*To be populated during planning and execution.*
+
+---
+
+## Known Gotchas
+
+*To be populated as issues are discovered.*
+
+---
+
+*Auto-generated from discovery interview. Update as project evolves.*
+```
+
+Write to `.goopspec/PROJECT_KNOWLEDGE_BASE.md` before proceeding.
 
 ### Phase 4: Spawn Planner
 
@@ -395,6 +459,7 @@ memory_save({
 | `.goopspec/BLUEPRINT.md` | Wave-based execution plan |
 | `.goopspec/CHRONICLE.md` | Progress tracking |
 | `.goopspec/HANDOFF.md` | Session handoff |
+| `.goopspec/PROJECT_KNOWLEDGE_BASE.md` | Stack and conventions (created if missing) |
 | State (via goop_state) | Workflow state (phase transitions) |
 
 ## Transitions
@@ -460,6 +525,7 @@ Orchestrator:
 - [ ] Gate check performed (interview_complete + REQUIREMENTS.md)
 - [ ] If gate fails, refused with clear redirect to /goop-discuss
 - [ ] Existing documents handled (archive/continue/overwrite)
+- [ ] PROJECT_KNOWLEDGE_BASE.md created if missing (from REQUIREMENTS.md constraints)
 - [ ] goop-planner spawned with full discovery context
 - [ ] SPEC.md created with traceability
 - [ ] BLUEPRINT.md created with spec coverage
@@ -486,5 +552,5 @@ Orchestrator:
 
 ---
 
-*Planning Protocol v0.1.4*
+*Planning Protocol v0.1.5*
 *"Every must-have traces to tasks."*

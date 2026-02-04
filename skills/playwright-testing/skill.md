@@ -7,7 +7,7 @@ triggers:
   - testing
   - e2e
   - suites
-version: 0.1.0
+version: 0.1.5
 ---
 
 # Playwright Testing Skill

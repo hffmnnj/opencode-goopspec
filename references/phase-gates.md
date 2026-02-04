@@ -356,5 +356,5 @@ Recovery: Fix failing requirements, re-verify
 
 ---
 
-*Phase Gates Protocol v0.1.4*
+*Phase Gates Protocol v0.1.5*
 *"Quality requires discipline."*

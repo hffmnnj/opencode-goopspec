@@ -6,7 +6,6 @@
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import type {
   MemoryInput,
   MemoryUpdate,
@@ -18,6 +17,7 @@ import type {
 import { MemoryStorage } from "../storage/sqlite.js";
 import { VectorStorage } from "../storage/vector.js";
 import { EmbeddingGenerator } from "../storage/embeddings.js";
+import { memLog, memWarn, memError } from "../logger.js";
 
 // Server configuration
 export interface ServerConfig {
@@ -62,7 +62,7 @@ function normalizeMemoryInput(input: MemoryInput): MemoryInput {
 async function initializeStorage(config: ServerConfig): Promise<void> {
   if (initialized) return;
 
-  console.log(`[Memory Worker] Initializing storage at: ${config.dbPath}`);
+  memLog(`[Memory Worker] Initializing storage at: ${config.dbPath}`);
 
   storage = new MemoryStorage(config.dbPath);
   vectors = new VectorStorage(storage.getDatabase(), config.dimensions ?? 384);
@@ -71,13 +71,13 @@ async function initializeStorage(config: ServerConfig): Promise<void> {
   // Pre-warm embedding model
   try {
     await embeddings.initialize();
-    console.log("[Memory Worker] Embedding model loaded");
+    memLog("[Memory Worker] Embedding model loaded");
   } catch (error) {
-    console.warn("[Memory Worker] Embedding model failed to load, vector search disabled:", error);
+    memWarn("[Memory Worker] Embedding model failed to load, vector search disabled:", error);
   }
 
   initialized = true;
-  console.log("[Memory Worker] Storage initialized");
+  memLog("[Memory Worker] Storage initialized");
 }
 
 /**
@@ -88,7 +88,6 @@ export function createApp(config: ServerConfig): Hono {
 
   // Middleware
   app.use("*", cors());
-  app.use("*", logger());
 
   // Health check
   app.get("/health", (c) => {
@@ -143,7 +142,7 @@ export function createApp(config: ServerConfig): Hono {
 
       return c.json(memory, 201);
     } catch (error) {
-      console.error("[Memory Worker] Create error:", error);
+      memError("[Memory Worker] Create error:", error);
       return c.json({ error: String(error) }, 500);
     }
   });
@@ -178,17 +177,17 @@ export function createApp(config: ServerConfig): Hono {
               const embedding = await embeddingGen.generate(text);
               vectorStore.storeEmbedding(memory.id, embedding);
             } catch (error) {
-              console.warn(`[Memory Worker] Failed to generate embedding for memory ${memory.id}:`, error);
+              memWarn(`[Memory Worker] Failed to generate embedding for memory ${memory.id}:`, error);
             }
           })
         ).catch(error => {
-          console.error("[Memory Worker] Batch embedding generation failed:", error);
+          memError("[Memory Worker] Batch embedding generation failed:", error);
         });
       }
 
       return c.json({ memories, count: memories.length }, 201);
     } catch (error) {
-      console.error("[Memory Worker] Batch create error:", error);
+      memError("[Memory Worker] Batch create error:", error);
       return c.json({ error: String(error) }, 500);
     }
   });
@@ -211,7 +210,7 @@ export function createApp(config: ServerConfig): Hono {
 
       return c.json(memory);
     } catch (error) {
-      console.error("[Memory Worker] Get error:", error);
+      memError("[Memory Worker] Get error:", error);
       return c.json({ error: String(error) }, 500);
     }
   });
@@ -252,7 +251,7 @@ export function createApp(config: ServerConfig): Hono {
 
       return c.json(memory);
     } catch (error) {
-      console.error("[Memory Worker] Update error:", error);
+      memError("[Memory Worker] Update error:", error);
       return c.json({ error: String(error) }, 500);
     }
   });
@@ -278,7 +277,7 @@ export function createApp(config: ServerConfig): Hono {
 
       return c.json({ deleted: true, id });
     } catch (error) {
-      console.error("[Memory Worker] Delete error:", error);
+      memError("[Memory Worker] Delete error:", error);
       return c.json({ error: String(error) }, 500);
     }
   });
@@ -317,7 +316,7 @@ export function createApp(config: ServerConfig): Hono {
           const queryEmbedding = await embeddings.generate(options.query);
           vecResults = vectors.searchSimilar(queryEmbedding, limit * 2);
         } catch (error) {
-          console.warn("[Memory Worker] Vector search failed:", error);
+          memWarn("[Memory Worker] Vector search failed:", error);
         }
       }
 
@@ -326,7 +325,7 @@ export function createApp(config: ServerConfig): Hono {
 
       return c.json({ results, count: results.length });
     } catch (error) {
-      console.error("[Memory Worker] Search error:", error);
+      memError("[Memory Worker] Search error:", error);
       return c.json({ error: String(error) }, 500);
     }
   });
@@ -344,7 +343,7 @@ export function createApp(config: ServerConfig): Hono {
       const memories = storage!.getRecent(limit, types);
       return c.json({ memories, count: memories.length });
     } catch (error) {
-      console.error("[Memory Worker] Recent error:", error);
+      memError("[Memory Worker] Recent error:", error);
       return c.json({ error: String(error) }, 500);
     }
   });
@@ -372,7 +371,7 @@ export function createApp(config: ServerConfig): Hono {
         501
       );
     } catch (error) {
-      console.error("[Memory Worker] Distill error:", error);
+      memError("[Memory Worker] Distill error:", error);
       return c.json({ error: String(error) }, 500);
     }
   });
@@ -396,7 +395,7 @@ export function createApp(config: ServerConfig): Hono {
         vectorsAvailable: vectors?.isAvailable() ?? false,
       });
     } catch (error) {
-      console.error("[Memory Worker] Stats error:", error);
+      memError("[Memory Worker] Stats error:", error);
       return c.json({ error: String(error) }, 500);
     }
   });
@@ -406,7 +405,7 @@ export function createApp(config: ServerConfig): Hono {
    * POST /shutdown
    */
   app.post("/shutdown", (c) => {
-    console.log("[Memory Worker] Shutdown requested");
+    memLog("[Memory Worker] Shutdown requested");
 
     // Close storage in background
     setTimeout(() => {
