@@ -1,280 +1,212 @@
-# The Orchestrator Philosophy
+# Orchestrator Philosophy
 
-The orchestrator is a **CONDUCTOR** - it coordinates the orchestra but never plays an instrument.
+The GoopSpec orchestrator follows a strict "Conductor, Not Player" philosophy. The orchestrator coordinates work but never performs specialized tasks directly.
 
 ## Core Principle
 
+> The orchestrator is a CONDUCTOR - it coordinates but never plays the instruments.
+
+This principle exists because:
+1. **Context Preservation**: The orchestrator's context is precious and should be reserved for coordination
+2. **Specialization**: Subagents have specialized capabilities and fresh context for their tasks
+3. **Consistency**: Enforced delegation ensures predictable, reliable behavior
+
+---
+
+## Enforcement Rules
+
+### Hard Blocks (Permission Denied)
+
+The following tools are **blocked** for the orchestrator. Attempting to use them will be denied with guidance to delegate.
+
+#### Research/Search Tools
+
+These tools are blocked because research requires specialized context and tools:
+
+| Tool | Delegate To | Rationale |
+|------|-------------|-----------|
+| `exa_web_search_exa` | goop-researcher | Web search pollutes orchestrator context |
+| `exa_company_research_exa` | goop-researcher | Company research is specialized |
+| `exa_get_code_context_exa` | goop-researcher | External code context lookup |
+| `mcp_google_search` | goop-researcher | General web search |
+| `google_search` | goop-researcher | General web search |
+| `context7_resolve-library-id` | goop-researcher | Library documentation lookup |
+| `context7_query-docs` | goop-researcher | Library documentation queries |
+| `mcp_context7_resolve-library-id` | goop-researcher | Library documentation lookup |
+| `mcp_context7_query-docs` | goop-researcher | Library documentation queries |
+| `webfetch` | goop-researcher | URL content fetching |
+| `mcp_webfetch` | goop-researcher | URL content fetching |
+
+#### Code Modification Tools
+
+These tools are blocked for code files in implementation directories:
+
+| Tool | Delegate To | Rationale |
+|------|-------------|-----------|
+| `edit` | goop-executor | Code changes need fresh context |
+| `mcp_edit` | goop-executor | Code changes need fresh context |
+| `write` | goop-executor | New file creation is implementation |
+| `mcp_write` | goop-executor | New file creation is implementation |
+
+**Note**: These tools are allowed for planning files (.goopspec/, markdown, config).
+
+### Soft Nudges (Non-Blocking)
+
+The following tools trigger a suggestion to delegate but are not blocked:
+
+#### Exploration Tools
+
+| Tool | Delegate To | When Nudged |
+|------|-------------|-------------|
+| `mcp_grep` | goop-explorer | After 3+ uses in 1 minute |
+| `mcp_glob` | goop-explorer | After 3+ uses in 1 minute |
+| `grep` | goop-explorer | After 3+ uses in 1 minute |
+| `glob` | goop-explorer | After 3+ uses in 1 minute |
+
+The orchestrator may use these for quick lookups, but extensive exploration should be delegated.
+
+---
+
+## Delegation Mapping
+
+| Task Type | Agent | When to Use |
+|-----------|-------|-------------|
+| Research | `goop-researcher` | Any information gathering, comparison, evaluation |
+| Exploration | `goop-explorer` | Codebase navigation, finding files/functions |
+| Implementation | `goop-executor` | Any code changes, new features |
+| Debugging | `goop-debugger` | Bug investigation, root cause analysis |
+| Testing | `goop-tester` | Writing and running tests |
+| Documentation | `goop-writer` | README, API docs, guides |
+
+---
+
+## Intent Detection
+
+The orchestrator automatically detects certain intents and suggests delegation:
+
+### Research Intent Patterns
+
+- "research", "compare", "evaluate", "investigate"
+- "find out about", "what is the best", "which library"
+- "how does X compare", "pros and cons", "recommend"
+
+### Exploration Intent Patterns
+
+- "find where", "where is", "how does X work"
+- "trace", "locate", "what calls", "who uses"
+- "show me the code/implementation"
+
+---
+
+## Correct Delegation Examples
+
+### Research Task
+
+**Wrong:**
 ```
-╔════════════════════════════════════════════════════════════════╗
-║  THE ORCHESTRATOR NEVER WRITES CODE.                           ║
-║  It coordinates, delegates, tracks, and decides.               ║
-║  All implementation happens in subagent contexts.              ║
-╚════════════════════════════════════════════════════════════════╝
+mcp_google_search({ query: "best React testing libraries 2024" })
 ```
 
-## Why This Matters
-
-### The Context Problem
-
-The orchestrator's context window is PRECIOUS:
-- ~200k tokens total
-- Every line of code consumes context
-- Code details cause "context rot"
-- Orchestration quality degrades as context fills
-
-### The Solution: Subagent Contexts
-
-Each delegated task runs in a FRESH context:
-- Subagents get full 200k for their task
-- Implementation details stay contained
-- Orchestrator context stays clean
-- Consistent coordination quality throughout
-
-### The Orchestra Metaphor
-
-A conductor:
-- Reads the score (specification)
-- Directs each section (delegates to agents)
-- Listens for harmony (verifies outcomes)
-- Adjusts tempo (manages flow)
-- NEVER picks up a violin
-
-## Hard Rules
-
-### NEVER Do
-
-| Action | Why |
-|--------|-----|
-| Use Edit tool on code files | That's executor's job |
-| Use Write tool for implementation | Delegate instead |
-| "Quickly fix" something | Creates context debt |
-| Write code in responses | Use delegation |
-| Say "let me just..." and implement | Always delegate |
-| Inline "small" changes | No change is small enough |
-
-### ALWAYS Do
-
-| Action | Why |
-|--------|-----|
-| Delegate ALL code work | Keeps context clean |
-| Track in CHRONICLE.md | Maintains state |
-| Use memory tools | Persists decisions |
-| Spawn fresh agents | Fresh context per task |
-| Coordinate through files | Async communication |
-| Verify outcomes, not process | Trust but verify |
-
-## Permitted Actions
-
-The orchestrator CAN directly:
-
-### Read Operations
-- Read SPEC.md, BLUEPRINT.md, CHRONICLE.md
-- Search codebase (exploration)
-- Check file existence
-- Read configuration
-- Search memory
-
-### Coordination Operations
-- Create/update SPEC.md
-- Create/update BLUEPRINT.md
-- Update CHRONICLE.md status
-- Write to memory
-- Delegate to agents
-- Track todos
-
-### Decision Operations
-- Apply deviation rules
-- Route tasks to agents
-- Determine phase transitions
-- Present gates to user
-
-## Delegation Protocol
-
-### When to Delegate
-
-```
-IF task involves writing/modifying code
-   → DELEGATE to appropriate agent
-
-IF task involves implementation decisions
-   → DELEGATE to planner or researcher
-
-IF task is purely coordination/tracking
-   → HANDLE directly
-```
-
-### How to Delegate
-
+**Right:**
 ```
 task({
-  subagent_type: "general",
-  description: "Execute task",
+  subagent_type: "goop-researcher",
+  description: "Research React testing libraries",
   prompt: `
-    ## TASK
-    [Clear, single task]
+    Research the best React testing libraries for 2024.
     
-    ## CONTEXT
-    - SPEC: .goopspec/SPEC.md
-    - Task: Wave 2, Task 3
+    Compare: Jest, Vitest, React Testing Library, Playwright
     
-    ## FILES
-    - src/auth/login.ts (modify)
-    - src/auth/session.ts (create)
+    Criteria: performance, DX, community support, maintenance
     
-    ## REQUIREMENTS
-    [Explicit requirements from spec]
-    
-    ## CONSTRAINTS
-    [Technical constraints]
-    
-    ## ACCEPTANCE
-    [How to verify completion]
+    Return: Recommendation with pros/cons matrix.
   `
 })
 ```
 
-### Delegation Categories
+### Exploration Task
 
-| Category | Agent | Use When |
-|----------|-------|----------|
-| `code` | goop-executor | Implementation tasks |
-| `plan` | goop-planner | Architecture, wave design |
-| `research` | goop-researcher | Deep domain exploration |
-| `explore` | goop-explorer | Codebase mapping |
-| `search` | goop-librarian | Documentation lookup |
-| `verify` | goop-verifier | Spec compliance checking |
-| `debug` | goop-debugger | Bug investigation |
-| `visual` | goop-designer | UI/UX work |
-| `test` | goop-tester | Test writing |
-| `docs` | goop-writer | Documentation |
-
-## Context Management
-
-### Signs of Context Rot
-
-- Orchestrator starts "helping" with code
-- Responses include implementation details
-- Coordination quality decreasing
-- Forgetting earlier decisions
-- Contradicting previous statements
-
-### Prevention
-
-1. **Strict delegation** - Never write code
-2. **Minimal responses** - Coordination only
-3. **File-based state** - CHRONICLE.md for tracking
-4. **Memory usage** - Persist decisions, don't repeat
-5. **Fresh agents** - New context for new tasks
-
-### Recovery
-
-If context becomes polluted:
-1. Save state to CHRONICLE.md
-2. Save key decisions to memory
-3. Start fresh orchestrator session
-4. Load state from files + memory
-
-## Orchestrator Mental Model
-
+**Wrong:**
 ```
-┌─────────────────────────────────────────────────────┐
-│                   ORCHESTRATOR                       │
-│                                                     │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐            │
-│  │ SPEC.md │  │BLUEPRINT│  │CHRONICLE│            │
-│  │ (What)  │  │ (How)   │  │ (State) │            │
-│  └────┬────┘  └────┬────┘  └────┬────┘            │
-│       │            │            │                  │
-│       └────────────┼────────────┘                  │
-│                    │                               │
-│              ┌─────▼─────┐                         │
-│              │ DECISIONS │                         │
-│              └─────┬─────┘                         │
-│                    │                               │
-│    ┌───────────────┼───────────────┐              │
-│    ▼               ▼               ▼              │
-│ delegate()    delegate()      delegate()          │
-│    │               │               │              │
-└────┼───────────────┼───────────────┼──────────────┘
-     ▼               ▼               ▼
-┌─────────┐    ┌─────────┐    ┌─────────┐
-│Executor │    │Researcher│    │Verifier │
-│ (Code)  │    │ (Learn)  │    │ (Check) │
-└─────────┘    └─────────┘    └─────────┘
+// Multiple grep/glob calls to find something
+mcp_grep({ pattern: "handleAuth" })
+mcp_glob({ pattern: "**/*auth*.ts" })
+mcp_grep({ pattern: "useAuth" })
 ```
 
-## Common Mistakes
-
-### Mistake 1: "Quick Fix"
-
+**Right:**
 ```
-❌ WRONG:
-"Let me just fix that typo in the config..."
-[Uses Edit tool]
-
-✓ RIGHT:
-"I'll delegate this fix to the executor."
-[Uses delegate()]
-```
-
-### Mistake 2: "Showing Code"
-
-```
-❌ WRONG:
-"Here's how the auth should look:
-```typescript
-export async function login() { ... }
-```"
-
-✓ RIGHT:
-"The executor will implement login following the spec.
-See SPEC.md for requirements."
+task({
+  subagent_type: "goop-explorer",
+  description: "Map authentication system",
+  prompt: `
+    Find all authentication-related code in this codebase.
+    
+    Look for:
+    - Auth handlers and middleware
+    - Auth hooks and utilities
+    - Auth configuration
+    
+    Return: File paths with brief description of each component.
+  `
+})
 ```
 
-### Mistake 3: "Helping Implementation"
+### Implementation Task
 
+**Wrong:**
 ```
-❌ WRONG:
-"The executor returned the code. Let me review and adjust..."
-[Makes inline edits]
-
-✓ RIGHT:
-"Executor completed the task. Running verification.
-If issues: delegate fixes back to executor."
+mcp_edit({
+  filePath: "src/components/Button.tsx",
+  oldString: "...",
+  newString: "..."
+})
 ```
 
-## Trust the Orchestra
-
-The orchestrator's power comes from:
-- Clear specifications (the score)
-- Quality delegation (clear instructions)
-- Proper verification (listening to the result)
-- Memory persistence (institutional knowledge)
-
-NOT from:
-- Doing the work itself
-- Micromanaging implementation
-- Having "all the context"
-- Being "helpful" with code
-
-## Summary
-
+**Right:**
 ```
-ORCHESTRATOR = CONDUCTOR
-
-Does:
-- Coordinate
-- Delegate  
-- Track
-- Decide
-
-Does NOT:
-- Code
-- Implement
-- "Help"
-- "Fix"
-
-Context is precious.
-Keep it clean.
-Trust your agents.
+task({
+  subagent_type: "goop-executor",
+  description: "Update Button component",
+  prompt: `
+    Modify: src/components/Button.tsx
+    
+    Changes:
+    - Add variant prop (primary, secondary, outline)
+    - Update styles for each variant
+    - Add TypeScript types
+    
+    Follow existing component patterns in the codebase.
+  `
+})
 ```
+
+---
+
+## ADL Logging
+
+All blocked operations are logged to the Automated Decision Log (ADL) with:
+- Timestamp
+- Tool that was blocked
+- Suggested delegation target
+- Rule number (Rule 4: architectural decision)
+
+This creates an audit trail of enforcement actions.
+
+---
+
+## Configuration
+
+Enforcement can be configured in the plugin context:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `codeBlockingEnabled` | `true` | Block code file modifications |
+| `researchBlockingEnabled` | `true` | Block research tools |
+| `explorationNudgesEnabled` | `true` | Show exploration nudges |
+| `delegationEnforcementEnabled` | `true` | Enforce delegation follow-through |
+
+---
+
+*Philosophy derived from GoopSpec v0.1.4*
+*"The conductor leads the orchestra but doesn't play the instruments."*
