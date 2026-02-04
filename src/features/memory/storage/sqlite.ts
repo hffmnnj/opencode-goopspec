@@ -1,6 +1,9 @@
 /**
  * SQLite Memory Storage Implementation
  * @module features/memory/storage/sqlite
+ * 
+ * NOTE: bun:sqlite in strict mode requires parameter object keys WITHOUT the $ prefix,
+ * even though the SQL uses $name syntax. E.g., SQL: $type -> Object: { type: value }
  */
 
 import { Database, type Statement } from "bun:sqlite";
@@ -93,20 +96,21 @@ export class MemoryStorage {
     `
     );
 
+    // Note: bun:sqlite strict mode requires keys WITHOUT $ prefix
     const row = insert.get({
-      $type: input.type,
-      $title: input.title,
-      $content: input.content,
-      $facts: JSON.stringify(input.facts ?? []),
-      $concepts: JSON.stringify(input.concepts ?? []),
-      $sourceFiles: JSON.stringify(input.sourceFiles ?? []),
-      $importance: input.importance ?? 5,
-      $visibility: input.visibility ?? "public",
-      $phase: input.phase ?? null,
-      $sessionId: input.sessionId ?? null,
-      $createdAt: now,
-      $updatedAt: now,
-      $accessedAt: now,
+      type: input.type,
+      title: input.title,
+      content: input.content,
+      facts: JSON.stringify(input.facts ?? []),
+      concepts: JSON.stringify(input.concepts ?? []),
+      sourceFiles: JSON.stringify(input.sourceFiles ?? []),
+      importance: input.importance ?? 5,
+      visibility: input.visibility ?? "public",
+      phase: input.phase ?? null,
+      sessionId: input.sessionId ?? null,
+      createdAt: now,
+      updatedAt: now,
+      accessedAt: now,
     }) as MemoryRow;
 
     return rowToMemory(row);
@@ -121,7 +125,7 @@ export class MemoryStorage {
       "SELECT * FROM memories WHERE id = $id"
     );
 
-    const row = query.get({ $id: id }) as MemoryRow | null;
+    const row = query.get({ id }) as MemoryRow | null;
     if (!row) return null;
 
     // Update access stats
@@ -129,7 +133,7 @@ export class MemoryStorage {
       .query<unknown, NamedBindings>(
         `UPDATE memories SET accessed_at = unixepoch(), access_count = access_count + 1 WHERE id = $id`
       )
-      .run({ $id: id });
+      .run({ id });
 
     return rowToMemory(row);
   }
@@ -142,35 +146,35 @@ export class MemoryStorage {
     if (!existing) return null;
 
     const setClauses: string[] = ["updated_at = unixepoch()"];
-    const params: NamedBindings = { $id: id };
+    const params: NamedBindings = { id };
 
     if (updates.title !== undefined) {
       setClauses.push("title = $title");
-      params.$title = updates.title;
+      params.title = updates.title;
     }
     if (updates.content !== undefined) {
       setClauses.push("content = $content");
-      params.$content = updates.content;
+      params.content = updates.content;
     }
     if (updates.facts !== undefined) {
       setClauses.push("facts = $facts");
-      params.$facts = JSON.stringify(updates.facts);
+      params.facts = JSON.stringify(updates.facts);
     }
     if (updates.concepts !== undefined) {
       setClauses.push("concepts = $concepts");
-      params.$concepts = JSON.stringify(updates.concepts);
+      params.concepts = JSON.stringify(updates.concepts);
     }
     if (updates.sourceFiles !== undefined) {
       setClauses.push("source_files = $sourceFiles");
-      params.$sourceFiles = JSON.stringify(updates.sourceFiles);
+      params.sourceFiles = JSON.stringify(updates.sourceFiles);
     }
     if (updates.importance !== undefined) {
       setClauses.push("importance = $importance");
-      params.$importance = updates.importance;
+      params.importance = updates.importance;
     }
     if (updates.visibility !== undefined) {
       setClauses.push("visibility = $visibility");
-      params.$visibility = updates.visibility;
+      params.visibility = updates.visibility;
     }
 
     const sql = `UPDATE memories SET ${setClauses.join(", ")} WHERE id = $id RETURNING *`;
@@ -185,7 +189,7 @@ export class MemoryStorage {
   delete(id: number): boolean {
     const result = this.db
       .query<unknown, NamedBindings>("DELETE FROM memories WHERE id = $id")
-      .run({ $id: id });
+      .run({ id });
     return result.changes > 0;
   }
 
@@ -214,22 +218,21 @@ export class MemoryStorage {
 
     let whereClause = "";
     const params: NamedBindings = {
-      $query: escapedQuery,
-      $limit: limit,
+      limit,
     };
 
     // Add type filter
     if (options?.types?.length) {
       whereClause += ` AND m.type IN (${options.types.map((_, i) => `$type${i}`).join(", ")})`;
       options.types.forEach((t, i) => {
-        params[`$type${i}`] = t;
+        params[`type${i}`] = t;
       });
     }
 
     // Add importance filter
     if (options?.minImportance) {
       whereClause += " AND m.importance >= $minImportance";
-      params.$minImportance = options.minImportance;
+      params.minImportance = options.minImportance;
     }
 
     // Add visibility filter
@@ -237,6 +240,7 @@ export class MemoryStorage {
       whereClause += " AND m.visibility = 'public'";
     }
 
+    // Note: FTS5 MATCH - inline the escaped query (already sanitized)
     const sql = `
       SELECT 
         m.*,
@@ -245,7 +249,7 @@ export class MemoryStorage {
         highlight(memories_fts, 1, '<mark>', '</mark>') as highlighted_content
       FROM memories m
       JOIN memories_fts ON m.id = memories_fts.rowid
-      WHERE memories_fts MATCH $query ${whereClause}
+      WHERE memories_fts MATCH '${escapedQuery}' ${whereClause}
       ORDER BY rank
       LIMIT $limit
     `;
@@ -269,7 +273,7 @@ export class MemoryStorage {
     includePrivate: boolean = false
   ): Memory[] {
     let whereClause = includePrivate ? "" : "WHERE visibility = 'public'";
-    const params: NamedBindings = { $limit: limit };
+    const params: NamedBindings = { limit };
 
     if (types?.length) {
       const typeCondition = `type IN (${types.map((_, i) => `$type${i}`).join(", ")})`;
@@ -277,7 +281,7 @@ export class MemoryStorage {
         ? `${whereClause} AND ${typeCondition}`
         : `WHERE ${typeCondition}`;
       types.forEach((t, i) => {
-        params[`$type${i}`] = t;
+        params[`type${i}`] = t;
       });
     }
 
@@ -300,9 +304,9 @@ export class MemoryStorage {
     const conditions = concepts.map(
       (_, i) => `concepts LIKE '%' || $concept${i} || '%'`
     );
-    const params: NamedBindings = { $limit: limit };
+    const params: NamedBindings = { limit };
     concepts.forEach((c, i) => {
-      params[`$concept${i}`] = c;
+      params[`concept${i}`] = c;
     });
 
     const sql = `
@@ -330,7 +334,7 @@ export class MemoryStorage {
 
     const rows = this.db
       .query<MemoryRow, NamedBindings>(sql)
-      .all({ $phase: phase, $limit: limit }) as MemoryRow[];
+      .all({ phase, limit }) as MemoryRow[];
     return rows.map(rowToMemory);
   }
 
@@ -346,7 +350,7 @@ export class MemoryStorage {
 
     const rows = this.db
       .query<MemoryRow, NamedBindings>(sql)
-      .all({ $sessionId: sessionId }) as MemoryRow[];
+      .all({ sessionId }) as MemoryRow[];
     return rows.map(rowToMemory);
   }
 
@@ -363,7 +367,7 @@ export class MemoryStorage {
         ? `${whereClause} AND ${typeCondition}`
         : `WHERE ${typeCondition}`;
       options.types.forEach((t, i) => {
-        params[`$type${i}`] = t;
+        params[`type${i}`] = t;
       });
     }
 
@@ -381,7 +385,7 @@ export class MemoryStorage {
     const cutoff = Math.floor(Date.now() / 1000) - days * 24 * 60 * 60;
     const result = this.db
       .query<unknown, NamedBindings>("DELETE FROM memories WHERE created_at < $cutoff")
-      .run({ $cutoff: cutoff });
+      .run({ cutoff });
     return result.changes;
   }
 
@@ -403,7 +407,7 @@ export class MemoryStorage {
       )
     `
       )
-      .run({ $toDelete: toDelete });
+      .run({ toDelete });
     return result.changes;
   }
 
