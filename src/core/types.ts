@@ -75,6 +75,14 @@ export type WorkflowPhase = "idle" | "plan" | "research" | "specify" | "execute"
  */
 export type TaskMode = "quick" | "standard" | "comprehensive" | "milestone";
 
+/**
+ * Workflow depth describes the desired level of investigation and rigor.
+ * - shallow: minimal depth for quick changes
+ * - standard: default depth for typical work
+ * - deep: increased depth for thorough analysis
+ */
+export type WorkflowDepth = "shallow" | "standard" | "deep";
+
 export interface GoopState {
   version: number;
   project: {
@@ -97,6 +105,8 @@ export interface GoopState {
     phase: WorkflowPhase;
     
     mode: TaskMode;
+    depth: WorkflowDepth;
+    researchOptIn: boolean;
     specLocked: boolean;
     acceptanceConfirmed: boolean;
     currentWave: number;
@@ -419,4 +429,36 @@ export interface SkillDefinition {
   triggers?: string[];
   version?: string;
   content: string;
+}
+
+// ============================================================================
+// OpenCode Client Types
+// ============================================================================
+
+/**
+ * Configuration for creating an authenticated OpenCode client
+ */
+export interface OpenCodeClientConfig {
+  /** Directory scope for API calls */
+  directory?: string;
+  /** Whether to create authenticated client when password is set */
+  useAuth?: boolean;
+}
+
+/**
+ * Result of a safe API call with error handling
+ */
+export interface SafeApiCallResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+/**
+ * Prompt injection result with method tracking
+ */
+export interface PromptInjectionResult {
+  success: boolean;
+  /** Which method was used: session API, TUI fallback, or none (both failed) */
+  method: "session" | "tui" | "none";
 }

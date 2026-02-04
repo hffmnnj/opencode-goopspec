@@ -13,6 +13,9 @@ import {
   list,
   numberedList,
   table,
+  stageBanner,
+  decisionGate,
+  compactProgressRow,
   colors,
   colorize,
   colored,
@@ -335,6 +338,77 @@ describe("ui utilities", () => {
     });
   });
 
+  describe("stageBanner", () => {
+    it("formats a basic stage banner", () => {
+      const result = stageBanner("plan", "Capture intent");
+      expect(result).toBe("[STAGE] PLAN - Capture intent");
+    });
+
+    it("supports custom width padding", () => {
+      const result = stageBanner("execute", "Build", { width: 40 });
+      expect(result.length).toBe(40);
+      expect(result).toContain("[STAGE] EXECUTE - Build");
+    });
+
+    it("keeps ASCII output", () => {
+      const result = stageBanner("accept");
+      expect(result).toMatch(/^[\x00-\x7F]+$/);
+    });
+  });
+
+  describe("decisionGate", () => {
+    it("formats a decision gate with action", () => {
+      const result = decisionGate("Specify", "Confirm the specification");
+      expect(result).toContain("[GATE] Specify");
+      expect(result).toContain("Action: Confirm the specification");
+    });
+
+    it("renders details as list items", () => {
+      const result = decisionGate("Accept", "Confirm delivery", {
+        details: ["Review summary", "Provide approval"],
+      });
+      const lines = result.split("\n");
+      expect(lines).toContain("- Review summary");
+      expect(lines).toContain("- Provide approval");
+    });
+
+    it("keeps ASCII output", () => {
+      const result = decisionGate("Gate", "Do it");
+      expect(result).toMatch(/^[\x00-\x7F\n]+$/);
+    });
+  });
+
+  describe("compactProgressRow", () => {
+    it("formats a compact progress row", () => {
+      const result = compactProgressRow([
+        { label: "Wave", value: "2/5" },
+        { label: "Task", value: "3/7" },
+        { label: "Stage", value: "Execute" },
+      ]);
+      expect(result).toContain("[WORK]");
+      expect(result).toContain("Wave 2/5");
+      expect(result).toContain("Task 3/7");
+      expect(result).toContain("Stage Execute");
+    });
+
+    it("supports custom separator and widths", () => {
+      const result = compactProgressRow(
+        [
+          { label: "Wave", value: "1/2", width: 10 },
+          { label: "Task", value: "4/9", width: 10 },
+        ],
+        { separator: " / " },
+      );
+      expect(result).toContain(" / ");
+      expect(result).toContain("Wave 1/2");
+    });
+
+    it("keeps ASCII output", () => {
+      const result = compactProgressRow([{ label: "Stage", value: "Plan" }]);
+      expect(result).toMatch(/^[\x00-\x7F]+$/);
+    });
+  });
+
   describe("colors", () => {
     it("has reset code", () => {
       expect(colors.reset).toBe("\x1b[0m");
@@ -436,6 +510,9 @@ describe("ui utilities", () => {
       expect(UI.list).toBe(list);
       expect(UI.numberedList).toBe(numberedList);
       expect(UI.table).toBe(table);
+      expect(UI.stageBanner).toBe(stageBanner);
+      expect(UI.decisionGate).toBe(decisionGate);
+      expect(UI.compactProgressRow).toBe(compactProgressRow);
       expect(UI.colors).toBe(colors);
       expect(UI.colorize).toBe(colorize);
       expect(UI.colored).toBe(colored);

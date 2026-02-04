@@ -173,6 +173,120 @@ export function table(headers: string[], rows: string[][]): string {
   return lines.join("\n");
 }
 
+export interface StageBannerOptions {
+  width?: number;
+  tag?: string;
+  dividerChar?: string;
+  uppercase?: boolean;
+}
+
+/**
+ * Format a compact stage banner using ASCII-friendly output
+ *
+ * @param stage - Stage name
+ * @param detail - Optional detail text
+ * @param options - Banner formatting options
+ * @returns Stage banner string
+ *
+ * @example
+ * stageBanner("plan", "Capture intent")
+ * // [STAGE] PLAN - Capture intent
+ */
+export function stageBanner(
+  stage: string,
+  detail?: string,
+  options: StageBannerOptions = {},
+): string {
+  const tag = options.tag ?? "[STAGE]";
+  const dividerChar = options.dividerChar ?? "-";
+  const uppercased = options.uppercase !== false;
+  const stageLabel = uppercased ? stage.toUpperCase() : stage;
+  const base = detail ? `${tag} ${stageLabel} - ${detail}` : `${tag} ${stageLabel}`;
+
+  if (!options.width || base.length >= options.width) {
+    return base;
+  }
+
+  const padding = options.width - base.length - 1;
+  return `${base} ${dividerChar.repeat(padding)}`;
+}
+
+export interface DecisionGateOptions {
+  statusLabel?: string;
+  actionLabel?: string;
+  details?: string[];
+}
+
+/**
+ * Format a decision gate block
+ *
+ * @param title - Gate title
+ * @param action - Action prompt
+ * @param options - Gate formatting options
+ * @returns Decision gate string
+ *
+ * @example
+ * decisionGate("Specify", "Confirm the specification")
+ * // [GATE] Specify\nAction: Confirm the specification
+ */
+export function decisionGate(
+  title: string,
+  action: string,
+  options: DecisionGateOptions = {},
+): string {
+  const statusLabel = options.statusLabel ?? status.gate;
+  const actionLabel = options.actionLabel ?? "Action";
+  const lines = [`${statusLabel} ${title}`, `${actionLabel}: ${action}`];
+
+  if (options.details?.length) {
+    for (const detail of options.details) {
+      lines.push(`- ${detail}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+export interface ProgressSegment {
+  label: string;
+  value?: string | number;
+  width?: number;
+}
+
+export interface ProgressRowOptions {
+  statusLabel?: string;
+  separator?: string;
+}
+
+/**
+ * Format a compact progress row
+ *
+ * @param segments - Progress segments
+ * @param options - Row formatting options
+ * @returns Progress row string
+ *
+ * @example
+ * compactProgressRow([
+ *   { label: "Wave", value: "2/5" },
+ *   { label: "Task", value: "3/7" },
+ *   { label: "Stage", value: "Execute" },
+ * ])
+ * // [WORK] Wave 2/5 | Task 3/7 | Stage Execute
+ */
+export function compactProgressRow(
+  segments: ProgressSegment[],
+  options: ProgressRowOptions = {},
+): string {
+  const statusLabel = options.statusLabel ?? status.work;
+  const separator = options.separator ?? " | ";
+  const formattedSegments = segments.map((segment) => {
+    const value = segment.value === undefined ? segment.label : `${segment.label} ${segment.value}`;
+    return segment.width ? value.padEnd(segment.width) : value;
+  });
+
+  return [statusLabel, ...formattedSegments].join(separator);
+}
+
 /**
  * Colorize text (for terminal output)
  * Note: These are ANSI color codes
@@ -238,6 +352,9 @@ export const UI = {
   list,
   numberedList,
   table,
+  stageBanner,
+  decisionGate,
+  compactProgressRow,
   colors,
   colorize,
   colored,
