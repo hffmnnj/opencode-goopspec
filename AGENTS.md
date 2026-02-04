@@ -128,6 +128,25 @@ describe("goop_status tool", () => {
 
 ## Implementation Patterns
 
+### UI Pattern (Clack)
+Use the shared UI wrapper for consistent, interactive feedback.
+
+```typescript
+import { ui } from "../shared/ui.js";
+
+// Status spinners
+await ui.spinner("Analyzing dependency graph", async () => {
+  await heavyOperation();
+  return "Graph built";
+});
+
+// Interactive prompts
+const confirm = await ui.confirm("Do you want to proceed?");
+
+// Notes and Logs
+ui.note("Analysis Complete", "Found 3 potential issues.");
+```
+
 ### Tool Pattern
 ```typescript
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
@@ -140,6 +159,10 @@ export function createMyTool(ctx: PluginContext): ToolDefinition {
       param: tool.schema.string().optional(),
     },
     async execute(args, _context: ToolContext): Promise<string> {
+      // 1. Memory Check (Memory-First)
+      const memory = await ctx.memory.search(args.param);
+      
+      // 2. Execution
       const state = ctx.stateManager.getState();
       return "result";
     },
@@ -165,10 +188,12 @@ export function createMyHook(ctx: PluginContext) {
 
 ## Key Rules
 
-1. **Graceful degradation** - Never crash the plugin, return fallback results
-2. **Co-locate tests** - Test files next to implementation
-3. **Use test-utils** - Leverage shared mock factories
-4. **ESM imports** - Always use .js extension for local imports
-5. **Explicit types** - Avoid `any`, define interfaces in core/types.ts
-6. **Minimal comments** - Only document non-obvious logic
-7. **Atomic commits** - Keep changes focused and small
+1. **Memory-First** - Always check memory/state before action. Persist learnings after.
+2. **Interactive UI** - Use `ui` helpers (Clack) for all user interaction. Never use raw `console.log`.
+3. **Graceful degradation** - Never crash the plugin, return fallback results.
+4. **Co-locate tests** - Test files next to implementation.
+5. **Use test-utils** - Leverage shared mock factories.
+6. **ESM imports** - Always use .js extension for local imports.
+7. **Explicit types** - Avoid `any`, define interfaces in core/types.ts.
+8. **Minimal comments** - Only document non-obvious logic.
+9. **Atomic commits** - Keep changes focused and small.

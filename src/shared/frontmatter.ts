@@ -58,7 +58,7 @@ export function parseFrontmatter<T = Record<string, unknown>>(
 
 /**
  * Simple YAML parser for frontmatter
- * Handles basic key-value pairs and arrays
+ * Handles basic key-value pairs, arrays, and nested objects in arrays
  * Does not require external yaml library
  */
 function parseSimpleYaml(yaml: string): Record<string, unknown> {
@@ -66,7 +66,9 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
   const lines = yaml.split(/\r?\n/);
   
   let currentKey: string | null = null;
-  let currentArray: string[] | null = null;
+  let currentArray: unknown[] | null = null;
+  let currentArrayObject: Record<string, unknown> | null = null;
+  let arrayObjectIndent: number = 0;
 
   for (const line of lines) {
     // Skip empty lines and comments
@@ -74,18 +76,58 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
       continue;
     }
 
-    // Check for array item (starts with -)
-    const arrayMatch = line.match(/^\s+-\s+(.*)$/);
-    if (arrayMatch && currentKey && currentArray) {
-      currentArray.push(arrayMatch[1].trim());
+    // Get indentation level
+    const indent = line.search(/\S/);
+    
+    // Check for array item start (starts with -)
+    const arrayItemMatch = line.match(/^(\s*)-\s+(.*)$/);
+    if (arrayItemMatch && currentKey && currentArray) {
+      // Save previous array object if exists
+      if (currentArrayObject) {
+        currentArray.push(currentArrayObject);
+        currentArrayObject = null;
+      }
+      
+      const [, spaces, content] = arrayItemMatch;
+      arrayObjectIndent = spaces.length;
+      
+      // Check if this array item has a key-value pair on the same line
+      const inlineKvMatch = content.match(/^([\w-]+):\s*(.*)$/);
+      if (inlineKvMatch) {
+        const [, itemKey, itemValue] = inlineKvMatch;
+        if (itemValue === "" || itemValue.trim() === "") {
+          // Start of object with nested properties
+          currentArrayObject = { [itemKey]: "" };
+        } else {
+          // Inline object property, start new object
+          currentArrayObject = { [itemKey]: parseYamlValue(itemValue) };
+        }
+      } else {
+        // Simple array item (string)
+        currentArray.push(parseYamlValue(content));
+      }
       continue;
     }
+    
+    // Check for nested property in array object (indented key-value after array item)
+    if (currentArrayObject && indent > arrayObjectIndent) {
+      const nestedKvMatch = line.match(/^\s+([\w-]+):\s*(.*)$/);
+      if (nestedKvMatch) {
+        const [, nestedKey, nestedValue] = nestedKvMatch;
+        currentArrayObject[nestedKey] = parseYamlValue(nestedValue);
+        continue;
+      }
+    }
 
-    // Check for key-value pair
-    const kvMatch = line.match(/^(\w+):\s*(.*)$/);
+    // Check for top-level key-value pair
+    const kvMatch = line.match(/^([\w-]+):\s*(.*)$/);
     if (kvMatch) {
-      // Save previous array if exists
+      // Save previous array/object if exists
       if (currentKey && currentArray) {
+        if (currentArrayObject) {
+          currentArray.push(currentArrayObject);
+          currentArrayObject = null;
+        }
         result[currentKey] = currentArray;
         currentArray = null;
       }
@@ -93,7 +135,7 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
       const [, key, value] = kvMatch;
       currentKey = key;
 
-      if (value === "") {
+      if (value === "" || value.trim() === "") {
         // Value might be an array on following lines
         currentArray = [];
       } else {
@@ -106,6 +148,9 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
 
   // Save final array if exists
   if (currentKey && currentArray) {
+    if (currentArrayObject) {
+      currentArray.push(currentArrayObject);
+    }
     result[currentKey] = currentArray;
   }
 

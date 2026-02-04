@@ -61,7 +61,7 @@ When the blueprint calls for a pause, or a **Rule 4 (Architectural Decision)** i
 ### 3. Deviation Handling
 *   **Rule 1-3 (Minor):** Auto-fix and log.
     *   `⬢ Notice: Auto-fixed missing import in auth.ts`
-*   **Rule 4-5 (Major):** Stop and Ask (Checkpoint Gate).
+*   **Rule 4 (Major):** Stop and Ask (Checkpoint Gate).
 
 ## Output: CHRONICLE.md
 

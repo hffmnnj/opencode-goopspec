@@ -53,7 +53,7 @@ Don't just ask "What do you want?". Use loaded skills to provide *informed optio
 
 **✅ Good (Skill-Backed - Security):**
 > ⬢ **Security Skill Analysis:**
-> For this stack, I recommend **OAuth2 with PKC**E for these reasons:
+> For this stack, I recommend **OAuth2 with PKCE** for these reasons:
 > 1. Matches your security baseline.
 > 2. Best support for mobile clients.
 >
@@ -76,7 +76,7 @@ Use formal Gates for high-impact questions. Stop the world.
 *Stop for architectural forks in the road.*
 
 > **Question:** "I found two valid patterns. A is faster, B is more scalable. Which path?"
-> **Trigger:** Rule 4 (Ambiguity) or Rule 5 (One-way door).
+> **Trigger:** Rule 4 (Architectural Decision).
 > **Action:** Wait for user selection.
 
 ### Acceptance Gate (Completion Phase)

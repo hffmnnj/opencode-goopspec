@@ -15,6 +15,13 @@ export function buildExecuteSection(waveExecution: WaveExecutionMode): string {
 
 **Goal**: Implement the plan through systematic wave-based execution.
 
+### Memory-First Checks
+
+Before executing a wave:
+- Review SPEC/BLUEPRINT/CHRONICLE for scope and constraints
+- Search memory for related implementations or decisions
+- Confirm the spec is locked before proceeding
+
 ### Execution Strategy: ${waveExecution === "sequential" ? "Sequential Waves" : "Parallel Execution"}
 
 ${executionStrategy}
@@ -30,7 +37,7 @@ For each wave:
    \`\`\`
 
 2. **Execute Tasks**
-   - Delegate via the \`task\` tool for implementation
+   - Delegate via \`goop_delegate\` to **goop-executor** for implementation
    - Track progress with todo tools
    - Save checkpoints with \`goop_checkpoint\`
 
@@ -48,33 +55,15 @@ For each wave:
    Ready for Wave [N+1]?"
    \`\`\`
 
-### Delegation via task tool
+### Delegation via goop_delegate
 
 When delegating tasks:
 \`\`\`
-task({
-  subagent_type: "general",
-  description: "Execute plan task",
-  prompt: \`
-    Execute Task [X.Y]: [Name]
-    
-    Context:
-    - [Relevant context from plan]
-    
-    Requirements:
-    - [Specific requirements]
-    
-    Files to modify:
-    - [file paths]
-    
-    Acceptance criteria:
-    - [How to verify completion]
-    
-    Constraints:
-    - Follow existing code patterns
-    - Write clean, tested code
-    - Document decisions in ADL
-  \`
+goop_delegate({
+  agent: "goop-executor",
+  prompt: "Execute Task [X.Y]: [Name]",
+  context: "\
+Context:\n- [Relevant context from plan]\n\nRequirements:\n- [Specific requirements]\n- [UI patterns or design system guidance, if applicable]\n\nFiles to modify:\n- [file paths]\n\nAcceptance criteria:\n- [How to verify completion]\n\nConstraints:\n- Follow existing code patterns\n- Write clean, tested code\n- Document decisions in ADL\n- Respect decision gates; do not bypass Specify/Accept\n"
 })
 \`\`\`
 
