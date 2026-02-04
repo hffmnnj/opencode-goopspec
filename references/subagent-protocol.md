@@ -2,14 +2,26 @@
 
 All GoopSpec subagents follow a standardized protocol for memory usage, planning file access, and communication with the orchestrator.
 
-## Core Principle
+## Core Principles
 
 ```
-╔════════════════════════════════════════════════════════════════╗
-║  SUBAGENTS ARE MEMORY-FIRST.                                   ║
-║  Search before starting. Save during work. Persist after.      ║
-║  Decisions and learnings flow through memory.                  ║
-╚════════════════════════════════════════════════════════════════╝
++================================================================+
+|  SUBAGENTS ARE MEMORY-FIRST.                                    |
+|  Search before starting. Save during work. Persist after.       |
+|  Decisions and learnings flow through memory.                   |
++================================================================+
+
++================================================================+
+|  SUBAGENTS USE XML RESPONSE ENVELOPES.                          |
+|  Every response ends with a <goop_report> XML block.            |
+|  See references/xml-response-schema.md for full format.         |
++================================================================+
+
++================================================================+
+|  SUBAGENTS LOAD PROJECT CONTEXT.                                |
+|  Read PROJECT_KNOWLEDGE_BASE.md for conventions.                |
+|  Align work with spec must-haves.                               |
++================================================================+
 ```
 
 ## The Memory-First Protocol
@@ -19,20 +31,26 @@ All GoopSpec subagents follow a standardized protocol for memory usage, planning
 Every subagent MUST:
 
 ```typescript
-// 1. Search for relevant past decisions
+// 1. Read project state
+Read(".goopspec/state.json")
+
+// 2. Read project knowledge base
+Read(".goopspec/PROJECT_KNOWLEDGE_BASE.md")  // If exists
+
+// 3. Search for relevant past decisions
 memory_search({ 
   query: "[task-specific query]",
   concepts: ["relevant", "concepts"],
   types: ["decision", "observation"]
 })
 
-// 2. Read the specification
+// 4. Read the specification
 Read(".goopspec/SPEC.md")
 
-// 3. Read current state
+// 5. Read current state
 Read(".goopspec/CHRONICLE.md")
 
-// 4. Read the task details
+// 6. Read the task details
 Read(".goopspec/BLUEPRINT.md")
 ```
 
@@ -164,31 +182,55 @@ Research findings. Research agents:
 
 ## Communication with Orchestrator
 
-### Response Format
+### XML Response Envelope (MANDATORY)
 
-Subagents return structured results:
+All subagent responses MUST end with an XML envelope. See `references/xml-response-schema.md` for the full specification.
 
-```typescript
-interface SubagentResponse {
-  status: "complete" | "partial" | "blocked" | "failed";
-  summary: string;           // What was accomplished
-  files_modified?: string[]; // Changed files
-  files_created?: string[];  // New files
-  commit?: string;           // Commit hash if applicable
-  notes?: string[];          // Observations for orchestrator
-  blockers?: string[];       // If blocked/failed, why
-  next_steps?: string[];     // Suggestions if incomplete
-}
+**Basic structure:**
+
+```xml
+<goop_report version="0.1.4">
+  <status>COMPLETE|PARTIAL|BLOCKED|CHECKPOINT</status>
+  <agent>goop-[type]</agent>
+  <task_name>Task description</task_name>
+  
+  <state>
+    <phase>plan|specify|execute|accept</phase>
+    <spec_locked>true|false</spec_locked>
+  </state>
+  
+  <summary>1-2 sentence summary</summary>
+  
+  <artifacts>
+    <files>
+      <file path="path/to/file" action="created|modified">reason</file>
+    </files>
+    <commits>
+      <commit sha="abc123">type(scope): message</commit>
+    </commits>
+  </artifacts>
+  
+  <memory>
+    <saved type="decision" importance="0.7">Memory title</saved>
+  </memory>
+  
+  <handoff>
+    <ready>true|false</ready>
+    <next_action agent="goop-[type]">Next task description</next_action>
+    <suggest_new_session>true|false</suggest_new_session>
+    <next_command>/goop-[command]</next_command>
+  </handoff>
+</goop_report>
 ```
 
 ### Status Meanings
 
 | Status | Meaning | Orchestrator Action |
 |--------|---------|---------------------|
-| `complete` | Task fully done | Move to next task |
-| `partial` | Some progress, more needed | Continue same task |
-| `blocked` | Cannot proceed | Assess and unblock |
-| `failed` | Task cannot be done | Apply deviation rules |
+| `COMPLETE` | Task fully done | Move to next task |
+| `PARTIAL` | Some progress, more needed | Continue same task |
+| `BLOCKED` | Cannot proceed | Assess blocker, may need user |
+| `CHECKPOINT` | Natural stopping point | Generate handoff, suggest new session |
 
 ### Raising Issues
 
@@ -379,15 +421,23 @@ memory_save({
 
 Every subagent execution:
 
+- [ ] Read state.json for current phase
+- [ ] Read PROJECT_KNOWLEDGE_BASE.md for conventions
 - [ ] Searched memory for relevant context
 - [ ] Read SPEC.md for requirements
 - [ ] Read CHRONICLE.md for current state
 - [ ] Read BLUEPRINT.md for task details
+- [ ] Aligned work with spec must-haves
 - [ ] Updated CHRONICLE.md with progress
 - [ ] Persisted learnings to memory
-- [ ] Returned structured response with:
-  - [ ] Clear status
+- [ ] Returned XML response envelope with:
+  - [ ] Status (COMPLETE/PARTIAL/BLOCKED/CHECKPOINT)
   - [ ] Summary of work
-  - [ ] Files modified
+  - [ ] Files modified with artifacts section
   - [ ] Commit hash (if applicable)
-  - [ ] Any notes/blockers
+  - [ ] Memory persisted section
+  - [ ] Handoff with next_action and suggest_new_session
+
+---
+
+*Subagent Protocol v0.1.4*
