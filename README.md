@@ -1,250 +1,198 @@
-# GoopSpec v0.1.3
+# GoopSpec
 
-<div align="center">
+<p align="center">
+  <img src=".github/assets/banner.png" alt="GoopSpec - Spec-Driven Development for AI" width="100%" />
+</p>
 
-**Spec-Driven Development for AI-Assisted Coding**
+**Stop the AI chaos. Ship what you actually want.**
 
-*The Orchestrator that turns vague ideas into shipped software*
-
-[![Version](https://img.shields.io/badge/version-0.1.3-blue.svg)](https://github.com/hffmnnj/opencode-goopspec)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-936%20passing-green.svg)](./TEST-SUMMARY.md)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-
-</div>
-
----
-
-## What is GoopSpec?
-
-GoopSpec is a plugin for [OpenCode](https://opencode.ai) that transforms how you work with AI coding assistants. Instead of chaotic back-and-forth, GoopSpec enforces a disciplined **spec-driven workflow** that captures your intent, creates binding specifications, and delivers verified results.
-
-**The Problem:** AI assistants are powerful but unpredictable. They start coding before understanding requirements, miss edge cases, forget context, and deliver work that doesn't match what you actually wanted.
-
-**The Solution:** GoopSpec introduces **interactive questioning**, **contracts**, and **verification gates** that ensure the AI understands what you want before it writes a single line of code.
-
-```
-Your Idea → Interactive Plan → Research (Opt-in) → Specify → Execute → Accept
-```
+[![Version](https://img.shields.io/badge/version-0.1.4-blue?style=for-the-badge)](https://github.com/hffmnnj/opencode-goopspec)
+[![OpenCode](https://img.shields.io/badge/OpenCode-plugin-0891b2?style=for-the-badge)](https://opencode.ai)
+[![Bun](https://img.shields.io/badge/Bun-1.0+-f97316?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tests](https://img.shields.io/badge/tests-1056%20passing-22c55e?style=for-the-badge)](./TEST-SUMMARY.md)
+[![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](./LICENSE)
 
 ---
 
-## Core Philosophy
+You've been there. You ask an AI to build a feature. It starts coding immediately, misses half your requirements, forgets context mid-conversation, and delivers something that... works? But isn't what you wanted.
 
-### "Ask, Don't Assume"
-GoopSpec is interactive by default. It interviews you to uncover hidden requirements and ambiguities. If something is unclear, it asks clarifying questions rather than guessing.
+**GoopSpec fixes this.**
 
-### "Spec as Contract"
-The specification is a binding agreement. Once locked, both you and the AI know exactly what will be delivered. No scope creep. No surprises.
+It's a spec-driven workflow for [OpenCode](https://opencode.ai) that forces clarity *before* code. You describe what you want, GoopSpec interviews you to uncover the edge cases, locks a specification you both agree on, then executes against that contract.
 
-### "Memory-First"
-Every agent searches memory before starting work, saves decisions during work, and persists learnings after. GoopSpec gets smarter with every project you complete.
+No more "that's not what I meant." No more scope creep. No more AI amnesia.
 
-### "Unified Experience"
-A consistent, rich terminal UI (powered by Clack) keeps you informed with clear status indicators, spinners for long tasks, and human-friendly prompts.
+```
+Discuss → Plan → Specify (lock it) → Execute → Accept (verify it)
+```
 
-### "Scale to the Task"
-Quick bug fix? GoopSpec routes to a lightweight path. Major feature? Full 5-phase workflow. The system detects task complexity and adapts.
+---
+
+## Philosophy
+
+- **Ask, Don't Assume** — Interview first, code second
+- **Spec as Contract** — Lock requirements before execution
+- **Memory-First** — Learn from every project
+- **Scale to the Task** — Quick fixes skip gates, big features get the full workflow
 
 ---
 
 ## The Workflow
 
 ```
-┌─────────────┐     ┌─────────────┐
-│    PLAN     │ ◀──▶ │  RESEARCH   │
-│ (Interview) │     │  (Opt-in)   │
-└─────────────┘     └─────────────┘
-       │
-       ▼
-┌─────────────┐     ┌─────────────┐
-│   SPECIFY   │ ──▶ │   EXECUTE   │ ──▶ │   ACCEPT    │
-│ (Contract)  │     │   (Build)   │     │  (Verify)   │
-└─────────────┘     └─────────────┘     └─────────────┘
+  DISCUSS          PLAN           EXECUTE         AUDIT          CONFIRM
+ ┌────────┐     ┌────────┐      ┌────────┐     ┌────────┐     ┌────────┐
+ │  What  │     │  How   │      │  Build │     │ Verify │     │ Accept │
+ │  do    │ ──▶ │  will  │ ──▶  │   it   │ ──▶ │   it   │ ──▶ │   it   │
+ │  you   │     │  we    │      │        │     │        │     │        │
+ │  want? │     │  do it?│      │        │     │        │     │        │
+ └────────┘     └────────┘      └────────┘     └────────┘     └────────┘
+      │               │               │              │              │
+   Interview      Create          Waves of       Check vs.     You sign
+   to uncover     locked          atomic         the spec      off on it
+   requirements   spec            commits
+                    │                                              │
+                    └─────── CONTRACT GATE ─────────────────────────┘
+                          (You confirm before and after)
 ```
 
-### Phase 1: Plan (Interactive)
-Capture your intent. GoopSpec acts as a product manager, conducting an interview to:
-- Clarify ambiguous requirements
-- Identify edge cases
-- Suggest technical approaches
-- confirm the "Definition of Done"
+### Phase 1: Discuss
+GoopSpec interviews you like a product manager. It asks questions, uncovers edge cases, and makes sure it actually understands what you want before touching any code.
 
-### Phase 2: Research (Opt-in)
-Triggered only when needed or requested. Specialized agents explore:
-- **Researcher** - Deep domain knowledge & options
-- **Explorer** - Existing codebase patterns
-- **Librarian** - Documentation & APIs
+### Phase 2: Plan  
+Your requirements become a locked specification (SPEC.md) and execution blueprint (BLUEPRINT.md). This is the contract — both sides agree on what will be delivered.
 
-### Phase 3: Specify (CONTRACT GATE)
-Lock the specification. This is the contract:
-- **Must-Haves** - Non-negotiable requirements
-- **Out of Scope** - Explicit exclusions
-- **You must confirm before execution begins.**
+### Phase 3: Execute
+Wave-based implementation. Tasks run in ordered waves, each with atomic commits. Progress tracked in real-time. Pause and resume anytime.
 
-### Phase 4: Execute
-Wave-based implementation with atomic commits:
-- Tasks grouped into sequential waves
-- Real-time progress tracking via Unified UI
-- Checkpoints for pausing/resuming
+### Phase 4: Audit
+The Verifier agent checks every requirement against the actual implementation. Did we build what we said we'd build? Tests run, code reviewed.
 
-### Phase 5: Accept (ACCEPTANCE GATE)
-Verify the implementation:
-- Automated tests run
-- Security audit performed
-- **You must confirm completion**
+### Phase 5: Confirm
+You verify the results and accept the work. The AI can't declare itself done — you have to sign off.
 
 ---
 
 ## Quick Start
 
-### Installation
+**60 seconds to your first spec-driven feature.**
 
-Add `opencode-goopspec` to your OpenCode configuration (`opencode.json` in your project root or `~/.config/opencode/opencode.json`):
+### 1. Install
+
+Add to your OpenCode config (`opencode.json`):
 
 ```json
-{
-  "plugins": ["opencode-goopspec"]
-}
+{ "plugins": ["opencode-goopspec"] }
 ```
 
-### Build From Source
+Or build from source:
 
 ```bash
-# Clone the repository
 git clone https://github.com/hffmnnj/opencode-goopspec.git
-cd opencode-goopspec
-
-# Install dependencies
-bun install
-
-# Build
-bun run build
+cd opencode-goopspec && bun install && bun run build
 ```
 
-Then add the local path to your OpenCode configuration:
-
-```json
-{
-  "plugins": ["./path/to/opencode-goopspec"]
-}
-```
-
-### First-Time Setup
+### 2. Setup
 
 ```
 /goop-setup
 ```
 
-This wizard configures:
-- Model preferences for orchestrator and agents
-- MCP server connections
-- Memory system settings
-
-### Start Your First Project
+### 3. Start Building
 
 ```
-/goop-plan "Add user authentication with OAuth"
+/goop-discuss "Add dark mode to the settings page"
 ```
 
-GoopSpec will guide you through the entire workflow.
-
----
-
-## Task Modes
-
-GoopSpec scales to any task size:
-
-| Mode | When to Use | Workflow |
-|------|-------------|----------|
-| **Quick** | Bug fixes, typos, small tweaks | Plan → Execute → Accept |
-| **Standard** | Features, moderate complexity | Full 5-phase workflow |
-| **Comprehensive** | System redesigns, major refactors | Extended research + multiple waves |
-| **Milestone** | Major releases, multi-feature work | Multiple cycles + archive with learnings |
-
-### Quick Mode Example
-```
-/goop-quick "Fix the typo in the login button"
-```
-Skip Research and Specify phases. Ship fast.
-
-### Milestone Mode Example
-```
-/goop-milestone "v1.0 Authentication System"
-```
-Groups related work, archives on completion, extracts learnings.
+GoopSpec interviews you, creates a locked spec, executes in waves, and asks you to verify. Done.
 
 ---
 
 ## Commands Reference
 
+All 20 commands, organized by what you're doing.
+
 ### Workflow Commands
 
 | Command | Description |
 |---------|-------------|
-| `/goop-plan [intent]` | Start Plan phase - capture intent and requirements |
-| `/goop-research` | Start Research phase - parallel exploration |
-| `/goop-specify` | Lock specification (CONTRACT GATE) |
-| `/goop-execute` | Start Execute phase - wave-based implementation |
-| `/goop-accept` | Verify and accept (ACCEPTANCE GATE) |
+| `/goop-discuss` | Start discussion — interview to gather requirements |
+| `/goop-plan` | Create SPEC.md and BLUEPRINT.md from requirements |
+| `/goop-specify` | Lock the specification (CONTRACT GATE) |
+| `/goop-execute` | Begin wave-based implementation |
+| `/goop-accept` | Verify and accept work (ACCEPTANCE GATE) |
 
 ### Task Mode Commands
 
 | Command | Description |
 |---------|-------------|
-| `/goop-quick [task]` | Fast-track small tasks |
-| `/goop-milestone [name]` | Start versioned milestone |
-| `/goop-complete` | Complete and archive milestone |
+| `/goop-quick [task]` | Fast-track a small task (skip gates) |
+| `/goop-milestone [name]` | Start a versioned milestone |
+| `/goop-complete` | Complete and archive current milestone |
+
+### Research & Debug
+
+| Command | Description |
+|---------|-------------|
+| `/goop-research` | Deep research on unknowns or risks |
+| `/goop-debug` | Scientific debugging workflow |
+| `/goop-map-codebase` | Analyze existing codebase structure |
+
+### Memory Commands
+
+| Command | Description |
+|---------|-------------|
+| `/goop-recall [query]` | Search past work and memory |
+| `/goop-remember [note]` | Save important context to memory |
+| `/goop-memory` | View memory system status |
 
 ### Utility Commands
 
 | Command | Description |
 |---------|-------------|
-| `/goop-status` | Show comprehensive workflow status |
+| `/goop-status` | Show current workflow state |
+| `/goop-setup` | First-time setup wizard |
 | `/goop-amend [change]` | Propose spec changes after lock |
-| `/goop-pause` | Save checkpoint to pause work |
-| `/goop-resume [id]` | Resume from checkpoint |
-| `/goop-recall [query]` | Search past work and memory |
-| `/goop-debug` | Scientific debugging workflow |
-| `/goop-map-codebase` | Analyze existing codebase |
+| `/goop-pause` | Save checkpoint and pause work |
+| `/goop-resume [id]` | Resume from a checkpoint |
+| `/goop-help` | Show help and available commands |
 
 ---
 
-## The Orchestrator
+## The Agents
 
-The GoopSpec Orchestrator is your primary interface. It's a **conductor**, not a player:
+GoopSpec uses an orchestrator + specialist model. The Orchestrator (**The Conductor**) never writes code — it coordinates work by delegating to 11 specialized agents.
 
-### What It Does
+Each agent has a default model optimized for its task. **All models are configurable via `/goop-setup`.**
+
+### The Orchestrator
+
+**goop-orchestrator** — *The Conductor* (`anthropic/claude-opus-4-5`)
+
 - Coordinates all work through delegation
-- Maintains clean context for consistent quality
-- Tracks progress via CHRONICLE.md
+- Maintains clean context across tasks
+- Tracks progress in CHRONICLE.md
 - Applies deviation rules automatically
-- Presents gates for user confirmation
+- Presents contract gates for your confirmation
 
-### What It Never Does
-- Write implementation code directly
-- Make architectural decisions alone
-- "Quickly fix" things itself
-- Modify files outside spec scope
+The Conductor never writes implementation code. It directs specialists.
 
-### Delegation to Specialists
+### The Specialists
 
-The Orchestrator delegates to 12 specialized agents:
-
-| Agent | Role | Use Case |
-|-------|------|----------|
-| `goop-executor` | The Builder | Implementation tasks |
-| `goop-planner` | The Architect | Creating blueprints |
-| `goop-researcher` | The Scholar | Deep domain research |
-| `goop-explorer` | The Scout | Fast codebase mapping |
-| `goop-librarian` | The Archivist | Documentation lookup |
-| `goop-verifier` | The Auditor | Spec compliance checking |
-| `goop-debugger` | The Detective | Scientific debugging |
-| `goop-designer` | The Artisan | UI/UX design |
-| `goop-tester` | The Guardian | Test writing |
-| `goop-writer` | The Scribe | Documentation |
-| `goop-librarian` | The Archivist | Code/doc search |
-| `memory-distiller` | The Curator | Knowledge extraction |
+| Agent | Alias | Default Model | What They Do |
+|-------|-------|---------------|--------------|
+| `goop-executor` | The Builder | `openai/gpt-5.2-codex` | Writes implementation code |
+| `goop-planner` | The Architect | `anthropic/claude-opus-4-5` | Creates specs and blueprints |
+| `goop-researcher` | The Scholar | `openai/gpt-5.2` | Deep domain research |
+| `goop-explorer` | The Scout | `google/gemini-3-flash` | Fast codebase mapping |
+| `goop-verifier` | The Auditor | `openai/gpt-5.2-codex` | Verifies against spec |
+| `goop-debugger` | The Detective | `openai/gpt-5.2-codex` | Scientific debugging |
+| `goop-designer` | The Artisan | `anthropic/claude-opus-4-5` | UI/UX design |
+| `goop-tester` | The Guardian | `kimi-for-coding/k2p5` | Test writing |
+| `goop-writer` | The Scribe | `google/gemini-3-pro-high` | Documentation |
+| `goop-librarian` | The Archivist | `openai/gpt-5.2` | Code and doc search |
+| `memory-distiller` | The Curator | `zai-coding-plan/glm-4.7` | Extracts learnings to memory |
 
 ---
 
@@ -351,213 +299,186 @@ When milestones complete:
 
 ## Contract Gates
 
-Two mandatory confirmation points ensure alignment:
+Two points where you must confirm. This is what makes GoopSpec different — the AI can't just declare itself done.
 
-### Specify Gate (Pre-Execution)
+### Specify Gate (Before Execution)
+
 ```
-╭─ ⬢ GoopSpec ───────────────────────────────────────╮
-│                                                    │
-│  🔒 CONTRACT GATE                                  │
-│                                                    │
-│  MUST HAVES (I commit to delivering):              │
-│  • User can log in with email/password             │
-│  • Session persists across refresh                 │
-│  • Error messages shown on failure                 │
-│                                                    │
-│  OUT OF SCOPE:                                     │
-│  • OAuth integration (future milestone)            │
-│                                                    │
-│  ─────────────────────────────────────────────     │
-│  Type "confirm" to lock the specification.         │
-│                                                    │
-╰────────────────────────────────────────────────────╯
++-------------------------------------------------------+
+|  CONTRACT GATE                                        |
++-------------------------------------------------------+
+|  MUST-HAVES:           | OUT OF SCOPE:                |
+|  • Login with email    | • OAuth (future)             |
+|  • Session persistence | • Password reset             |
+|  • Error messages      |                              |
++-------------------------------------------------------+
+|  Type "confirm" to lock. Changes require /goop-amend. |
++-------------------------------------------------------+
 ```
 
-### Accept Gate (Post-Execution)
+Once locked, this is the contract. Both you and the AI know exactly what will be built.
+
+### Accept Gate (After Execution)
+
 ```
-╭─ ⬢ GoopSpec ───────────────────────────────────────╮
-│                                                    │
-│  ✓ ACCEPTANCE GATE                                 │
-│                                                    │
-│  VERIFICATION RESULTS:                             │
-│  ☑ User can log in - VERIFIED                      │
-│     (test: auth.test.ts:15)                        │
-│  ☑ Session persists - VERIFIED                     │
-│     (test: session.test.ts:42)                     │
-│  ☑ Error messages - VERIFIED (manual)              │
-│                                                    │
-│  Tests: 24/24 passing                              │
-│  Build: Successful                                 │
-│                                                    │
-│  ─────────────────────────────────────────────     │
-│  Type "accept" to confirm completion.              │
-│                                                    │
-╰────────────────────────────────────────────────────╯
++-------------------------------------------------------+
+|  ACCEPTANCE GATE                                      |
++-------------------------------------------------------+
+|  VERIFIED:                                            |
+|  ✓ Login with email       (test: auth.test.ts:15)    |
+|  ✓ Session persistence    (test: session.test.ts:42) |
+|  ✓ Error messages         (manual check)             |
+|                                                       |
+|  Tests: 24/24 | Build: OK                             |
++-------------------------------------------------------+
+|  Type "accept" to confirm completion.                 |
++-------------------------------------------------------+
 ```
+
+The AI can't mark itself done. You verify, you accept.
 
 ---
 
-## Use Cases
+## Example: Building a Feature
 
-### 1. Building a New Feature
+Here's what it actually looks like to build a feature with GoopSpec.
+
+**You want:** Add user notifications to your app.
+
+### Step 1: Discuss
 
 ```
-You: "I need to add a notification system to my app"
-
-GoopSpec: "Let me understand what you need..."
-         → Asks about notification types, delivery methods, UI
-         → Creates SPEC.md with must-haves
-         → Researches best practices
-         → Presents plan for approval
-         → Implements in waves with atomic commits
-         → Verifies against spec
-         → You confirm completion
+/goop-discuss "Add user notifications"
 ```
 
-### 2. Quick Bug Fix
+GoopSpec asks questions:
+```
+> What triggers notifications? (new messages, mentions, system alerts?)
+> How should they be delivered? (in-app, email, push?)
+> Do users need to configure notification preferences?
+> What happens when a notification is clicked?
+```
+
+You answer. GoopSpec builds understanding.
+
+### Step 2: Plan
+
+```
+/goop-plan
+```
+
+GoopSpec creates:
+- **SPEC.md** — Must-haves and out-of-scope
+- **BLUEPRINT.md** — Waves of tasks with acceptance criteria
+
+### Step 3: Specify (Contract Gate)
+
+```
++--------------------------------------------------------+
+|  CONTRACT GATE                                          |
++--------------------------------------------------------+
+|  MUST-HAVES:                                            |
+|  • In-app notification badge on header                  |
+|  • Notification dropdown with mark-as-read              |
+|  • User preferences page for notification types         |
+|                                                         |
+|  OUT OF SCOPE: Email notifications, push notifications  |
++--------------------------------------------------------+
+|  Type "confirm" to lock this specification.             |
++--------------------------------------------------------+
+```
+
+You type `confirm`. The spec is now locked.
+
+### Step 4: Execute
+
+```
+/goop-execute
+```
+
+GoopSpec executes in waves:
+```
+Wave 1: Foundation (DB schema, types)
+  ✓ Task 1.1: Create notifications table
+  ✓ Task 1.2: Add TypeScript interfaces
+
+Wave 2: Core (business logic)
+  ✓ Task 2.1: Notification service
+  ✓ Task 2.2: Mark-as-read endpoint
+
+Wave 3: UI (components)
+  ✓ Task 3.1: NotificationBadge component
+  ✓ Task 3.2: NotificationDropdown component
+  ✓ Task 3.3: Preferences page
+```
+
+Each task gets an atomic commit.
+
+### Step 5: Accept (Acceptance Gate)
+
+```
++--------------------------------------------------------+
+|  ACCEPTANCE GATE                                        |
++--------------------------------------------------------+
+|  VERIFIED:                                              |
+|  ✓ In-app notification badge — test: header.test.ts    |
+|  ✓ Notification dropdown — test: dropdown.test.ts      |
+|  ✓ User preferences page — manual verification          |
+|                                                         |
+|  Tests: 12/12 passing | Build: Successful               |
++--------------------------------------------------------+
+|  Type "accept" to confirm completion.                   |
++--------------------------------------------------------+
+```
+
+You type `accept`. Done.
+
+---
+
+## Other Use Cases
+
+### Quick Bug Fix
 
 ```
 /goop-quick "Fix the date formatting bug in the dashboard"
 ```
 
-Skips research/specify, ships the fix fast, still creates atomic commit.
+Skips gates, ships fast, still makes atomic commit.
 
-### 3. Major Refactor
+### Major Refactor
 
 ```
 /goop-milestone "v2.0 Database Migration"
-
-GoopSpec: Creates milestone tracking
-         → Deep research on migration strategies
-         → Locked spec with rollback plan
-         → Multi-wave execution with checkpoints
-         → Comprehensive verification
-         → Archives with extracted learnings
 ```
 
-### 4. Brownfield Project
+Full workflow with deep research, locked spec with rollback plan, multi-wave execution, and archived learnings.
+
+### Brownfield Project
 
 ```
 /goop-map-codebase
 ```
 
-Analyzes existing codebase:
-- Stack detection (frameworks, libraries)
-- Pattern discovery (conventions, architecture)
-- Integration point mapping
-- Technical debt identification
+Maps existing codebase: stack detection, pattern discovery, integration points.
 
-### 5. Systematic Debugging
+### Systematic Debugging
 
 ```
 /goop-debug "Users are getting logged out randomly"
 ```
 
-Scientific method approach:
-1. Form hypothesis
-2. Design experiment
-3. Execute test
-4. Analyze results
-5. Iterate until root cause found
+Scientific method: hypothesis → experiment → analyze → iterate.
 
 ---
 
 ## Configuration
 
-### Project Configuration
+Configure via `.goopspec/config.json` after running `/goop-setup`. Key settings:
 
-`.goopspec/config.json`:
-
-```json
-{
-  "version": "0.1.0",
-  "projectName": "my-project",
-  "enforcement": "warn",
-  "orchestrator": {
-    "enableAsDefault": true,
-    "model": "anthropic/claude-opus-4-5",
-    "thinkingBudget": 32000,
-    "phaseGates": "ask",
-    "waveExecution": "sequential"
-  },
-  "memory": {
-    "enabled": true,
-    "capture": {
-      "captureToolUse": true,
-      "capturePhaseChanges": true
-    }
-  },
-  "agents": {
-    "goop-executor": { "model": "anthropic/claude-sonnet-4-5" },
-    "goop-researcher": { "model": "anthropic/claude-sonnet-4-5" }
-  }
-}
-```
-
-### Enforcement Levels
-
-| Level | Behavior |
-|-------|----------|
-| `assist` | Suggestions only |
-| `warn` | Warn on scope violations |
-| `strict` | Block modifications outside spec |
-
----
-
-## Hooks & Tools
-
-### Hooks
-
-| Hook | Purpose |
-|------|---------|
-| `continuation-enforcer` | Prevents stopping with incomplete todos |
-| `comment-checker` | Detects excessive AI comments in code |
-| `system-transform` | Injects context into conversations |
-| `tool-lifecycle` | Tracks tool usage and modifications |
-
-### Tools
-
-| Tool | Purpose |
-|------|---------|
-| `goop_status` | Show workflow state, phases, progress |
-| `goop_checkpoint` | Save/load/list execution checkpoints |
-| `task` | Delegate tasks to specialized subagents |
-| `goop_skill` | Load domain knowledge |
-| `goop_adl` | Read/append Automated Decision Log |
-| `goop_spec` | Read/validate spec and plan files |
-| `session_search` | Search past session history |
-| `memory_*` | Save, search, note, decision, forget |
-
----
-
-## Best Practices
-
-### Do
-- Let GoopSpec ask clarifying questions
-- Define clear success criteria
-- Review the spec before confirming
-- Use checkpoints for long tasks
-- Let it learn from completed work
-
-### Don't
-- Skip the Plan phase for non-trivial work
-- Approve specs you haven't read
-- Interrupt during wave execution
-- Ignore deviation warnings
-- Forget to confirm at gates
-
----
-
-## Comparison
-
-| Feature | Traditional AI | GoopSpec |
-|---------|---------------|----------|
-| Requirements | Inferred/assumed | Explicitly captured |
-| Scope | Often creeps | Locked in spec |
-| Verification | Manual | Automated + gates |
-| Memory | Per-session | Persistent |
-| Context | Degrading | Fresh per agent |
-| Commits | Variable | Atomic per task |
+- **orchestrator.model** — Model for the Conductor (default: claude-opus-4-5)
+- **agents.{name}.model** — Model for specific agents
+- **enforcement** — `assist`, `warn`, or `strict`
+- **memory.enabled** — Persistent memory on/off
 
 ---
 
@@ -595,6 +516,7 @@ opencode-goopspec/
     ├── core/         # Core types and config
     ├── features/     # Feature modules
     │   ├── archive/
+    │   ├── enforcement/
     │   ├── memory/
     │   ├── mode-detection/
     │   ├── parallel-research/
