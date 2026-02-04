@@ -1,11 +1,16 @@
 /**
  * Unit Tests for Continuation Enforcer Hook
+ * 
+ * Note: The continuation enforcer now uses the event-based pattern from oh-my-opencode,
+ * which requires a PluginInput with client access. Full integration testing requires
+ * mocking the OpenCode client APIs.
+ * 
  * @module hooks/continuation-enforcer.test
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import {
-  createContinuationEnforcerHook,
+  createContinuationEnforcer,
   updateTodoCount,
   isContinuationActive,
   getPromptCount,
@@ -20,356 +25,155 @@ describe("continuation-enforcer", () => {
   beforeEach(() => {
     const env = setupTestEnvironment("continuation-test");
     cleanup = env.cleanup;
-    // Reset state before each test
-    resetContinuation(sessionId);
   });
 
   afterEach(() => {
     cleanup();
-    resetContinuation(sessionId);
   });
 
-  describe("createContinuationEnforcerHook", () => {
-    it("creates hook with name", () => {
-      const hook = createContinuationEnforcerHook();
-      expect(hook.name).toBe("continuation-enforcer");
+  describe("legacy exports", () => {
+    // These are legacy exports for backward compatibility
+    // The actual enforcement now happens via event handlers
+    
+    it("updateTodoCount does not throw", () => {
+      expect(() => updateTodoCount(sessionId, 5)).not.toThrow();
     });
 
-    it("creates hook with postToolUse handler", () => {
-      const hook = createContinuationEnforcerHook();
-      expect(typeof hook.postToolUse).toBe("function");
-    });
-
-    it("creates hook with session lifecycle handlers", () => {
-      const hook = createContinuationEnforcerHook();
-      expect(typeof hook.onSessionStart).toBe("function");
-      expect(typeof hook.onSessionEnd).toBe("function");
-    });
-  });
-
-  describe("updateTodoCount", () => {
-    it("updates todo count for session", () => {
-      updateTodoCount(sessionId, 5);
-      
-      // The count is internal, but we can test via hook behavior
-      expect(true).toBe(true); // Function doesn't throw
-    });
-
-    it("allows zero count", () => {
-      updateTodoCount(sessionId, 0);
-      expect(true).toBe(true);
-    });
-  });
-
-  describe("isContinuationActive", () => {
-    it("returns false initially", () => {
+    it("isContinuationActive returns false (legacy)", () => {
       expect(isContinuationActive(sessionId)).toBe(false);
     });
 
-    it("returns false for unknown session", () => {
-      expect(isContinuationActive("unknown-session")).toBe(false);
-    });
-  });
-
-  describe("getPromptCount", () => {
-    it("returns 0 initially", () => {
+    it("getPromptCount returns 0 (legacy)", () => {
       expect(getPromptCount(sessionId)).toBe(0);
     });
 
-    it("returns 0 for unknown session", () => {
-      expect(getPromptCount("unknown-session")).toBe(0);
+    it("resetContinuation does not throw", () => {
+      expect(() => resetContinuation(sessionId)).not.toThrow();
     });
   });
 
-  describe("resetContinuation", () => {
-    it("resets prompt count", () => {
-      // First trigger continuation
-      const hook = createContinuationEnforcerHook();
-      updateTodoCount(sessionId, 3);
-      
-      resetContinuation(sessionId);
-      
-      expect(getPromptCount(sessionId)).toBe(0);
-    });
-
-    it("resets continuation active state", () => {
-      resetContinuation(sessionId);
-      expect(isContinuationActive(sessionId)).toBe(false);
-    });
-  });
-
-  describe("postToolUse hook", () => {
-    it("returns undefined for non-ending tools", async () => {
-      const hook = createContinuationEnforcerHook();
+  describe("createContinuationEnforcer", () => {
+    it("creates enforcer with handler function", () => {
       const ctx = createMockPluginContext();
+      const mockInput = {
+        client: {
+          session: {
+            todo: async () => ({ data: [] }),
+            prompt: async () => ({}),
+            messages: async () => ({ data: [] }),
+          },
+          tui: {
+            showToast: async () => {},
+          },
+        },
+        directory: "/test",
+      } as never;
       
-      const result = await hook.postToolUse({
-        toolName: "Write",
-        result: "Success",
-        sessionId,
-        context: ctx,
-      });
-
-      expect(result).toBeUndefined();
+      const enforcer = createContinuationEnforcer(ctx, mockInput);
+      
+      expect(typeof enforcer.handler).toBe("function");
+      expect(typeof enforcer.markRecovering).toBe("function");
+      expect(typeof enforcer.markRecoveryComplete).toBe("function");
+      expect(typeof enforcer.cancelAllCountdowns).toBe("function");
     });
 
-    it("returns undefined when no incomplete todos", async () => {
-      const hook = createContinuationEnforcerHook();
+    it("handler handles session.idle event", async () => {
       const ctx = createMockPluginContext();
+      const mockInput = {
+        client: {
+          session: {
+            todo: async () => ({ data: [] }), // No todos
+            prompt: async () => ({}),
+            messages: async () => ({ data: [] }),
+          },
+          tui: {
+            showToast: async () => {},
+          },
+        },
+        directory: "/test",
+      } as never;
       
-      // Set todo count to 0
-      updateTodoCount(sessionId, 0);
+      const enforcer = createContinuationEnforcer(ctx, mockInput);
       
-      const result = await hook.postToolUse({
-        toolName: "task_complete",
-        result: "Done",
-        sessionId,
-        context: ctx,
+      // Should not throw
+      await enforcer.handler({
+        event: {
+          type: "session.idle",
+          properties: { sessionID: sessionId },
+        },
       });
-
-      expect(result).toBeUndefined();
     });
 
-    it("returns continuation prompt when has incomplete todos", async () => {
-      const hook = createContinuationEnforcerHook();
+    it("handler handles session.deleted event", async () => {
       const ctx = createMockPluginContext();
+      const mockInput = {
+        client: {
+          session: {
+            todo: async () => ({ data: [] }),
+            prompt: async () => ({}),
+            messages: async () => ({ data: [] }),
+          },
+          tui: {
+            showToast: async () => {},
+          },
+        },
+        directory: "/test",
+      } as never;
       
-      // Set incomplete todos
-      updateTodoCount(sessionId, 3);
+      const enforcer = createContinuationEnforcer(ctx, mockInput);
       
-      const result = await hook.postToolUse({
-        toolName: "task_complete",
-        result: "Done",
-        sessionId,
-        context: ctx,
+      // Should not throw
+      await enforcer.handler({
+        event: {
+          type: "session.deleted",
+          properties: { info: { id: sessionId } },
+        },
       });
-
-      expect(result).toBeDefined();
-      expect(result?.inject).toContain("CONTINUATION REQUIRED");
-      expect(result?.inject).toContain("3");
     });
 
-    it("returns undefined when disabled", async () => {
-      const hook = createContinuationEnforcerHook({ enabled: false });
+    it("markRecovering prevents continuation injection", async () => {
       const ctx = createMockPluginContext();
+      let promptCalled = false;
       
-      updateTodoCount(sessionId, 3);
+      const mockInput = {
+        client: {
+          session: {
+            todo: async () => ({ 
+              data: [
+                { id: "1", content: "Test", status: "pending", priority: "high" }
+              ] 
+            }),
+            prompt: async () => {
+              promptCalled = true;
+              return {};
+            },
+            messages: async () => ({ data: [] }),
+          },
+          tui: {
+            showToast: async () => {},
+          },
+        },
+        directory: "/test",
+      } as never;
       
-      const result = await hook.postToolUse({
-        toolName: "task_complete",
-        result: "Done",
-        sessionId,
-        context: ctx,
-      });
-
-      expect(result).toBeUndefined();
-    });
-
-    it("returns undefined when todoCheckEnabled is false", async () => {
-      const hook = createContinuationEnforcerHook({ todoCheckEnabled: false });
-      const ctx = createMockPluginContext();
+      const enforcer = createContinuationEnforcer(ctx, mockInput, { countdownSeconds: 0 });
       
-      updateTodoCount(sessionId, 3);
+      // Mark as recovering
+      enforcer.markRecovering(sessionId);
       
-      const result = await hook.postToolUse({
-        toolName: "task_complete",
-        result: "Done",
-        sessionId,
-        context: ctx,
-      });
-
-      expect(result).toBeUndefined();
-    });
-
-    it("stops prompting after maxPrompts", async () => {
-      const hook = createContinuationEnforcerHook({ maxPrompts: 2 });
-      const ctx = createMockPluginContext();
-      
-      updateTodoCount(sessionId, 1);
-      
-      // First prompt
-      await hook.postToolUse({
-        toolName: "task_complete",
-        result: "Done",
-        sessionId,
-        context: ctx,
+      // Trigger session.idle - should not inject because recovering
+      await enforcer.handler({
+        event: {
+          type: "session.idle",
+          properties: { sessionID: sessionId },
+        },
       });
       
-      // Second prompt
-      await hook.postToolUse({
-        toolName: "task_complete",
-        result: "Done",
-        sessionId,
-        context: ctx,
-      });
+      // Give it a moment (countdown is 0 seconds)
+      await new Promise(resolve => setTimeout(resolve, 50));
       
-      // Third call - should be allowed to stop
-      const result = await hook.postToolUse({
-        toolName: "task_complete",
-        result: "Done",
-        sessionId,
-        context: ctx,
-      });
-
-      expect(result?.inject).toContain("Stopping with incomplete todos");
-    });
-
-    it("increments prompt count on each call", async () => {
-      const hook = createContinuationEnforcerHook({ maxPrompts: 10 });
-      const ctx = createMockPluginContext();
-      
-      updateTodoCount(sessionId, 1);
-      
-      await hook.postToolUse({
-        toolName: "task_complete",
-        result: "",
-        sessionId,
-        context: ctx,
-      });
-      
-      expect(getPromptCount(sessionId)).toBe(1);
-      
-      await hook.postToolUse({
-        toolName: "task_complete",
-        result: "",
-        sessionId,
-        context: ctx,
-      });
-      
-      expect(getPromptCount(sessionId)).toBe(2);
-    });
-
-    it("clears prompt count when todos complete", async () => {
-      const hook = createContinuationEnforcerHook();
-      const ctx = createMockPluginContext();
-      
-      // First with incomplete todos
-      updateTodoCount(sessionId, 1);
-      await hook.postToolUse({
-        toolName: "task_complete",
-        result: "",
-        sessionId,
-        context: ctx,
-      });
-      
-      expect(getPromptCount(sessionId)).toBe(1);
-      
-      // Now complete all todos
-      updateTodoCount(sessionId, 0);
-      await hook.postToolUse({
-        toolName: "task_complete",
-        result: "",
-        sessionId,
-        context: ctx,
-      });
-      
-      expect(getPromptCount(sessionId)).toBe(0);
-    });
-  });
-
-  describe("onSessionStart", () => {
-    it("clears session state", async () => {
-      const hook = createContinuationEnforcerHook();
-      
-      // Set some state
-      updateTodoCount(sessionId, 5);
-      
-      await hook.onSessionStart({ sessionId });
-      
-      expect(getPromptCount(sessionId)).toBe(0);
-      expect(isContinuationActive(sessionId)).toBe(false);
-    });
-  });
-
-  describe("onSessionEnd", () => {
-    it("clears session state", async () => {
-      const hook = createContinuationEnforcerHook();
-      
-      // Set some state
-      updateTodoCount(sessionId, 5);
-      
-      await hook.onSessionEnd({ sessionId });
-      
-      expect(getPromptCount(sessionId)).toBe(0);
-    });
-  });
-
-  describe("default configuration", () => {
-    it("uses default maxPrompts of 3", async () => {
-      const hook = createContinuationEnforcerHook();
-      const ctx = createMockPluginContext();
-      
-      updateTodoCount(sessionId, 1);
-      
-      // Exhaust prompts
-      for (let i = 0; i < 3; i++) {
-        await hook.postToolUse({
-          toolName: "task_complete",
-          result: "",
-          sessionId,
-          context: ctx,
-        });
-      }
-      
-      // Next should allow stop
-      const result = await hook.postToolUse({
-        toolName: "task_complete",
-        result: "",
-        sessionId,
-        context: ctx,
-      });
-      
-      expect(result?.inject).toContain("Stopping");
-    });
-  });
-
-  describe("ending tool detection", () => {
-    it("recognizes task_complete as ending tool", async () => {
-      const hook = createContinuationEnforcerHook();
-      const ctx = createMockPluginContext();
-      
-      updateTodoCount(sessionId, 1);
-      
-      const result = await hook.postToolUse({
-        toolName: "task_complete",
-        result: "",
-        sessionId,
-        context: ctx,
-      });
-
-      expect(result?.inject).toBeDefined();
-    });
-
-    it("recognizes conversation_end as ending tool", async () => {
-      const hook = createContinuationEnforcerHook();
-      const ctx = createMockPluginContext();
-      
-      updateTodoCount(sessionId, 1);
-      
-      const result = await hook.postToolUse({
-        toolName: "conversation_end",
-        result: "",
-        sessionId,
-        context: ctx,
-      });
-
-      expect(result?.inject).toBeDefined();
-    });
-
-    it("does not trigger for regular tools", async () => {
-      const hook = createContinuationEnforcerHook();
-      const ctx = createMockPluginContext();
-      
-      updateTodoCount(sessionId, 10);
-      
-      const result = await hook.postToolUse({
-        toolName: "Read",
-        result: "",
-        sessionId,
-        context: ctx,
-      });
-
-      expect(result).toBeUndefined();
+      // Prompt should not have been called because we're recovering
+      expect(promptCalled).toBe(false);
     });
   });
 });

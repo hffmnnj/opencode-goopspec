@@ -7,7 +7,7 @@
 
 import type { Event } from "@opencode-ai/sdk";
 import type { PluginContext } from "../core/types.js";
-import { log, logError } from "../shared/logger.js";
+import { log, logError, logEvent } from "../shared/logger.js";
 
 /**
  * Create the event handler
@@ -30,7 +30,8 @@ export function createEventHandler(ctx: PluginContext) {
     // Handle different event types
     const eventType = "type" in event ? (event as { type: string }).type : "unknown";
 
-    log("Event received", { eventType });
+    // Log all events to file for debugging
+    logEvent(eventType, { properties: (event as { properties?: unknown }).properties });
 
     switch (eventType) {
       case "session.created":
