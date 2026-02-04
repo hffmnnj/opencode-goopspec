@@ -1,165 +1,49 @@
 ---
 name: goop-quick
-description: Execute small tasks with abbreviated workflow (Plan → Execute → Accept)
+description: Fast-track a small task
 ---
 
-# GoopSpec Quick
+# /goop-quick
 
-Execute small, ad-hoc tasks with GoopSpec guarantees using an abbreviated workflow.
+**Execute small tasks fast.** Abbreviated workflow for simple changes.
 
 ## Usage
 
-```
-/goop-quick [brief description]
-```
-
-## Workflow Position
-
-Quick mode uses a shortened path:
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│    PLAN     │ ──▶ │   EXECUTE   │ ──▶ │   ACCEPT    │
-│  (Intent)   │     │   (Build)   │     │  (Verify)   │
-└─────────────┘     └─────────────┘     └─────────────┘
-
-Research and Specify phases SKIPPED
+```bash
+/goop-quick [task description]
 ```
 
-Quick mode skips:
-- Research phase (assumes existing patterns sufficient)
-- Specify phase (intent serves as implicit spec)
-- Formal SPEC.md and BLUEPRINT.md
-- Comprehensive verification
+## How It Works
 
-## When to Use Quick Mode
+Quick mode bypasses the formal Plan/Research/Specify phases while maintaining safety guarantees. Ideal for bug fixes, small refactors, or docs.
 
-**Good for:**
-- Fix a specific bug
-- Add a small feature
-- Refactor a specific function
-- Update documentation
-- Add a test
-- Configure a tool
-- 15-60 minutes of work
+### 1. Implicit Planning
+- Captures intent in 1 sentence.
+- Defines 1 clear success criterion.
+- Skips formal `SPEC.md`.
 
-**Too big for quick mode:**
-- New major feature
-- Architecture changes
-- Multiple interdependent changes
-- Unknown problem domain
-- Anything requiring research
+### 2. Rapid Execution
+- Creates a simplified 1-Wave Blueprint.
+- Executes immediately.
+- Still performs atomic commits.
 
-## What Happens
+### 3. Quick Acceptance
+- Verifies the fix.
+- Asks for confirmation.
 
-1. **Quick Planning** - Abbreviated Plan phase:
-   - Capture intent in 1-2 sentences
-   - Define one clear success criterion
-   - Skip detailed requirements
+## When to Use
+- **Good:** "Fix the typo in the navbar", "Update dependency X", "Add a unit test".
+- **Bad:** "Add user auth", "Refactor entire API". (Use `/goop-plan` for these).
 
-2. **Direct Execution** - Simplified Execute phase:
-   - 1-2 waves maximum
-   - Faster delegation
-   - Less formal tracking
-   - Atomic commits still required
+## Output
 
-3. **Quick Acceptance** - Abbreviated Accept phase:
-   - Quick verification
-   - No formal report
-   - Simple confirmation prompt
-
-## Artifacts Created
-
-- `.goopspec/quick/NNN-slug/PLAN.md` - Brief task plan
-- `.goopspec/quick/NNN-slug/SUMMARY.md` - Completion summary
-- Git commits (atomic, per task)
-- STATE.md updated with quick task entry
-
-## Task Size Guide
-
-| Duration | Appropriate? |
-|----------|--------------|
-| < 15 min | Yes (might be too simple) |
-| 15-30 min | Ideal |
-| 30-60 min | Good |
-| 1-2 hours | Borderline |
-| > 2 hours | Use standard workflow |
+- Atomic commits.
+- `.goopspec/quick/` logs (for history).
 
 ## Example
 
-```
-/goop-quick Fix login button styling to match design system
-```
-
-Agent:
-1. Captures intent: "Update login button to use design system styles"
-2. Success criterion: "Button matches design system colors and spacing"
-3. Executes: Modify button component, update styles
-4. Commits: `fix(quick): update login button to match design system`
-5. Verifies: Visual check, no errors
-6. Presents for acceptance
-
-## Good Quick Task Examples
-
-**GOOD:**
-- "Fix the login button styling"
-- "Add validation to the email field"
-- "Update the README with new setup steps"
-- "Refactor the auth utility to use async/await"
-- "Add unit test for user validation"
-
-**TOO BIG:**
-- "Implement user authentication" (use standard workflow)
-- "Add payment processing" (use standard workflow)
-- "Refactor the entire codebase" (use milestone)
-
-## Quick Mode Guarantees
-
-Even in quick mode, you still get:
-- Atomic commits
-- Deviation rule enforcement
-- Memory integration
-- Verification before acceptance
-- User confirmation gate
-
-What you skip:
-- Formal research
-- Locked specification
-- Wave-based planning
-- Comprehensive verification report
-
-## Next Steps
-
-After quick task:
-- `/goop-quick [next]` - Another quick task
-- `/goop-plan [feature]` - Start standard workflow
-- `/goop-status` - Check overall progress
-
-## Completion Prompt
-
-```
-╭─ ⬢ GoopSpec ───────────────────────────────────────╮
-│                                                    │
-│  ⚡ QUICK TASK COMPLETE                            │
-│                                                    │
-│  Task: Fix login button styling                   │
-│                                                    │
-│  Duration: 12 minutes                              │
-│  Files: 1 modified                                 │
-│  Commits: 1                                        │
-│                                                    │
-│  VERIFICATION:                                     │
-│  ☑ Button matches design system                    │
-│  ☑ No console errors                               │
-│  ☑ Tests passing                                   │
-│                                                    │
-│  ─────────────────────────────────────────────     │
-│  Type "accept" to confirm.                         │
-│  Type "issues: [description]" for fixes.           │
-│                                                    │
-╰────────────────────────────────────────────────────╯
-```
-
----
-
-**GoopSpec**: Quick tasks, same guarantees.
+> **User:** `/goop-quick Fix the z-index on the modal`
+> **Agent:** "Plan: Adjust z-index in `Modal.css`. Success: Modal appears above overlay.
+> Executing...
+> Done (commit: x9y8z7). Modal z-index set to 1000.
+> Verified. Type 'accept' to close."

@@ -1,61 +1,40 @@
 ---
 name: goop-pause
-description: Save a checkpoint to pause work
+description: Save a checkpoint and pause work
 ---
 
-# GoopSpec Pause (Checkpoint)
+# /goop-pause
 
-Save your current progress as a checkpoint that you can resume later.
+**Pause work and save state.** Create a resumption checkpoint.
 
 ## Usage
 
+```bash
+/goop-pause [optional message]
 ```
-/goop-pause [checkpoint-name]
-```
 
-## What Gets Saved
+## How It Works
 
-A checkpoint captures:
-- Current session ID
-- Current phase and spec
-- Incomplete todos
-- Modified files
-- Git commit hash
-- Timestamp
+Safely stops the current workflow and saves a snapshot of the context. This allows you to switch tasks or end your session without losing "brain state."
 
-## Storage
+### What is Saved?
+- **Workflow State:** Phase, Wave, active Plan/Spec.
+- **Task Context:** Which task was active.
+- **Memory Buffer:** Short-term observations not yet persisted.
+- **Git State:** Current branch and status.
 
-Checkpoints are saved to:
-`.goopspec/checkpoints/checkpoint-{id}.json`
+### When to Use
+- Ending a work session.
+- Switching to a different urgent task.
+- Before a risky manual experiment.
 
-## Auto-Cleanup
+## Output
 
-Old checkpoints are automatically cleaned up (configurable limit, default 10).
+- Saves a checkpoint file (JSON) in `.goopspec/checkpoints/`.
+- Confirms the checkpoint ID for resumption.
 
 ## Example
 
-```
-/goop-pause "Before major refactor"
-```
-
-## Resume Later
-
-To resume from this checkpoint:
-```
-/goop-resume [checkpoint-id]
-```
-
-Or resume the latest:
-```
-/goop-resume
-```
-
-## Use Cases
-
-- End of work day - save and resume tomorrow
-- Before experimental changes - save as backup
-- Context switching - pause one task, work on another
-
----
-
-**GoopSpec**: Never lose your place.
+> **User:** `/goop-pause Heading to lunch`
+> **Agent:** "Checkpoint `cp-123` saved. 'Heading to lunch'.
+> Run `/goop-resume` to pick up exactly here."

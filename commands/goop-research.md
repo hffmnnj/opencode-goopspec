@@ -1,98 +1,64 @@
 ---
 name: goop-research
-description: Start the Research phase - explore implementation approaches
+description: Launch research for unknowns or risks
+agent: goop-researcher
+spawn: true
+phase: research
+next-step: "Apply research findings to create or refine the plan"
+next-command: /goop-plan
+alternatives:
+  - command: /goop-research
+    when: "For additional research on related topics"
+  - command: /goop-specify
+    when: "If research confirms the plan is ready to lock"
 ---
 
-# GoopSpec Research
+# /goop-research
 
-Gather context and explore implementation approaches before committing to a specification.
+**Start the Research Phase.** Explore unknowns, compare options, and gather technical context.
 
 ## Usage
 
-```
-/goop-research
-```
-
-## Workflow Position
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│    PLAN     │ ──▶ │  RESEARCH   │ ──▶ │   SPECIFY   │
-│  (Intent)   │     │  (Explore)  │     │ (Contract)  │
-└─────────────┘     └─────────────┘     └─────────────┘
-                          ↑
-                    (You are here)
+```bash
+/goop-research [topic or question]
 ```
 
-The Research phase answers: **How should we build this?**
+## How It Works
 
-## What Happens
+Research is an **opt-in** phase used when the path forward isn't clear. It prevents "coding in the dark."
 
-1. **Parallel Agent Spawning** - Multiple agents work simultaneously:
-   - **Researcher** - Deep domain research (technologies, patterns, best practices)
-   - **Explorer** - Codebase analysis (existing patterns, conventions, integration points)
-   - **Librarian** - Documentation gathering (API docs, library guides, examples)
-   - **Designer** - (UI tasks only) Visual research (patterns, components, UX)
+### 1. Scope Definition
+The agent confirms what needs to be learned:
+- Technical feasibility
+- Library/Tool selection
+- Architectural patterns
+- Bug root cause analysis
 
-2. **Research Areas Covered:**
-   - Technology options and trade-offs
-   - Existing codebase patterns
-   - Domain knowledge and edge cases
-   - Security and performance considerations
-   - Industry standards and best practices
+### 2. Investigation
+The `goop-researcher` subagent performs:
+- **Web Search:** For latest docs and libraries.
+- **Code Search:** For examples and usage patterns.
+- **Memory Search:** For past learnings.
 
-3. **Consolidation** - Findings merged into RESEARCH.md with:
-   - Technology recommendations
-   - Codebase integration points
-   - Key decisions needed
-   - Risk assessment
-   - Estimated complexity
+### 3. Synthesis
+Findings are compiled into a structured report with a clear recommendation.
 
-4. **Memory Integration** - Past research and patterns retrieved
+## Output
 
-## Artifacts Created
+- `.goopspec/RESEARCH.md`: Detailed findings and trade-offs.
+- **Memory:** Key learnings are persisted for future recall.
 
-- `RESEARCH.md` - Consolidated research findings
-- Technology comparison table
-- Recommended approach with rationale
-- Risk catalog
-- Integration points identified
+## Transitions
 
-## Example
+- **Next Step:** `/goop-plan` to apply findings to a plan.
+- **Loop:** `/goop-research` can be run multiple times for deep dives.
 
-After planning "Add user authentication":
+## Examples
 
-```
-/goop-research
-```
+**Library Selection:**
+> **User:** `/goop-research best react animation library for minimal bundle size`
+> **Agent:** "I'll compare Framer Motion, React Spring, and a CSS-only approach."
 
-Research agents explore:
-- JWT vs session-based auth
-- Existing auth patterns in codebase
-- Security best practices
-- Library options (jose, jsonwebtoken, etc.)
-- Integration with current user model
-
-## Next Steps
-
-After research:
-- `/goop-specify` - Lock the specification (CONTRACT GATE)
-
-## Quick Mode Shortcut
-
-For Quick tasks, Research phase is **SKIPPED entirely**:
-- Assumes existing patterns are sufficient
-- No parallel agent spawning
-- Jumps directly from Plan to Execute
-
-## Comprehensive Mode
-
-For Comprehensive tasks:
-- Deeper research per agent
-- More alternatives explored
-- Extended timeframe
-- User reviews RESEARCH.md before Specify
-
----
-
-**GoopSpec**: Research thoroughly, decide confidently.
+**Technical Feasibility:**
+> **User:** `/goop-research can we use WebSockets on Vercel serverless?`
+> **Agent:** "Investigating Vercel platform limits and workaround options like Pusher."

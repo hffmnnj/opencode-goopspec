@@ -15,7 +15,7 @@ Map an existing codebase for brownfield projects.
 
 Analyzes codebase with parallel Explore agents. Creates `.goopspec/codebase/` with 7 focused documents covering stack, architecture, structure, conventions, testing, integrations, and concerns.
 
-Use before `/goop-new` on existing codebases. Provides the context needed to extend rather than replace.
+Use before `/goop-setup` on existing codebases. Provides the context needed to extend rather than replace.
 
 **Creates:**
 - `.goopspec/codebase/STACK.md` - Technology stack
@@ -429,7 +429,7 @@ OPTIONAL_VAR=[description]
 
 ## Phase 5: Update State
 
-Update STATE.md:
+Update `.goopspec/state.json`:
 - Mark codebase as mapped
 - Add timestamp
 - Link to codebase docs
@@ -467,7 +467,7 @@ Created in .goopspec/codebase/:
 
 **Initialize GoopSpec project** with brownfield context
 
-/goop-new [project-name]
+/goop-setup
 
 <sub>Will use codebase map to understand existing code</sub>
 

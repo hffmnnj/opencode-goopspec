@@ -1,208 +1,299 @@
 ---
 name: goop-setup
-description: First-time GoopSpec setup wizard with model picker
+description: GoopSpec setup wizard - first-time init, configuration, and verification
 ---
 
 # GoopSpec Setup Wizard
 
-You are helping the user set up GoopSpec for the first time. This wizard includes an in-depth model picker for configuring each agent.
+You are helping the user set up or modify their GoopSpec configuration. This wizard handles first-time setup, modifications, and verification.
 
-## Step 1: Detect Current Environment
+## Available Actions
 
-First, call the `goop_setup` tool with `action: "detect"` to see what's already configured:
+| Action | Purpose | When to Use |
+|--------|---------|-------------|
+| `init` | Full first-time initialization | New projects, creates all directories and files |
+| `detect` | Show current environment | Understand what's already configured |
+| `plan` | Preview changes | Before applying, see what will change |
+| `apply` | Write configuration | Apply configuration changes |
+| `verify` | Check setup health | Ensure everything is working |
+| `reset` | Reset to defaults | Start over or fix broken config |
+| `models` | Show model suggestions | Help choosing agent models |
+| `status` | Show current config | Quick overview of current state |
+
+## First-Time Setup Flow
+
+For users who haven't set up GoopSpec yet, use the `init` action.
+
+### Step 1: Detect Current State
 
 ```
 goop_setup(action: "detect")
 ```
 
-Review the output and share a brief summary with the user about their current state.
+Review what's already configured. If nothing exists, proceed to full init.
 
-## Step 2: Configuration Scope
+### Step 2: Ask for Project Name
+
+Ask the user: "What's your project name?"
+
+This will be stored in the configuration for context.
+
+### Step 3: Configuration Scope
 
 Ask: "Where should GoopSpec be configured?"
 
-Use the question tool to present these options:
+Use the question tool:
 - **both** (Recommended) - Both global and project-specific settings
-- **global** - Only system-wide settings (~/.config/opencode/goopspec.json)
-- **project** - Only this project (.goopspec/config.json)
+- **global** - Only system-wide settings
+- **project** - Only this project
 
-## Step 3: MCP Preset
+### Step 4: MCP Preset
 
 Ask: "Which MCPs should be installed?"
 
-Use the question tool to present these options:
-- **recommended** - Context7 + Exa + Playwright (full GoopSpec workflow support)
-- **core** - Context7 + Exa only (minimal setup)
+- **recommended** - Context7 + Exa + Playwright (full workflow support)
+- **core** - Context7 + Exa only (minimal)
 - **none** - Skip MCP installation
 
-## Step 4: Default Agent
+### Step 5: Memory System
 
-Ask: "Should GoopSpec be set as your default agent?"
+Ask: "Would you like to enable the memory system?"
 
-Use the question tool:
-- **yes** - GoopSpec orchestrator will be the default for new sessions
-- **no** - Keep current default agent
+The memory system allows GoopSpec to remember decisions, patterns, and context across sessions.
 
-## Step 5: Model Configuration
+If yes, ask about embedding provider:
+- **local** (Recommended) - Uses local embeddings, no API needed
+- **openai** - Uses OpenAI embeddings (requires API key)
+- **ollama** - Uses local Ollama server
 
-This is the key step. Ask: "Would you like to configure models for each agent?"
+### Step 6: Model Configuration
 
-Use the question tool:
-- **Quick setup** - Use recommended defaults for all agents
-- **Custom setup** - Choose models for each agent individually
+Ask: "Would you like to configure models for each agent?"
 
-### If Quick Setup
-Use the defaults from agent files (user can change later):
-- goop-debugger: openai/gpt-5.2-codex
-- goop-designer: anthropic/claude-opus-4-5
-- goop-executor: openai/gpt-5.2-codex
-- goop-explorer: google/antigravity-gemini-3-flash
-- goop-librarian: openai/gpt-5.2
-- goop-orchestrator: anthropic/claude-opus-4-5
-- goop-planner: anthropic/claude-opus-4-5
-- goop-researcher: openai/gpt-5.2
-- goop-tester: opencode/kimi-k2.5-free
-- goop-verifier: openai/gpt-5.2-codex
-- goop-writer: google/antigravity-gemini-3-pro-high
+- **Quick setup** - Use recommended defaults
+- **Custom setup** - Choose models individually
 
-### If Custom Setup
-For EACH agent, present a model picker using the question tool. Include a "Custom model" option that allows free text entry.
+For custom setup, walk through each agent or accept shortcuts like "use Claude Sonnet for everything".
 
-#### Agent Model Options
+### Step 7: Apply Init
 
-**goop-debugger** (Systematic debugging with hypothesis testing):
+Execute the initialization:
+
+```
+goop_setup(
+  action: "init",
+  scope: "<scope>",
+  projectName: "<name>",
+  mcpPreset: "<preset>",
+  memoryEnabled: true,
+  memoryProvider: "local",
+  agentModels: { ... }
+)
+```
+
+### Step 8: Verify Setup
+
+After init completes, verify everything is working:
+
+```
+goop_setup(action: "verify")
+```
+
+Report any issues and suggest fixes.
+
+## Modifying Existing Setup
+
+For users who already have GoopSpec configured:
+
+### Check Current Status
+
+```
+goop_setup(action: "status")
+```
+
+Shows what's currently configured.
+
+### Update Configuration
+
+```
+goop_setup(
+  action: "apply",
+  scope: "project",
+  // Only include what you want to change
+  memoryEnabled: true,
+  agentModels: {
+    "goop-executor": "anthropic/claude-sonnet-4-5"
+  }
+)
+```
+
+### Reset Configuration
+
+If something is broken:
+
+```
+goop_setup(
+  action: "reset",
+  scope: "project",
+  preserveData: true,  // Keep memories, history, checkpoints
+  confirmed: true
+)
+```
+
+## Agent Model Options
+
+### goop-debugger
+*Systematic debugging with hypothesis testing*
 1. openai/gpt-5.2-codex
 2. anthropic/claude-opus-4-5
 3. opencode/kimi-k2.5-free
-- Custom model...
 
-**goop-designer** (Visual design planning and UI/UX reasoning):
+### goop-designer
+*Visual design planning and UI/UX reasoning*
 1. anthropic/claude-opus-4-5
 2. opencode/kimi-k2.5-free
 3. google/antigravity-gemini-3-pro-high
-- Custom model...
 
-**goop-executor** (Task execution with checkpoints and verification):
+### goop-executor
+*Task execution with checkpoints and verification*
 1. openai/gpt-5.2-codex
 2. anthropic/claude-opus-4-5
 3. anthropic/claude-sonnet-4-5
 4. opencode/kimi-k2.5-free
 5. google/antigravity-gemini-3-pro-high
 6. opencode/glm-4.7-free
-- Custom model...
 
-**goop-explorer** (Fast codebase exploration and pattern extraction):
+### goop-explorer
+*Fast codebase exploration and pattern extraction*
 1. google/antigravity-gemini-3-flash
 2. anthropic/claude-haiku-4-5
 3. opencode/minimax-m2.1-free
-- Custom model...
 
-**goop-librarian** (Codebase search and documentation retrieval):
+### goop-librarian
+*Codebase search and documentation retrieval*
 1. openai/gpt-5.2
 2. google/antigravity-gemini-3-flash
 3. anthropic/claude-sonnet-4-5
-- Custom model...
 
-**goop-orchestrator** (Primary orchestrator - spec clarity and wave execution):
+### goop-orchestrator
+*Primary orchestrator - spec clarity and wave execution*
 1. anthropic/claude-opus-4-5
 2. openai/gpt-5.2-codex
 3. opencode/kimi-k2.5-free
 4. anthropic/claude-sonnet-4-5
-- Custom model...
 
-**goop-planner** (Detailed execution plans with architectural precision):
+### goop-planner
+*Detailed execution plans with architectural precision*
 1. anthropic/claude-opus-4-5
 2. openai/gpt-5.2-codex
 3. opencode/kimi-k2.5-free
 4. anthropic/claude-sonnet-4-5
-- Custom model...
 
-**goop-researcher** (Comprehensive ecosystem research):
+### goop-researcher
+*Comprehensive ecosystem research*
 1. openai/gpt-5.2
 2. anthropic/claude-sonnet-4-5
 3. opencode/kimi-k2.5-free
 4. opencode/glm-4.7-free
-- Custom model...
 
-**goop-tester** (Web frontend testing with Playwright):
+### goop-tester
+*Web frontend testing with Playwright*
 1. opencode/kimi-k2.5-free
 2. anthropic/claude-sonnet-4-5
 3. google/antigravity-gemini-3-flash
-- Custom model...
 
-**goop-verifier** (Post-execution verification with security focus):
+### goop-verifier
+*Post-execution verification with security focus*
 1. openai/gpt-5.2-codex
 2. anthropic/claude-opus-4-5
-- Custom model...
 
-**goop-writer** (Comprehensive documentation generation):
+### goop-writer
+*Comprehensive documentation generation*
 1. google/antigravity-gemini-3-pro-high
 2. opencode/kimi-k2.5-free
 3. anthropic/claude-sonnet-4-5
-- Custom model...
 
-## Step 6: Preview the Plan
+## Memory System Configuration
 
-After collecting all answers, call `goop_setup` with `action: "plan"` and the user's choices:
+The memory system allows GoopSpec to:
+- Remember decisions and their reasoning
+- Recall patterns from past work
+- Build context across sessions
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `memoryEnabled` | boolean | true | Enable/disable memory |
+| `memoryProvider` | string | "local" | Embedding provider |
+| `memoryWorkerPort` | number | 37777 | Worker process port |
+
+### Embedding Providers
+
+- **local** - Uses `Xenova/all-MiniLM-L6-v2`, runs locally, free
+- **openai** - Uses OpenAI's embedding API, requires API key
+- **ollama** - Uses local Ollama server
+
+## Troubleshooting
+
+### "Memory worker not responding"
+
+1. Check if port 37777 is in use: `lsof -i :37777`
+2. Try a different port: `memoryWorkerPort: 37778`
+3. Check memory directory exists: `.goopspec/memory/`
+
+### "Configuration not loading"
+
+1. Run `goop_setup(action: "verify")` to diagnose
+2. Check for JSON syntax errors in config files
+3. Try `goop_setup(action: "reset", scope: "project", confirmed: true)`
+
+### "MCPs not installing"
+
+MCPs require OpenCode configuration. Check:
+1. OpenCode is installed and configured
+2. You have write permissions to ~/.config/opencode/
+
+## Tips
+
+1. **Start with detect** - Always check what's already configured
+2. **Use verify after changes** - Ensures everything works
+3. **Preserve data on reset** - Don't lose memories unless needed
+4. **Quick setup is fine** - Model defaults work well for most users
+5. **Local memory is best** - No API costs, runs offline
+
+## Complete Example
+
+First-time setup:
 
 ```
+// 1. Check current state
+goop_setup(action: "detect")
+
+// 2. Initialize everything
 goop_setup(
-  action: "plan",
-  scope: "<user_choice>",
-  mcpPreset: "<user_choice>",
-  enableOrchestrator: <true/false>,
+  action: "init",
+  scope: "both",
+  projectName: "my-project",
+  mcpPreset: "recommended",
+  memoryEnabled: true,
+  memoryProvider: "local",
+  enableOrchestrator: true
+)
+
+// 3. Verify
+goop_setup(action: "verify")
+```
+
+Modify existing:
+
+```
+// Update just the executor model
+goop_setup(
+  action: "apply",
+  scope: "project",
   agentModels: {
-    "goop-orchestrator": "<model>",
-    "goop-planner": "<model>",
-    "goop-executor": "<model>",
-    // ... other agents
+    "goop-executor": "anthropic/claude-opus-4-5"
   }
 )
 ```
-
-Show the user a summary including:
-- Configuration scope
-- MCPs to install
-- Agent model assignments (in a table format)
-
-Ask for confirmation before proceeding.
-
-## Step 7: Apply Configuration
-
-If the user confirms, call `goop_setup` with `action: "apply"` and the same parameters.
-
-## Step 8: Verify and Complete
-
-After applying, summarize what was done:
-- List all agents and their assigned models
-- List MCPs installed
-- Show any warnings or notes
-
-Suggest next steps:
-- Run `/goop-status` to verify configuration
-- Start a new conversation to use GoopSpec
-- Try `/goop-discuss` to start your first spec-driven project
-
-## Tips for the Model Picker
-
-1. **Be conversational** - Don't just list options, explain the trade-offs
-2. **Group similar agents** - You can ask about related agents together (e.g., "orchestrator + planner" or "explorer + librarian")
-3. **Explain costs** - Opus models are more capable but expensive; free models (opencode/*) are great for budget-conscious users
-4. **Allow skipping** - If a user says "use defaults for the rest", accept that
-5. **Support bulk selection** - If a user says "use Claude Sonnet for everything", honor that
-
-## Available Models
-
-All models listed in the suggestions:
-- openai/gpt-5.2-codex
-- openai/gpt-5.2
-- anthropic/claude-opus-4-5
-- anthropic/claude-sonnet-4-5
-- anthropic/claude-haiku-4-5
-- google/antigravity-gemini-3-pro-high
-- google/antigravity-gemini-3-flash
-- opencode/kimi-k2.5-free
-- opencode/glm-4.7-free
-- opencode/minimax-m2.1-free
-
-Users can also enter any custom model name supported by their OpenCode installation.

@@ -1,153 +1,51 @@
 ---
 name: goop-status
-description: Show GoopSpec status and progress
+description: Show current GoopSpec status
 ---
 
-# GoopSpec Status
+# /goop-status
 
-Display the current status of your GoopSpec project and workflow progress.
+**Show project status.** View progress, active phase, and pending tasks.
 
 ## Usage
 
+```bash
+/goop-status [--verbose]
 ```
-/goop-status
-```
 
-## Information Shown
+## How It Works
 
-### Project State
-- Initialized: Yes/No
-- Active: Yes/No
-- Current milestone (if any)
-- Task mode: Quick | Standard | Comprehensive | Milestone
+Displays a dashboard of the current GoopSpec session.
 
-### Current Workflow
-- Phase: Plan | Research | Specify | Execute | Accept
-- Spec locked: Yes/No
-- Acceptance confirmed: Yes/No
-- Last activity timestamp
+### Information Shown
+- **Project State:** Initialized? Active Milestone?
+- **Current Phase:** Discuss, Plan, Research, Specify, Execute, or Accept.
+- **Progress:** Wave completion (e.g., "Wave 2 of 4").
+- **Task Status:** Current active task and recent completions.
+- **Gates:** Spec locked? Acceptance pending?
 
-### Execution Progress (if in Execute phase)
-- Current wave: N of M
-- Tasks completed in current wave
-- Total tasks completed
-- Recent commits
-
-### Contract Status
-- Specification locked at: [timestamp]
-- Must-haves: N total
-- Must-haves completed: N of M
-- Nice-to-haves completed: N of M
-
-### Checkpoints
-- Total checkpoints saved
-- Latest checkpoint info
-- Resume available: Yes/No
-
-### Memory Stats
-- Decisions logged: N
-- Observations saved: N
-- Patterns documented: N
+### Interactive Actions
+From the status view, the agent often suggests the logical next command (e.g., "Execution complete. Run `/goop-accept` to verify.").
 
 ## Example Output
 
 ```
-⬢ GoopSpec · Status
-──────────────────────────────────────────────────────
+⬢ GoopSpec Status
+─────────────────
+Phase:    EXECUTE (Wave 2/4)
+Task:     [2.1] Implement Login Handler (In Progress)
+Milestone: Auth System v1
 
-Project: Initialized ✓
-Mode: Standard
-Milestone: Authentication System
+Progress:
+[✓] Wave 1: Foundation
+[→] Wave 2: Core Logic
+    [✓] 2.1 Define types
+    [→] 2.2 Implement handler
+    [ ] 2.3 Add tests
+[ ] Wave 3: Integration
 
-WORKFLOW:
-Phase: Execute (Wave 2 of 4)
-Spec Locked: Yes (2024-01-15 10:30)
-Acceptance: Pending
-
-PROGRESS:
-Wave 1: Foundation [COMPLETE] ✓
-  ☑ Task 1.1: Setup
-  ☑ Task 1.2: Config
-  ☑ Task 1.3: Base
-
-Wave 2: Core [IN PROGRESS]
-  ☑ Task 2.1: Auth
-  ◉ Task 2.2: Logic
-  ○ Task 2.3: Data
-
-Wave 3: Integration [PENDING]
-Wave 4: Polish [PENDING]
-
-MUST-HAVES: 2 of 3 complete
-☑ User can log in
-☑ Session persists
-○ Error messages displayed
-
-CHECKPOINTS: 2 saved
-Latest: checkpoint-xyz789 (30 mins ago)
-
-MEMORY: 5 decisions, 12 observations
-
-──────────────────────────────────────────────────────
+Next: Finish Task 2.2
 ```
 
-## Phase-Specific Information
-
-### Plan Phase
-- Intent captured: Yes/No
-- Requirements categorized: Yes/No
-- Success criteria defined: Yes/No
-- Ready for research: Yes/No
-
-### Research Phase
-- Agents spawned: N
-- Research complete: Yes/No
-- RESEARCH.md created: Yes/No
-- Ready for specify: Yes/No
-
-### Specify Phase
-- SPEC.md created: Yes/No
-- BLUEPRINT.md created: Yes/No
-- Contract presented: Yes/No
-- User confirmed: Yes/No
-
-### Execute Phase
-- Current wave: N of M
-- Tasks complete: N of M
-- Deviations: N logged
-- Blockers: N active
-
-### Accept Phase
-- Verification complete: Yes/No
-- Must-haves verified: N of M
-- Tests passing: Yes/No
-- User accepted: Yes/No
-
-## Quick Actions
-
-From status view, you can:
-- `/goop-plan [intent]` - Start planning
-- `/goop-research` - Begin research
-- `/goop-specify` - Lock specification
-- `/goop-execute` - Continue execution
-- `/goop-accept` - Verify completion
-- `/goop-pause` - Save checkpoint
-- `/goop-resume` - Resume from checkpoint
-
-## Verbose Mode
-
-For detailed status:
-
-```
-/goop-status --verbose
-```
-
-Shows additional information:
-- Full task list with commit hashes
-- All deviations with details
-- Complete checkpoint history
-- Memory entries related to current work
-
----
-
-**GoopSpec**: Know exactly where you stand.
+## Flags
+- `--verbose`: Show full task history, memory stats, and recent deviations.
