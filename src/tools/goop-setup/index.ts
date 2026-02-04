@@ -41,14 +41,14 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
     suggestions: [
       "openai/gpt-5.2-codex",
       "anthropic/claude-opus-4-5",
-      "opencode/kimi-k2.5-free",
+      "kimi-for-coding/k2p5",
     ],
     description: "Systematic debugging with hypothesis testing",
   },
   "goop-designer": {
     suggestions: [
       "anthropic/claude-opus-4-5",
-      "opencode/kimi-k2.5-free",
+      "kimi-for-coding/k2p5",
       "google/antigravity-gemini-3-pro-high",
     ],
     description: "Visual design planning and UI/UX reasoning",
@@ -58,7 +58,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
       "openai/gpt-5.2-codex",
       "anthropic/claude-opus-4-5",
       "anthropic/claude-sonnet-4-5",
-      "opencode/kimi-k2.5-free",
+      "kimi-for-coding/k2p5",
       "google/antigravity-gemini-3-pro-high",
       "opencode/glm-4.7-free",
     ],
@@ -84,7 +84,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
     suggestions: [
       "openai/gpt-5.2-codex",
       "anthropic/claude-opus-4-5",
-      "opencode/kimi-k2.5-free",
+      "kimi-for-coding/k2p5",
       "anthropic/claude-sonnet-4-5",
     ],
     description: "Primary orchestrator - spec clarity and wave execution",
@@ -93,7 +93,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
     suggestions: [
       "openai/gpt-5.2-codex",
       "anthropic/claude-opus-4-5",
-      "opencode/kimi-k2.5-free",
+      "kimi-for-coding/k2p5",
       "anthropic/claude-sonnet-4-5",
     ],
     description: "Detailed execution plans with architectural precision",
@@ -102,7 +102,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
     suggestions: [
       "openai/gpt-5.2",
       "anthropic/claude-sonnet-4-5",
-      "opencode/kimi-k2.5-free",
+      "kimi-for-coding/k2p5",
       "opencode/glm-4.7-free",
     ],
     description: "Comprehensive ecosystem research",
@@ -110,7 +110,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   "goop-tester": {
     suggestions: [
       "anthropic/claude-sonnet-4-5",
-      "opencode/kimi-k2.5-free",
+      "kimi-for-coding/k2p5",
       "google/antigravity-gemini-3-flash",
     ],
     description: "Web frontend testing with Playwright",
@@ -125,7 +125,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   "goop-writer": {
     suggestions: [
       "google/antigravity-gemini-3-pro-high",
-      "opencode/kimi-k2.5-free",
+      "kimi-for-coding/k2p5",
       "anthropic/claude-sonnet-4-5",
     ],
     description: "Comprehensive documentation generation",

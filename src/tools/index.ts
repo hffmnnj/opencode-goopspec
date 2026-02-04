@@ -15,6 +15,7 @@ import { createGoopDelegateTool } from "./goop-delegate/index.js";
 import { createGoopReferenceTool } from "./goop-reference/index.js";
 import { createSlashcommandTool } from "./slashcommand/index.js";
 import { createGoopSetupTool } from "./goop-setup/index.js";
+import { createGoopStateTool } from "./goop-state/index.js";
 
 // Memory tools
 import { createMemorySaveTool } from "./memory-save/index.js";
@@ -44,6 +45,7 @@ export function createTools(ctx: PluginContext): ToolsMap {
   return {
     // Core GoopSpec tools
     goop_status: createGoopStatusTool(ctx),
+    goop_state: createGoopStateTool(ctx),
     goop_adl: createGoopAdlTool(ctx),
     goop_spec: createGoopSpecTool(ctx),
     goop_checkpoint: createGoopCheckpointTool(ctx),
@@ -67,6 +69,7 @@ export function createTools(ctx: PluginContext): ToolsMap {
 
 // Re-export individual tool factories
 export { createGoopStatusTool } from "./goop-status/index.js";
+export { createGoopStateTool } from "./goop-state/index.js";
 export { createGoopAdlTool } from "./goop-adl/index.js";
 export { createGoopSpecTool } from "./goop-spec/index.js";
 export { createGoopCheckpointTool } from "./goop-checkpoint/index.js";

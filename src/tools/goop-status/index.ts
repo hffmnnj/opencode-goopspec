@@ -117,20 +117,27 @@ function formatNextSteps(guidance: PhaseGuidance): string[] {
 function formatStatus(state: GoopState | null, verbose: boolean, ctx: PluginContext): string {
   const lines: string[] = [];
   
-  lines.push("# GoopSpec Status\n");
-  
   // Handle missing or incomplete state
   if (!state) {
-    lines.push("**Status:** Not initialized");
-    lines.push("\nRun `/goop-plan` to start a new project.");
+    lines.push("## 🔮 GoopSpec · Status");
+    lines.push("");
+    lines.push("⏳ Not initialized");
+    lines.push("");
+    lines.push("→ Run `/goop-discuss` to start a new project.");
+    lines.push("");
+    lines.push("---");
     return lines.join("\n");
   }
   
   // Project info
   const projectName = state.project?.name || "Unknown";
   const initialized = state.project?.initialized || "Not set";
+  
+  lines.push("## 🔮 GoopSpec · Status");
+  lines.push("");
   lines.push(`**Project:** ${projectName}`);
-  lines.push(`**Initialized:** ${initialized}\n`);
+  lines.push(`**Initialized:** ${initialized}`);
+  lines.push("");
   
   // Workflow status with new fields
   const workflow = state.workflow || { 
@@ -170,6 +177,8 @@ function formatStatus(state: GoopState | null, verbose: boolean, ctx: PluginCont
   lines.push(`- **Mode:** ${modeIcon} ${workflow.mode || "standard"}`);
   
   // Contract gates
+  const interviewComplete = (workflow as Record<string, unknown>).interviewComplete as boolean | undefined;
+  lines.push(`- **Interview Complete:** ${interviewComplete ? "✅ Yes" : "⏳ No"}`);
   lines.push(`- **Spec Locked:** ${workflow.specLocked ? "🔒 Yes" : "🔓 No"}`);
   lines.push(`- **Accepted:** ${workflow.acceptanceConfirmed ? "✅ Yes" : "⏳ Pending"}`);
   
@@ -226,7 +235,7 @@ function formatStatus(state: GoopState | null, verbose: boolean, ctx: PluginCont
   }
   
   // Next steps guidance based on current phase
-  lines.push("\n## Next Steps");
+  lines.push("\n═══ Next Steps ═════════════════════════════════════════════════════");
   const guidance = getPhaseGuidance(workflow.phase, workflow.specLocked);
   const nextSteps = formatNextSteps(guidance);
   for (const step of nextSteps) {
