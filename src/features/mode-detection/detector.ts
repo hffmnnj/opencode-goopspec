@@ -3,7 +3,7 @@
  * @module features/mode-detection/detector
  */
 
-import type { TaskMode } from "../../core/types.js";
+import type { TaskMode, WorkflowDepth } from "../../core/types.js";
 import {
   ALL_SIGNALS,
   WORD_COUNT_THRESHOLDS,
@@ -19,9 +19,10 @@ export interface ModeDetectionResult {
 export interface DetectorOptions {
   defaultMode?: TaskMode;
   confidenceThreshold?: number; // Below this, consider ambiguous
+  depthHint?: WorkflowDepth;
 }
 
-const DEFAULT_OPTIONS: Required<DetectorOptions> = {
+const DEFAULT_OPTIONS: Required<Pick<DetectorOptions, "defaultMode" | "confidenceThreshold">> = {
   defaultMode: "standard",
   confidenceThreshold: 0.6,
 };
@@ -49,6 +50,14 @@ export function detectTaskMode(
   
   // Normalize input
   const normalized = userRequest.toLowerCase().trim();
+  if (!normalized) {
+    return {
+      suggestedMode: opts.defaultMode,
+      confidence: 0,
+      signals: [`Empty request; defaulted to ${opts.defaultMode}`],
+      alternatives: [],
+    };
+  }
   const wordCount = normalized.split(/\s+/).length;
   
   // Initialize scores for each mode
@@ -61,6 +70,12 @@ export function detectTaskMode(
   
   // Track which signals fired
   const firedSignals: string[] = [];
+
+  // Apply depth hints (explicit or inferred)
+  const depthHint = options?.depthHint ?? detectDepthHint(normalized);
+  if (depthHint) {
+    firedSignals.push(...applyDepthHint(depthHint, scores));
+  }
   
   // Apply word count heuristics
   const wordCountSignals = applyWordCountHeuristics(wordCount, scores);
@@ -75,8 +90,20 @@ export function detectTaskMode(
     (a, b) => scores[b] - scores[a]
   );
   
-  const suggestedMode = sortedModes[0] || opts.defaultMode;
-  const topScore = scores[suggestedMode];
+  const topMode = sortedModes[0];
+  const topScore = topMode ? scores[topMode] : 0;
+  if (topScore === 0) {
+    return {
+      suggestedMode: opts.defaultMode,
+      confidence: 0,
+      signals: firedSignals.length > 0
+        ? firedSignals
+        : [`No strong signals; defaulted to ${opts.defaultMode}`],
+      alternatives: [],
+    };
+  }
+
+  const suggestedMode = topMode || opts.defaultMode;
   const secondScore = scores[sortedModes[1]] || 0;
   
   // Calculate confidence based on score margin
@@ -215,4 +242,39 @@ function calculateConfidence(topScore: number, margin: number): number {
   
   // Clamp to 0.0 - 1.0
   return Math.max(0.0, Math.min(1.0, confidence));
+}
+
+function detectDepthHint(input: string): WorkflowDepth | null {
+  if (!input) {
+    return null;
+  }
+
+  if (/\b(deep|in-depth|thorough|detailed|exhaustive|deep dive)\b/i.test(input)) {
+    return "deep";
+  }
+
+  if (/\b(shallow|brief|lightweight|minimal|surface|quick)\b/i.test(input)) {
+    return "shallow";
+  }
+
+  return null;
+}
+
+function applyDepthHint(
+  depth: WorkflowDepth,
+  scores: Record<TaskMode, number>
+): string[] {
+  switch (depth) {
+    case "deep":
+      scores.comprehensive += 1.0;
+      return ["Depth hint suggests comprehensive work"];
+    case "shallow":
+      scores.quick += 1.0;
+      return ["Depth hint suggests quick work"];
+    case "standard":
+      scores.standard += 0.4;
+      return ["Depth hint suggests standard work"];
+    default:
+      return [];
+  }
 }

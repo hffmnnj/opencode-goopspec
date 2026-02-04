@@ -123,6 +123,8 @@ export const DEFAULT_TEST_STATE: GoopState = {
   workflow: {
     phase: "idle",
     mode: "standard",
+    depth: "standard",
+    researchOptIn: false,
     specLocked: false,
     acceptanceConfirmed: false,
     currentPhase: null,

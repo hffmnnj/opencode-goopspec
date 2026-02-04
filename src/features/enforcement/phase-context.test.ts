@@ -25,6 +25,8 @@ function createTestState(overrides: Partial<GoopState["workflow"]> = {}): GoopSt
       currentPhase: null,
       phase: "idle" as WorkflowPhase,
       mode: "standard",
+      depth: "standard",
+      researchOptIn: false,
       specLocked: false,
       acceptanceConfirmed: false,
       currentWave: 0,

@@ -153,7 +153,7 @@ describe("goop_setup tool", () => {
       const result = await tool.execute({ action: "detect" }, toolContext);
 
       expect(result).toContain("# GoopSpec Environment Detection");
-      expect(result).toContain("## Existing Configuration");
+      expect(result).toContain("## Directory Structure");
     });
 
     it("shows config file status", async () => {
@@ -171,14 +171,14 @@ describe("goop_setup tool", () => {
       expect(result).toContain("## Installed MCPs");
     });
 
-    it("shows recommended setup options", async () => {
+    it("shows available actions", async () => {
       const tool = createGoopSetupTool(ctx);
       const result = await tool.execute({ action: "detect" }, toolContext);
 
-      expect(result).toContain("## Recommended Setup Options");
-      expect(result).toContain("scope");
-      expect(result).toContain("orchestratorModel");
-      expect(result).toContain("mcpPreset");
+      expect(result).toContain("## Available Actions");
+      expect(result).toContain("init");
+      expect(result).toContain("verify");
+      expect(result).toContain("reset");
     });
   });
 
@@ -343,6 +343,145 @@ describe("goop_setup tool", () => {
       }, toolContext);
 
       expect(result).toContain("# GoopSpec Setup Plan");
+    });
+  });
+
+  describe("init action", () => {
+    it("requires scope parameter", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({ action: "init" }, toolContext);
+
+      expect(result).toContain("Error");
+      expect(result).toContain("scope");
+    });
+
+    it("creates project structure", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({
+        action: "init",
+        scope: "project",
+        projectName: "test-project",
+        mcpPreset: "none",
+      }, toolContext);
+
+      expect(result).toContain("# GoopSpec Initialization Result");
+      expect(result).toContain("test-project");
+    });
+
+    it("shows created files", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({
+        action: "init",
+        scope: "project",
+        projectName: "test-project",
+        mcpPreset: "none",
+      }, toolContext);
+
+      expect(result).toContain("## Created");
+    });
+  });
+
+  describe("verify action", () => {
+    it("returns verification result", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({ action: "verify" }, toolContext);
+
+      expect(result).toContain("# GoopSpec Setup Verification");
+      expect(result).toContain("## Check Results");
+    });
+
+    it("shows check summary", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({ action: "verify" }, toolContext);
+
+      expect(result).toContain("## Summary");
+      expect(result).toContain("Total");
+      expect(result).toContain("Passed");
+      expect(result).toContain("Failed");
+    });
+  });
+
+  describe("reset action", () => {
+    it("requires scope parameter", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({ action: "reset" }, toolContext);
+
+      expect(result).toContain("Error");
+      expect(result).toContain("scope");
+    });
+
+    it("requires confirmation", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({
+        action: "reset",
+        scope: "project",
+      }, toolContext);
+
+      expect(result).toContain("confirmation");
+    });
+
+    it("resets when confirmed", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({
+        action: "reset",
+        scope: "project",
+        confirmed: true,
+      }, toolContext);
+
+      expect(result).toContain("# GoopSpec Reset Result");
+    });
+  });
+
+  describe("status action", () => {
+    it("returns status summary", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({ action: "status" }, toolContext);
+
+      expect(result).toContain("# GoopSpec Configuration Status");
+      expect(result).toContain("Initialized");
+    });
+
+    it("shows memory system status", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({ action: "status" }, toolContext);
+
+      expect(result).toContain("## Memory System");
+    });
+
+    it("shows MCP status", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({ action: "status" }, toolContext);
+
+      expect(result).toContain("## MCPs");
+    });
+  });
+
+  describe("memory configuration", () => {
+    it("accepts memory options in plan", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({
+        action: "plan",
+        scope: "project",
+        memoryEnabled: true,
+        memoryProvider: "local",
+      }, toolContext);
+
+      expect(result).toContain("# GoopSpec Setup Plan");
+      expect(result).toContain("Memory");
+    });
+
+    it("includes memory config in init", async () => {
+      const tool = createGoopSetupTool(ctx);
+      const result = await tool.execute({
+        action: "init",
+        scope: "project",
+        projectName: "test-memory",
+        mcpPreset: "none",
+        memoryEnabled: true,
+        memoryProvider: "local",
+      }, toolContext);
+
+      expect(result).toContain("# GoopSpec Initialization Result");
     });
   });
 });
