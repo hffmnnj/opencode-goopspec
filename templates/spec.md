@@ -4,6 +4,8 @@
 **Created:** {{created_date}}
 **Last Updated:** {{updated_date}}
 **Status:** {{status}}
+**Locked:** {{locked}}
+{{#locked_at}}**Locked At:** {{locked_at}}{{/locked_at}}
 
 ---
 
@@ -13,6 +15,8 @@
 
 **Why this matters:** {{why}}
 
+**Target Users:** {{target_users}}
+
 ---
 
 ## Must-Haves (The Contract)
@@ -20,17 +24,27 @@
 These are non-negotiable. The spec is not complete until ALL must-haves are delivered.
 
 {{#must_haves}}
-- [ ] **{{title}}**: {{description}}
-{{/must_haves}}
+### MH{{number}}: {{title}}
+
+{{description}}
+
+**Acceptance Criteria:**
+{{#acceptance_criteria}}
+- [ ] {{.}}
+{{/acceptance_criteria}}
+
+**Traced To:** {{#traced_to}}Wave {{wave}}, Task {{task}}{{/traced_to}}{{^traced_to}}*Not yet mapped*{{/traced_to}}
 
 ---
+{{/must_haves}}
 
 ## Nice-to-Haves
 
 These enhance the deliverable but are not required for acceptance.
 
 {{#nice_to_haves}}
-- [ ] **{{title}}**: {{description}}
+- [ ] **NH{{number}}: {{title}}**: {{description}}
+  - Defer if: {{defer_condition}}
 {{/nice_to_haves}}
 
 ---
@@ -40,7 +54,7 @@ These enhance the deliverable but are not required for acceptance.
 Explicitly excluded to prevent scope creep.
 
 {{#out_of_scope}}
-- {{item}}
+- **{{item}}** — {{reason}}
 {{/out_of_scope}}
 
 ---
@@ -48,17 +62,21 @@ Explicitly excluded to prevent scope creep.
 ## Technical Constraints
 
 ### Stack (Non-Negotiable)
-- **Runtime:** {{runtime}}
-- **Language:** {{language}}
-- **Framework:** {{framework}}
-- **Database:** {{database}}
-- **Testing:** {{testing}}
+| Component | Technology | Version |
+|-----------|------------|---------|
+| Runtime | {{runtime}} | {{runtime_version}} |
+| Language | {{language}} | {{language_version}} |
+| Framework | {{framework}} | {{framework_version}} |
+| Database | {{database}} | {{database_version}} |
+| Testing | {{testing}} | {{testing_version}} |
 
 ### Conventions
-- **Files:** {{file_naming}}
-- **Components:** {{component_naming}}
-- **Functions:** {{function_naming}}
-- **Commits:** {{commit_format}}
+| Aspect | Standard |
+|--------|----------|
+| Files | {{file_naming}} |
+| Components | {{component_naming}} |
+| Functions | {{function_naming}} |
+| Commits | {{commit_format}} |
 
 ### Boundaries
 
@@ -79,25 +97,72 @@ Explicitly excluded to prevent scope creep.
 
 ---
 
+## Assumptions
+
+We are assuming:
+
+{{#assumptions}}
+- **{{assumption}}**
+  - If false: {{impact}}
+{{/assumptions}}
+
+---
+
+## Risks & Mitigations
+
+| Risk | Impact | Likelihood | Mitigation |
+|------|--------|------------|------------|
+{{#risks}}
+| {{risk}} | {{impact}} | {{likelihood}} | {{mitigation}} |
+{{/risks}}
+
+---
+
+## Traceability Matrix
+
+Every must-have maps to specific blueprint tasks:
+
+| Must-Have | Covered By | Status |
+|-----------|------------|--------|
+{{#traceability}}
+| MH{{mh_number}}: {{mh_title}} | Wave {{wave}}, Task {{task}} | {{status}} |
+{{/traceability}}
+
+**Coverage:** {{coverage_percentage}}% of must-haves mapped
+
+---
+
 ## Acceptance Criteria
 
 The spec is complete when:
 
-{{#acceptance_criteria}}
+{{#final_acceptance}}
 1. {{.}}
-{{/acceptance_criteria}}
+{{/final_acceptance}}
 
 ---
 
 ## Amendment History
 
-| Version | Date | Change | Approved By |
-|---------|------|--------|-------------|
+| Version | Date | Change | Impact | Approved By |
+|---------|------|--------|--------|-------------|
 {{#amendments}}
-| {{version}} | {{date}} | {{change}} | {{approved_by}} |
+| {{version}} | {{date}} | {{change}} | {{impact}} | {{approved_by}} |
 {{/amendments}}
 
 ---
 
-*This specification is a CONTRACT. Changes require explicit amendment.*
-*GoopSpec v0.1.0*
+## Verification Protocol
+
+Before acceptance, verify:
+
+- [ ] All must-haves pass acceptance criteria
+- [ ] All tests pass
+- [ ] No type errors
+- [ ] Security checklist reviewed
+- [ ] Documentation updated
+
+---
+
+*This specification is a CONTRACT. Changes require explicit amendment via `/goop-amend`.*
+*GoopSpec v0.1.4*
