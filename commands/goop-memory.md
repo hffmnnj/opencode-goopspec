@@ -11,6 +11,17 @@ View the status and statistics of the persistent memory system.
 `/goop-memory stats` - Show detailed statistics
 `/goop-memory clean` - Clean up old/low-importance memories
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_status` | Check memory worker status |
+| `memory_search` | Query memory statistics |
+
+**Hook Support:** None specific - status command.
+
+---
+
 ## Instructions
 
 When this command is invoked:

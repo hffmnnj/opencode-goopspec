@@ -20,6 +20,16 @@ You are helping the user set up or modify their GoopSpec configuration. This wiz
 | `models` | Show model suggestions | Help choosing agent models |
 | `status` | Show current config | Quick overview of current state |
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_setup` | Primary tool - all setup actions |
+
+**Hook Support:** None specific - configuration tool.
+
+---
+
 ## First-Time Setup Flow
 
 For users who haven't set up GoopSpec yet, use the `init` action.
@@ -146,12 +156,12 @@ goop_setup(
 *Systematic debugging with hypothesis testing*
 1. openai/gpt-5.2-codex
 2. anthropic/claude-opus-4-5
-3. opencode/kimi-k2.5-free
+3. kimi-for-coding/k2p5
 
 ### goop-designer
 *Visual design planning and UI/UX reasoning*
 1. anthropic/claude-opus-4-5
-2. opencode/kimi-k2.5-free
+2. kimi-for-coding/k2p5
 3. google/antigravity-gemini-3-pro-high
 
 ### goop-executor
@@ -159,7 +169,7 @@ goop_setup(
 1. openai/gpt-5.2-codex
 2. anthropic/claude-opus-4-5
 3. anthropic/claude-sonnet-4-5
-4. opencode/kimi-k2.5-free
+4. kimi-for-coding/k2p5
 5. google/antigravity-gemini-3-pro-high
 6. opencode/glm-4.7-free
 
@@ -179,26 +189,26 @@ goop_setup(
 *Primary orchestrator - spec clarity and wave execution*
 1. anthropic/claude-opus-4-5
 2. openai/gpt-5.2-codex
-3. opencode/kimi-k2.5-free
+3. kimi-for-coding/k2p5
 4. anthropic/claude-sonnet-4-5
 
 ### goop-planner
 *Detailed execution plans with architectural precision*
 1. anthropic/claude-opus-4-5
 2. openai/gpt-5.2-codex
-3. opencode/kimi-k2.5-free
+3. kimi-for-coding/k2p5
 4. anthropic/claude-sonnet-4-5
 
 ### goop-researcher
 *Comprehensive ecosystem research*
 1. openai/gpt-5.2
 2. anthropic/claude-sonnet-4-5
-3. opencode/kimi-k2.5-free
+3. kimi-for-coding/k2p5
 4. opencode/glm-4.7-free
 
 ### goop-tester
 *Web frontend testing with Playwright*
-1. opencode/kimi-k2.5-free
+1. kimi-for-coding/k2p5
 2. anthropic/claude-sonnet-4-5
 3. google/antigravity-gemini-3-flash
 
@@ -210,7 +220,7 @@ goop_setup(
 ### goop-writer
 *Comprehensive documentation generation*
 1. google/antigravity-gemini-3-pro-high
-2. opencode/kimi-k2.5-free
+2. kimi-for-coding/k2p5
 3. anthropic/claude-sonnet-4-5
 
 ## Memory System Configuration

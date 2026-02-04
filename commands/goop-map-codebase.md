@@ -33,6 +33,19 @@ Use before `/goop-setup` on existing codebases. Provides the context needed to e
 @/home/james/Documents/opencode-goopspec/templates/codebase/conventions.md
 </execution_context>
 
+<tools_used>
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_status` | Check if mapping already exists |
+| `memory_search` | Find prior codebase insights |
+| `memory_save` | Persist discovered patterns |
+| `memory_note` | Quick capture during exploration |
+
+**Hook Support:** `system.transform` injects patterns for future sessions.
+</tools_used>
+
 <process>
 ## Phase 1: Setup
 

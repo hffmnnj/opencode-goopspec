@@ -17,6 +17,18 @@ Save important information to the persistent memory system for future sessions. 
 `/goop-remember note: [content]` - Quick note
 `/goop-remember todo: [content]` - Create a durable task
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `memory_save` | Store structured memories |
+| `memory_decision` | Record decisions with reasoning |
+| `memory_note` | Quick note capture |
+
+**Hook Support:** `system.transform` uses saved memories in future sessions.
+
+---
+
 ## Instructions
 
 When this command is invoked:

@@ -13,6 +13,18 @@ description: Resume from a saved checkpoint
 /goop-resume [checkpoint-id]
 ```
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_checkpoint` | Load saved execution state |
+| `goop_status` | Verify current state matches checkpoint |
+| `memory_search` | Find context from when checkpoint was saved |
+
+**Hook Support:** `system.transform` injects checkpoint context automatically.
+
+---
+
 ## How It Works
 
 Loads a saved state, restores the workflow context, and prepares the agent to continue exactly where it left off.

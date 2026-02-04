@@ -13,6 +13,19 @@ description: Debug with a systematic workflow
 /goop-debug [symptom description]
 ```
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_status` | Check current execution context |
+| `goop_checkpoint` | Save state before risky fixes |
+| `memory_search` | Find prior bugs, similar issues |
+| `memory_decision` | Record fix decisions with evidence |
+
+**Hook Support:** `system.transform` injects prior debugging context.
+
+---
+
 ## How It Works
 
 Enters a specialized debugging mode that enforces scientific rigor to prevent "flailing."
