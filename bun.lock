@@ -12,6 +12,7 @@
         "hono": "^4.11.7",
         "picocolors": "^1.1.1",
         "sqlite-vec": "^0.1.7-alpha.2",
+        "sqlite-vec-linux-x64": "^0.1.7-alpha.2",
         "zod": "^4.1.8",
       },
       "devDependencies": {
