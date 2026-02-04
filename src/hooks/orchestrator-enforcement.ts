@@ -229,6 +229,19 @@ const blockedOperations = new Map<string, BlockedOperation>();
 // Track blocked research operations per session (for guidance injection)
 const blockedResearchOperations = new Map<string, BlockedResearchOperation>();
 
+// Track exploration tool usage per session for pattern detection
+interface ExplorationTracking {
+  tools: string[];
+  timestamps: number[];
+  lastNudge: number;
+}
+
+const explorationTracking = new Map<string, ExplorationTracking>();
+
+const EXPLORATION_THRESHOLD = 3;
+const EXPLORATION_WINDOW_MS = 60000;
+const NUDGE_COOLDOWN_MS = 120000;
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -343,6 +356,55 @@ export function detectIntent(message: string): DetectedIntent {
   }
 
   return { type: null, pattern: null, confidence: "low" };
+}
+
+/**
+ * Track exploration tool usage
+ */
+function trackExplorationTool(sessionId: string, toolName: string): void {
+  const now = Date.now();
+  let tracking = explorationTracking.get(sessionId);
+
+  if (!tracking) {
+    tracking = { tools: [], timestamps: [], lastNudge: 0 };
+    explorationTracking.set(sessionId, tracking);
+  }
+
+  const windowStart = now - EXPLORATION_WINDOW_MS;
+  const validIndices = tracking.timestamps
+    .map((ts, i) => (ts > windowStart ? i : -1))
+    .filter(i => i >= 0);
+
+  tracking.tools = validIndices.map(i => tracking!.tools[i]);
+  tracking.timestamps = validIndices.map(i => tracking!.timestamps[i]);
+
+  tracking.tools.push(toolName);
+  tracking.timestamps.push(now);
+}
+
+/**
+ * Check if exploration pattern is detected
+ */
+function isExplorationPattern(sessionId: string): boolean {
+  const tracking = explorationTracking.get(sessionId);
+  if (!tracking) return false;
+
+  const now = Date.now();
+  if (now - tracking.lastNudge < NUDGE_COOLDOWN_MS) return false;
+
+  return tracking.tools.length >= EXPLORATION_THRESHOLD;
+}
+
+/**
+ * Mark that a nudge was shown
+ */
+function markNudgeShown(sessionId: string): void {
+  const tracking = explorationTracking.get(sessionId);
+  if (tracking) {
+    tracking.lastNudge = Date.now();
+    tracking.tools = [];
+    tracking.timestamps = [];
+  }
 }
 
 /**
@@ -696,6 +758,23 @@ export function createOrchestratorEnforcementHooks(ctx: PluginContext) {
           sessionID: input.sessionID,
         });
       }
+
+      // === EXPLORATION PATTERN DETECTION ===
+      if (config.explorationNudgesEnabled &&
+          (EXPLORATION_TOOLS as readonly string[]).includes(input.tool)) {
+        trackExplorationTool(input.sessionID, input.tool);
+
+        if (isExplorationPattern(input.sessionID)) {
+          markNudgeShown(input.sessionID);
+
+          output.output = (output.output || "") + generateExplorationDelegationGuidance(input.tool);
+
+          log("Injected exploration nudge after pattern detected", {
+            tool: input.tool,
+            sessionID: input.sessionID,
+          });
+        }
+      }
       
       // === DELEGATION ENFORCER ===
       if (config.delegationEnforcementEnabled && input.tool === "goop_delegate") {
@@ -723,6 +802,8 @@ export function createOrchestratorEnforcementHooks(ctx: PluginContext) {
           });
           pendingDelegations.delete(input.sessionID);
         }
+
+        clearExplorationTracking(input.sessionID);
       }
     },
 
@@ -798,6 +879,13 @@ export function getPendingDelegation(sessionId: string): DelegationState | undef
  */
 export function clearPendingDelegation(sessionId: string): void {
   pendingDelegations.delete(sessionId);
+}
+
+/**
+ * Clear exploration tracking
+ */
+export function clearExplorationTracking(sessionId: string): void {
+  explorationTracking.delete(sessionId);
 }
 
 /**
