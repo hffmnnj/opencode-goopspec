@@ -9,6 +9,7 @@
  * @module hooks/orchestrator-enforcement
  */
 
+import type { Part } from "@opencode-ai/sdk";
 import type { PluginContext } from "../core/types.js";
 import { log } from "../shared/logger.js";
 
@@ -38,6 +39,16 @@ interface ToolExecuteAfterOutput {
   title: string;
   output: string;
   metadata: unknown;
+}
+
+interface ChatMessageInput {
+  sessionID: string;
+  agent?: string;
+  messageID?: string;
+}
+
+interface ChatMessageOutput {
+  parts: Part[];
 }
 
 interface EnforcementConfig {
@@ -72,6 +83,12 @@ export interface DelegationMapping {
   agent: string;
   guidance: string;
 }
+
+export type DetectedIntent = {
+  type: "research" | "exploration" | null;
+  pattern: string | null;
+  confidence: "high" | "medium" | "low";
+};
 
 // Track blocked operations to inject guidance
 interface BlockedOperation {
@@ -178,6 +195,31 @@ export const DELEGATION_MAPPINGS: Record<BlockedToolCategory, DelegationMapping>
   },
 };
 
+export const RESEARCH_INTENT_PATTERNS = [
+  /\bresearch\b/i,
+  /\bcompare\b/i,
+  /\bevaluate\b/i,
+  /\binvestigate\b/i,
+  /\bfind out about\b/i,
+  /what is the best/i,
+  /which library/i,
+  /how does .+ compare/i,
+  /\bpros and cons\b/i,
+  /\brecommend\b/i,
+] as const;
+
+export const EXPLORATION_INTENT_PATTERNS = [
+  /\bfind\b.*\b(where|file|function|class)\b/i,
+  /where is\b/i,
+  /how does .+ work/i,
+  /\btrace\b/i,
+  /\blocate\b/i,
+  /what calls\b/i,
+  /who uses\b/i,
+  /show me .+ (code|implementation|file)/i,
+  /\bwhere.*defined\b/i,
+] as const;
+
 // Track pending delegations per session
 const pendingDelegations = new Map<string, DelegationState>();
 
@@ -208,6 +250,16 @@ function isAllowedPath(filePath: string, config: EnforcementConfig): boolean {
   }
   
   return false;
+}
+
+/**
+ * Extract text content from message parts
+ */
+function extractTextFromParts(parts: Part[]): string {
+  return parts
+    .filter((part): part is Part & { type: "text" } => part.type === "text")
+    .map((part) => (part as { type: "text"; text: string }).text)
+    .join("\n");
 }
 
 /**
@@ -264,6 +316,33 @@ export function getToolCategory(toolName: string): BlockedToolCategory | null {
     return "exploration";
   }
   return null;
+}
+
+/**
+ * Detect research or exploration intent from a message
+ */
+export function detectIntent(message: string): DetectedIntent {
+  for (const pattern of RESEARCH_INTENT_PATTERNS) {
+    if (pattern.test(message)) {
+      return {
+        type: "research",
+        pattern: pattern.source,
+        confidence: message.length < 50 ? "high" : "medium",
+      };
+    }
+  }
+
+  for (const pattern of EXPLORATION_INTENT_PATTERNS) {
+    if (pattern.test(message)) {
+      return {
+        type: "exploration",
+        pattern: pattern.source,
+        confidence: message.length < 50 ? "high" : "medium",
+      };
+    }
+  }
+
+  return { type: null, pattern: null, confidence: "low" };
 }
 
 /**
@@ -366,6 +445,44 @@ task({
 \`\`\`
 
 This is a suggestion, not a block. Continue if this is a quick lookup.
+`;
+}
+
+/**
+ * Generate intent-based delegation suggestion
+ */
+export function generateIntentSuggestion(intent: DetectedIntent): string {
+  if (!intent.type) return "";
+
+  const mapping = DELEGATION_MAPPINGS[intent.type];
+  const label = intent.type === "research" ? "Research" : "Exploration";
+  const description = intent.type === "research" ? "Research task" : "Explore codebase";
+  const promptLabel = intent.type === "research" ? "research" : "exploration";
+  const confidenceNote = intent.confidence === "high"
+    ? "**High confidence** — This strongly matches a delegation pattern."
+    : "**Medium confidence** — Consider whether delegation is appropriate.";
+
+  return `
+
+---
+
+## 💡 Detected ${label} Intent
+
+Based on your message, this looks like a ${intent.type} task.
+
+**Suggested delegation to ${mapping.agent}:**
+
+\`\`\`
+task({
+  subagent_type: "${mapping.agent}",
+  description: "${description}",
+  prompt: \`
+    [Your specific ${promptLabel} request here]
+  \`
+})
+\`\`\`
+
+${confidenceNote}
 `;
 }
 
@@ -607,6 +724,43 @@ export function createOrchestratorEnforcementHooks(ctx: PluginContext) {
           pendingDelegations.delete(input.sessionID);
         }
       }
+    },
+
+    /**
+     * chat.message - Detect intent and inject delegation suggestions
+     */
+    "chat.message": async (
+      input: ChatMessageInput,
+      output: ChatMessageOutput
+    ): Promise<void> => {
+      if (!isOrchestrator(input.agent)) {
+        return;
+      }
+
+      const messageContent = extractTextFromParts(output.parts).trim();
+      if (!messageContent) {
+        return;
+      }
+
+      const intent = detectIntent(messageContent);
+      if (!intent.type) {
+        return;
+      }
+
+      const suggestion = generateIntentSuggestion(intent);
+      if (!suggestion) {
+        return;
+      }
+
+      output.parts.push({ type: "text", text: suggestion } as Part);
+
+      log("Injected intent delegation suggestion", {
+        intent: intent.type,
+        pattern: intent.pattern,
+        confidence: intent.confidence,
+        sessionID: input.sessionID,
+        agent: input.agent,
+      });
     },
   };
 }
