@@ -1,4 +1,4 @@
-# GoopSpec v0.1.2
+# GoopSpec v0.1.3
 
 <div align="center">
 
@@ -6,7 +6,7 @@
 
 *The Orchestrator that turns vague ideas into shipped software*
 
-[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/hffmnnj/opencode-goopspec)
+[![Version](https://img.shields.io/badge/version-0.1.3-blue.svg)](https://github.com/hffmnnj/opencode-goopspec)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![Tests](https://img.shields.io/badge/tests-936%20passing-green.svg)](./TEST-SUMMARY.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
