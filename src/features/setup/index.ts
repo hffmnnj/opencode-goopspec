@@ -24,10 +24,16 @@ import type {
   ResetOptions,
   ResetResult,
   SetupStatus,
+  MemorySetupResult,
+  MemorySetupInput,
 } from "./types.js";
 import { MCP_PRESETS } from "./types.js";
 import { writeFileSync, mkdirSync, rmSync } from "fs";
 import { initializeGoopspec } from "../state-manager/manager.js";
+import { detectAllDependencies } from "./dependencies.js";
+import { installSqliteVec, installLocalEmbeddings } from "./installer.js";
+import { getDefaultFeatures, isFeatureAvailable } from "./feature-catalog.js";
+import { createDistillationConfig, getDistillationModel } from "./distillation-config.js";
 
 // ============================================================================
 // Environment Detection
@@ -242,6 +248,7 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
     dirsToCreate,
     memoryConfig: input.memory,
     projectName: input.projectName,
+    quick: input.quick,
   };
 }
 
@@ -385,6 +392,116 @@ export async function applySetup(plan: SetupPlan): Promise<SetupResult> {
 }
 
 /**
+ * Setup memory system dependencies (vector search, embeddings, distillation)
+ * 
+ * When the user selects local embeddings, this function will attempt to install
+ * the required native dependencies (sqlite-vec, onnxruntime-node, @huggingface/transformers).
+ * 
+ * @param memoryConfig - Memory configuration from user input
+ * @param quick - If true, install silently without verbose output
+ * @param agentModels - Agent model configuration for distillation
+ * @param defaultModel - Default model for distillation
+ * @param installDependencies - If true, attempt to install missing dependencies (default: true)
+ */
+export async function setupMemoryDependencies(
+  memoryConfig: MemorySetupInput | undefined,
+  quick: boolean = false,
+  agentModels: Record<string, string> = {},
+  defaultModel: string = "anthropic/claude-sonnet-4-5",
+  installDependencies: boolean = true
+): Promise<MemorySetupResult> {
+  const result: MemorySetupResult = {
+    enabled: memoryConfig?.enabled !== false,
+    vectorSearch: { enabled: false },
+    localEmbeddings: { enabled: false },
+    distillation: { enabled: false },
+    degradedFeatures: [],
+  };
+  
+  if (!result.enabled) return result;
+  
+  // Detect current dependencies
+  const deps = await detectAllDependencies();
+  
+  // Determine which features to set up
+  const defaultFeatures = getDefaultFeatures();
+  const featureIds = defaultFeatures.map(f => f.id);
+  
+  // Check what's already available
+  for (const feature of defaultFeatures) {
+    if (isFeatureAvailable(feature, deps)) {
+      if (feature.id === "vector-search") result.vectorSearch.enabled = true;
+      if (feature.id === "local-embeddings") result.localEmbeddings.enabled = true;
+    }
+  }
+  
+  // Determine if we should install dependencies
+  // Install if: installDependencies is true AND local embeddings are requested
+  const shouldInstall = installDependencies && 
+    (memoryConfig?.embeddings?.provider === "local" || memoryConfig?.embeddings?.provider === undefined);
+  
+  if (shouldInstall) {
+    const installOptions = { silent: quick };
+    
+    // Install sqlite-vec if needed for vector search
+    if (featureIds.includes("vector-search") && !result.vectorSearch.enabled) {
+      log("Installing sqlite-vec for vector search...");
+      const installResult = await installSqliteVec(deps.platform, installOptions);
+      result.vectorSearch.enabled = installResult.success;
+      if (!installResult.success) {
+        result.vectorSearch.error = installResult.error;
+        result.degradedFeatures.push(...(installResult.degradedFeatures ?? []));
+      } else {
+        log("sqlite-vec installed successfully");
+      }
+    }
+    
+    // Install local embeddings dependencies if needed
+    if (featureIds.includes("local-embeddings") && !result.localEmbeddings.enabled) {
+      log("Installing local embedding dependencies (onnxruntime-node, @huggingface/transformers)...");
+      const installResult = await installLocalEmbeddings(deps.platform, installOptions);
+      if (installResult.allSucceeded) {
+        result.localEmbeddings.enabled = true;
+        log("Local embedding dependencies installed successfully");
+      } else {
+        result.localEmbeddings.error = installResult.results
+          .filter(r => !r.success)
+          .map(r => r.error)
+          .join("; ");
+        result.degradedFeatures.push(...installResult.degradedFeatures);
+        log(`Some local embedding dependencies failed to install: ${result.localEmbeddings.error}`);
+      }
+    }
+  } else if (!installDependencies) {
+    // If we're not installing, report what's missing as degraded features
+    if (featureIds.includes("vector-search") && !result.vectorSearch.enabled) {
+      result.degradedFeatures.push(
+        `Vector search not available - install: bun add sqlite-vec-${deps.platform.packageSuffix}`
+      );
+    }
+    if (featureIds.includes("local-embeddings") && !result.localEmbeddings.enabled) {
+      const missingPkgs: string[] = [];
+      if (!deps.onnxRuntime.available) missingPkgs.push("onnxruntime-node");
+      if (!deps.transformers.available) missingPkgs.push("@huggingface/transformers");
+      if (missingPkgs.length > 0) {
+        result.degradedFeatures.push(
+          `Local embeddings not available - install: bun add ${missingPkgs.join(" ")}`
+        );
+      }
+    }
+  }
+  
+  // Configure distillation (always available if memory is enabled)
+  if (featureIds.includes("distillation")) {
+    const distillConfig = createDistillationConfig(true, "session-end");
+    result.distillation.enabled = distillConfig.enabled;
+    result.distillation.model = getDistillationModel(distillConfig, agentModels, defaultModel);
+  }
+  
+  return result;
+}
+
+/**
  * Apply initialization plan
  * Executes init-specific actions in addition to regular setup
  */
@@ -441,6 +558,21 @@ export async function applyInit(
     
     if (!setupResult.success) {
       result.success = false;
+    }
+    
+    // Setup memory dependencies if memory is enabled
+    if (plan.memoryConfig?.enabled !== false) {
+      result.memorySetup = await setupMemoryDependencies(
+        plan.memoryConfig,
+        plan.quick ?? false,
+        plan.agentModels ?? {},
+        "anthropic/claude-sonnet-4-5"
+      );
+      
+      // Add degraded features as warnings
+      if (result.memorySetup.degradedFeatures.length > 0) {
+        result.warnings.push(...result.memorySetup.degradedFeatures);
+      }
     }
     
   } catch (error) {
@@ -570,6 +702,48 @@ export async function verifySetup(projectDir: string): Promise<VerificationResul
       missing: recommendedMcps.filter(m => !env.existingMcps.includes(m)),
     },
   });
+  
+  // Check 8: Memory Dependencies (optional but informational)
+  if (env.hasMemoryDir) {
+    const deps = await detectAllDependencies();
+    
+    // Vector search (sqlite-vec)
+    checks.push({
+      name: "Vector Search (sqlite-vec)",
+      passed: deps.sqliteVec.available,
+      message: deps.sqliteVec.available
+        ? `sqlite-vec available${deps.sqliteVec.version ? ` (${deps.sqliteVec.version})` : ""}`
+        : "sqlite-vec not available - using keyword search only",
+      suggestedFix: deps.sqliteVec.available
+        ? undefined
+        : `Install: bun add sqlite-vec-${deps.platform.packageSuffix}`,
+      details: {
+        feature: deps.sqliteVec.feature,
+        error: deps.sqliteVec.error,
+      },
+    });
+    
+    // Local embeddings (ONNX + transformers)
+    const localEmbeddingsAvailable = deps.onnxRuntime.available && deps.transformers.available;
+    const missingPkgs: string[] = [];
+    if (!deps.onnxRuntime.available) missingPkgs.push("onnxruntime-node");
+    if (!deps.transformers.available) missingPkgs.push("@huggingface/transformers");
+    
+    checks.push({
+      name: "Local Embeddings",
+      passed: localEmbeddingsAvailable,
+      message: localEmbeddingsAvailable
+        ? "Local embedding generation available (no API costs)"
+        : `Local embeddings not available - ${missingPkgs.length > 0 ? `missing: ${missingPkgs.join(", ")}` : ""}`,
+      suggestedFix: localEmbeddingsAvailable
+        ? undefined
+        : `Install: bun add ${missingPkgs.join(" ")}`,
+      details: {
+        onnxRuntime: deps.onnxRuntime,
+        transformers: deps.transformers,
+      },
+    });
+  }
   
   // Calculate summary
   const passed = checks.filter(c => c.passed).length;

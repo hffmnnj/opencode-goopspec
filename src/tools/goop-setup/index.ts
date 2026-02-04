@@ -27,6 +27,7 @@ import type {
   ResetResult,
   SetupStatus,
   MemorySetupInput,
+  MemorySetupResult,
 } from "../../features/setup/types.js";
 
 // ============================================================================
@@ -339,6 +340,73 @@ function formatResult(result: SetupResult): string {
 }
 
 /**
+ * Format memory setup status for display
+ */
+function formatMemoryStatus(memorySetup: MemorySetupResult): string {
+  const lines: string[] = ["## Memory System", ""];
+  
+  lines.push(`**Status**: ${memorySetup.enabled ? "✅ Enabled" : "❌ Disabled"}`);
+  lines.push("");
+  
+  // Vector search
+  const vectorIcon = memorySetup.vectorSearch.enabled ? "✅" : "⚠️";
+  lines.push(`### ${vectorIcon} Vector Search`);
+  if (memorySetup.vectorSearch.enabled) {
+    lines.push("Semantic similarity search is available.");
+  } else {
+    lines.push(`Not available: ${memorySetup.vectorSearch.error ?? "Not installed"}`);
+    lines.push("*Memory search will use keyword matching only (FTS5).*");
+    lines.push("");
+    lines.push("**To enable:** Install sqlite-vec for your platform:");
+    lines.push("```bash");
+    lines.push("bun add sqlite-vec-linux-x64  # Linux x64");
+    lines.push("bun add sqlite-vec-darwin-arm64  # macOS Apple Silicon");
+    lines.push("```");
+  }
+  lines.push("");
+  
+  // Local embeddings
+  const embeddingIcon = memorySetup.localEmbeddings.enabled ? "✅" : "⚠️";
+  lines.push(`### ${embeddingIcon} Local Embeddings`);
+  if (memorySetup.localEmbeddings.enabled) {
+    lines.push("Local embedding generation is available (no API costs).");
+  } else {
+    lines.push(`Not available: ${memorySetup.localEmbeddings.error ?? "Not installed"}`);
+    lines.push("*Configure OPENAI_API_KEY for embeddings, or embeddings will be disabled.*");
+    lines.push("");
+    lines.push("**To enable:** Install ONNX runtime and transformers:");
+    lines.push("```bash");
+    lines.push("bun add onnxruntime-node @huggingface/transformers");
+    lines.push("```");
+  }
+  lines.push("");
+  
+  // Distillation
+  const distillIcon = memorySetup.distillation.enabled ? "✅" : "⏸️";
+  lines.push(`### ${distillIcon} Session Distillation`);
+  if (memorySetup.distillation.enabled) {
+    lines.push(`Enabled, using model: \`${memorySetup.distillation.model ?? "default"}\``);
+    lines.push("Session learnings will be automatically extracted at session end.");
+  } else {
+    lines.push("Disabled. Enable in config to auto-extract session learnings.");
+  }
+  lines.push("");
+  
+  // Degraded features summary
+  if (memorySetup.degradedFeatures.length > 0) {
+    lines.push("### ⚠️ Degraded Features");
+    lines.push("");
+    for (const feature of memorySetup.degradedFeatures) {
+      lines.push(`- ${feature}`);
+    }
+    lines.push("");
+    lines.push("*Run `goop_setup(action: 'verify')` for detailed diagnostics.*");
+  }
+  
+  return lines.join("\n");
+}
+
+/**
  * Format init result for display
  */
 function formatInitResult(result: InitResult): string {
@@ -367,6 +435,12 @@ function formatInitResult(result: InitResult): string {
   if (result.mcpsInstalled.length > 0) {
     lines.push("## MCPs Installed");
     lines.push(...result.mcpsInstalled.map(m => `- ${m}`));
+    lines.push("");
+  }
+  
+  // Add memory status if available
+  if (result.memorySetup) {
+    lines.push(formatMemoryStatus(result.memorySetup));
     lines.push("");
   }
   
@@ -559,6 +633,8 @@ export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
       // Reset options
       preserveData: tool.schema.boolean().optional(),
       confirmed: tool.schema.boolean().optional(),
+      // Quick mode
+      quick: tool.schema.boolean().optional(),
     },
     async execute(args, toolCtx: ToolContext): Promise<string> {
       try {
@@ -642,6 +718,7 @@ export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
           enableOrchestrator: args.enableOrchestrator,
           agentModels: args.agentModels,
           memory: memoryConfig,
+          quick: args.quick,
         };
         
         // Detect environment
