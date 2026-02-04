@@ -13,6 +13,19 @@ description: Start a new milestone
 /goop-milestone [start|status|list] [name]
 ```
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_status` | Check current milestone state |
+| `goop_adl` | Log milestone start/completion |
+| `memory_search` | Find prior milestone context |
+| `goop_checkpoint` | Save milestone boundaries |
+
+**Hook Support:** `tool.execute.after` tracks milestone transitions.
+
+---
+
 ## How It Works
 
 Milestones are containers for multiple features/tasks. They help track progress towards a larger release.

@@ -13,6 +13,19 @@ description: Complete and archive the current milestone
 /goop-complete
 ```
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_status` | Verify milestone is ready for completion |
+| `goop_adl` | Log completion decision |
+| `memory_save` | Persist milestone learnings |
+| `goop_checkpoint` | Archive milestone state |
+
+**Hook Support:** `tool.execute.after` triggers archive feature.
+
+---
+
 ## How It Works
 
 Marks the end of a significant body of work (a Milestone). It focuses on cleanup, reflection, and memory persistence.

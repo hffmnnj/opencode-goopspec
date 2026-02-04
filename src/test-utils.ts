@@ -127,6 +127,8 @@ export const DEFAULT_TEST_STATE: GoopState = {
     researchOptIn: false,
     specLocked: false,
     acceptanceConfirmed: false,
+    interviewComplete: false,
+    interviewCompletedAt: null,
     currentPhase: null,
     currentWave: 0,
     totalWaves: 0,
@@ -204,8 +206,26 @@ export function createMockStateManager(initialState: Partial<GoopState> = {}): S
       state.workflow.specLocked = true;
     },
     
+    unlockSpec: () => {
+      state.workflow.specLocked = false;
+    },
+    
     confirmAcceptance: () => {
       state.workflow.acceptanceConfirmed = true;
+    },
+    
+    resetAcceptance: () => {
+      state.workflow.acceptanceConfirmed = false;
+    },
+    
+    completeInterview: () => {
+      state.workflow.interviewComplete = true;
+      state.workflow.interviewCompletedAt = new Date().toISOString();
+    },
+    
+    resetInterview: () => {
+      state.workflow.interviewComplete = false;
+      state.workflow.interviewCompletedAt = null;
     },
     
     setMode: (mode: TaskMode) => {
@@ -215,6 +235,23 @@ export function createMockStateManager(initialState: Partial<GoopState> = {}): S
     updateWaveProgress: (current: number, total: number) => {
       state.workflow.currentWave = current;
       state.workflow.totalWaves = total;
+    },
+    
+    resetWorkflow: () => {
+      state.workflow = {
+        currentPhase: null,
+        phase: "idle",
+        mode: "standard",
+        depth: "standard",
+        researchOptIn: false,
+        specLocked: false,
+        acceptanceConfirmed: false,
+        interviewComplete: false,
+        interviewCompletedAt: null,
+        currentWave: 0,
+        totalWaves: 0,
+        lastActivity: new Date().toISOString(),
+      };
     },
     
     getADL: () => adlContent,

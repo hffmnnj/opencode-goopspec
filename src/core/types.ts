@@ -109,6 +109,8 @@ export interface GoopState {
     researchOptIn: boolean;
     specLocked: boolean;
     acceptanceConfirmed: boolean;
+    interviewComplete: boolean;
+    interviewCompletedAt: string | null; // ISO timestamp
     currentWave: number;
     totalWaves: number;
     lastActivity: string; // ISO timestamp
@@ -262,9 +264,14 @@ export interface StateManager {
   updateWorkflow(updates: Partial<GoopState["workflow"]>): void;
   transitionPhase(to: WorkflowPhase, force?: boolean): boolean;
   lockSpec(): void;
+  unlockSpec(): void;
   confirmAcceptance(): void;
+  resetAcceptance(): void;
+  completeInterview(): void;
+  resetInterview(): void;
   setMode(mode: TaskMode): void;
   updateWaveProgress(current: number, total: number): void;
+  resetWorkflow(): void;
   getADL(): string;
   appendADL(entry: ADLEntry): void;
   saveCheckpoint(id: string, data: Omit<CheckpointData, "id">): void;

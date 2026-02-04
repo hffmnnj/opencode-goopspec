@@ -13,6 +13,19 @@ description: Propose changes to a locked specification
 /goop-amend [description of change]
 ```
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_status` | Check spec is locked |
+| `goop_spec` | Load current spec for amendment |
+| `goop_adl` | Log amendment decision |
+| `memory_decision` | Record amendment rationale |
+
+**Hook Support:** `tool.execute.after` updates spec lock state.
+
+---
+
 ## How It Works
 
 Once a spec is locked via `/goop-specify`, it cannot be silently changed. `/goop-amend` provides a formal process to alter the contract.

@@ -1,16 +1,22 @@
 # Agent Response Format
 
-All GoopSpec subagents MUST return structured responses to the orchestrator. This enables clean handoffs, progress tracking, and next-step clarity.
+All GoopSpec subagents MUST return structured responses to the orchestrator using XML envelopes. This enables clean handoffs, progress tracking, and machine-parseable next-step clarity.
 
-## Core Principle
+## Core Principles
 
 ```
-╔════════════════════════════════════════════════════════════════╗
-║  EVERY RESPONSE MUST ANSWER THREE QUESTIONS:                   ║
-║  1. What did I do?                                              ║
-║  2. What is the current state?                                  ║
-║  3. What should happen next?                                    ║
-╚════════════════════════════════════════════════════════════════╝
++================================================================+
+|  EVERY RESPONSE MUST ANSWER THREE QUESTIONS:                    |
+|  1. What did I do?                                               |
+|  2. What is the current state?                                   |
+|  3. What should happen next?                                     |
++================================================================+
+
++================================================================+
+|  USE XML ENVELOPE FOR MACHINE PARSING.                          |
+|  Keep Markdown content inside for human readability.            |
+|  See references/xml-response-schema.md for full specification.  |
++================================================================+
 ```
 
 ## Response Structure
@@ -369,18 +375,44 @@ When a checkpoint is needed (user decision, verification, or manual action):
 **[For action]:** Type "done" when complete
 ```
 
+## XML Envelope Requirement
+
+**All responses MUST end with an XML envelope.** The Markdown content provides human readability; the XML provides machine-parseable structure for the orchestrator.
+
+See `references/xml-response-schema.md` for the complete specification.
+
+**Minimal XML envelope:**
+
+```xml
+<goop_report version="0.1.4">
+  <status>COMPLETE</status>
+  <agent>goop-[type]</agent>
+  <summary>Brief summary</summary>
+  <handoff>
+    <ready>true</ready>
+    <next_action agent="goop-[type]">Next task</next_action>
+  </handoff>
+</goop_report>
+```
+
 ## Anti-Patterns
 
 **NEVER return:**
 - "Done" (no context)
 - "It works now" (no verification)
+- Responses without XML envelope
 - Responses without NEXT STEPS
 - Unstructured text walls
 - Missing status indicators
 
 **ALWAYS include:**
-- Clear status header
+- Clear status header (Markdown)
 - Summary of work
 - Files touched
 - Memory persistence
 - NEXT STEPS section
+- XML envelope at the end
+
+---
+
+*Response Format v0.1.4*

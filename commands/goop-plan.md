@@ -1,184 +1,185 @@
 ---
 name: goop-plan
-description: Start the Planning Phase
+description: Create specification and blueprint from discovery interview
 phase: plan
-next-step: "When planning is complete and requirements are clear, lock the specification"
+requires: interview_complete
+next-step: "When planning is complete, lock the specification"
 next-command: /goop-specify
 alternatives:
+  - command: /goop-discuss
+    when: "If discovery interview was not completed"
   - command: /goop-research
-    when: "If there are unknowns or technology questions to investigate"
+    when: "If there are unknowns to investigate"
   - command: /goop-pause
     when: "To save progress and continue later"
 ---
 
 # /goop-plan
 
-**Start the Planning Phase.** Capture intent, clarify requirements, and prepare for execution.
+**Create Specification and Blueprint.** Transform discovery interview into executable plans.
 
 ## Usage
 
 ```bash
-/goop-plan [brief description of task]
+/goop-plan
 ```
+
+## Gate Requirement
+
+```
++================================================================+
+|  DISCOVERY GATE: Interview must be complete before planning.    |
+|  This ensures we build the RIGHT thing.                         |
++================================================================+
+```
+
+**Required before this command:**
+- `interviewComplete: true` (check via `goop_state({ action: "get" })`)
+- `.goopspec/REQUIREMENTS.md` exists
+
+**If not satisfied:** Refuse and redirect to `/goop-discuss`
+
+**CRITICAL: Never read or edit .goopspec/state.json directly. Always use `goop_state` tool.**
 
 ## Orchestrator Role
 
-**YOU conduct the interview directly.** Do NOT spawn agents for conversation. Only spawn agents when it's time to BUILD documents.
+**You check the gate, then spawn the planner.** The planner creates SPEC.md and BLUEPRINT.md.
 
-Why: The interview builds shared understanding. That understanding stays in YOUR context and informs how you delegate. Spawning for conversation fragments knowledge.
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_status` | Check current phase and gate requirements |
+| `goop_spec` | Validate interview complete, load existing specs |
+| `memory_search` | Find prior architecture decisions |
+| `memory_decision` | Record new planning decisions |
+| `goop_reference` | Load spec/blueprint templates |
+
+**Hook Support:** `tool.execute.after` may auto-transition to specify phase.
+
+---
 
 ## Process
 
-### Phase 1: Setup
+### Phase 1: Gate Check
 
-**Execute these checks BEFORE any user interaction:**
+**Execute BEFORE anything else:**
 
-**1.1 Check for existing project documents:**
 ```
 goop_status()
-Read(".goopspec/SPEC.md")
-Read(".goopspec/BLUEPRINT.md")
-Read(".goopspec/CHRONICLE.md")
+goop_state({ action: "get" })          # NEVER read state.json directly
+Read(".goopspec/REQUIREMENTS.md")
 ```
 
-**1.2 If documents exist, offer archive:**
+**1.1 Check interviewComplete:**
+
+```
+IF state.interviewComplete != true:
+  REFUSE with:
+  
+  ## 🔮 GoopSpec · Gate Blocked
+  
+  ✗ Discovery interview required before planning.
+  
+  → Run: `/goop-discuss`
+  
+  ---
+  
+  EXIT command.
+```
+
+**1.2 Check REQUIREMENTS.md exists:**
+
+```
+IF .goopspec/REQUIREMENTS.md does not exist:
+  REFUSE with:
+  
+  ## 🔮 GoopSpec · Gate Blocked
+  
+  ✗ No discovery output found.
+  
+  → Run: `/goop-discuss`
+  
+  ---
+  
+  EXIT command.
+```
+
+**1.3 Gate passed:**
+
+```
+## 🔮 GoopSpec · Planning
+
+✓ Discovery gate passed
+
+⏳ Creating specification and blueprint...
+
+---
+```
+
+### Phase 2: Check for Existing Documents
+
+**2.1 Check for existing SPEC.md/BLUEPRINT.md:**
+
+```
+Read(".goopspec/SPEC.md")
+Read(".goopspec/BLUEPRINT.md")
+```
+
+**2.2 If documents exist:**
 
 Use `question` tool:
 - header: "Existing Project"
 - question: "I found existing project documents. How would you like to proceed?"
 - options:
-  - "Archive and start fresh (Recommended)" — Move current docs to archive, extract learnings, start new project
-  - "Continue existing project" — Resume work on current spec (exit planning, run /goop-status)
+  - "Archive and start fresh (Recommended)" — Move current docs to archive, create new
+  - "Continue existing project" — Resume work (exit, run /goop-status)
   - "Overwrite without archiving" — Replace documents (loses history)
 
-**On "Archive and start fresh":**
+**On "Archive":** Spawn writer to archive, then continue.
+**On "Continue":** Exit, suggest `/goop-status`.
+**On "Overwrite":** Warn, then continue.
+
+### Phase 3: Load Context
+
+**3.1 Load discovery interview:**
+
 ```
-task({
-  subagent_type: "goop-writer",
-  description: "Archive current milestone",
-  prompt: `
-    Archive the current project:
-    1. Read .goopspec/SPEC.md and .goopspec/CHRONICLE.md
-    2. Generate RETROSPECTIVE.md summarizing:
-       - What was built
-       - Key decisions made
-       - Learnings for next time
-    3. Move all documents to .goopspec/archive/[milestone-name]/
-    4. Clear working documents (keep archive/)
-    5. Return ARCHIVE COMPLETE with summary
-  `
-})
-```
-Then continue to Phase 2.
-
-**On "Continue existing":** Exit command. Suggest `/goop-status` for current state.
-
-**On "Overwrite":** Warn user, then continue to Phase 2.
-
-**1.3 Initialize if needed:**
-```bash
-mkdir -p .goopspec
+Read(".goopspec/REQUIREMENTS.md")
 ```
 
-**1.4 Search memory for context:**
-```
-memory_search({ query: "project preferences architecture decisions [user's topic]", limit: 5 })
-```
+Extract:
+- Vision
+- Must-haves (with acceptance criteria)
+- Constraints
+- Out of scope
+- Assumptions
+- Risks
 
-Store any relevant findings - use them to skip questions you already know answers to.
+**3.2 Search memory:**
 
-### Phase 2: Deep Questioning
-
-**Display stage banner:**
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GOOPSPEC ▸ PLANNING
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+memory_search({ query: "[feature] architecture decisions patterns", limit: 5 })
 ```
 
-**2.1 Open the conversation:**
+**3.3 Load project knowledge:**
 
-If `$ARGUMENTS` provided:
-> "You want to **[argument]**. Let me understand this better."
-
-Otherwise:
-> "What do you want to build?"
-
-Wait for response. This gives context for intelligent follow-ups.
-
-**2.2 Follow the thread:**
-
-Based on their response, ask follow-up questions. Use the `question` tool with options that probe what they mentioned.
-
-Keep following threads. Each answer opens new areas:
-- What excited them about this idea
-- What problem sparked it
-- What vague terms mean concretely
-- What it would look like in use
-- What's already decided vs open
-
-**2.3 Memory-first questioning protocol:**
-
-Before asking ANYTHING:
-1. Check memory: `memory_search({ query: "[topic] preference" })`
-2. If found with high confidence: "I recall you prefer X for this. Still true? [Y/n]"
-3. If not found: Ask, then SAVE the answer with `memory_note`
-
-**Never ask what you already know.**
-
-**2.4 Context checklist (gather all of these):**
-
-| Category | Questions to Answer |
-|----------|-------------------|
-| **Goal** | What is the ONE thing that must work? |
-| **Context** | Why now? What problem does this solve? |
-| **Success** | How do we know it's done? Observable outcomes? |
-| **Constraints** | Tech stack? Performance? Security? Timeline? |
-| **Scope** | What's explicitly NOT included? |
-| **UI/UX** | Visual direction? Key patterns? States to handle? |
-
-Don't ask all at once. Weave naturally through conversation.
-
-**2.5 Strategy decision gate:**
-
-When you could write a clear SPEC.md, use `question` tool:
-
-- header: "Strategy"
-- question: "I understand what you're building. How should we proceed?"
-- options:
-  - "Create specification (Recommended)" — I'll create SPEC.md and BLUEPRINT.md now
-  - "Research first" — Investigate unknowns before planning (/goop-research)
-  - "Map codebase first" — Understand existing code before planning (/goop-map-codebase)
-  - "Keep exploring" — I want to share more context
-
-**On "Keep exploring":** Ask what they want to add, identify gaps, continue conversation.
-
-**On "Research first":** 
 ```
-Suggest: "Run `/goop-research [topic]` to investigate, then return to `/goop-plan`"
-```
-Exit command.
-
-**On "Map codebase":**
-```
-Suggest: "Run `/goop-map-codebase` to understand the existing code, then return to `/goop-plan`"
-```
-Exit command.
-
-**On "Create specification":** Continue to Phase 3.
-
-### Phase 3: Document Creation
-
-**Display stage banner:**
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GOOPSPEC ▸ CREATING DOCUMENTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-◆ Spawning planner to create SPEC.md and BLUEPRINT.md...
+Read(".goopspec/PROJECT_KNOWLEDGE_BASE.md")  # If exists
 ```
 
-**Spawn goop-planner with full interview context:**
+### Phase 4: Spawn Planner
+
+**Display banner:**
+```
+## 🔮 GoopSpec · Creating Documents
+
+⏳ Spawning planner to create SPEC.md and BLUEPRINT.md...
+
+---
+```
+
+**Spawn goop-planner with full context:**
 
 ```
 task({
@@ -186,147 +187,203 @@ task({
   description: "Create SPEC and BLUEPRINT",
   prompt: `
 ## TASK
-Create specification and blueprint for: [feature name]
+Create specification and blueprint from discovery interview.
 
-## CONTEXT FROM INTERVIEW
+## PROJECT CONTEXT
+[From PROJECT_KNOWLEDGE_BASE.md if exists]
+- Stack: [technologies]
+- Conventions: [naming, patterns]
 
-### User Intent
-[The core "why" - what problem this solves, why now]
+## DISCOVERY INTERVIEW OUTPUT
+[Full content of REQUIREMENTS.md]
 
-### Requirements Gathered
+### Vision
+[Vision section]
 
-**Must Have:**
-- [Requirement 1 from interview]
-- [Requirement 2 from interview]
-- [Requirement 3 from interview]
+### Must-Haves
+[Must-haves with acceptance criteria]
 
-**Nice to Have:**
-- [If mentioned]
+### Constraints
+[Technical and practical constraints]
 
-**Out of Scope:**
-- [Explicit exclusions from interview]
+### Out of Scope
+[Explicit exclusions]
 
-### Technical Constraints
-- Stack: [from interview]
-- Performance: [from interview]
-- Security: [from interview]
+### Assumptions
+[Baseline assumptions]
 
-### Success Criteria
-- [Observable outcome 1]
-- [Observable outcome 2]
-
-### UI/UX Requirements (if applicable)
-- Visual direction: [from interview]
-- Key patterns: [from interview]
-- States to handle: [loading, empty, error, success]
+### Risks
+[Identified risks with mitigations]
 
 ## INSTRUCTIONS
-1. Load templates:
-   - goop_reference({ name: "spec", type: "template" })
-   - goop_reference({ name: "blueprint", type: "template" })
 
-2. Create .goopspec/SPEC.md with:
-   - All must-haves as checkboxes with IDs (MH-01, MH-02)
-   - Nice-to-haves marked separately
-   - Clear out-of-scope section
-   - Success criteria
+1. **Verify discovery completeness:**
+   - Vision defined? 
+   - Must-haves listed with acceptance criteria?
+   - Out of scope defined?
+   - Risks identified?
+   
+   If missing critical info, return BLOCKED.
 
-3. Create .goopspec/BLUEPRINT.md with:
-   - Wave-based execution plan
-   - Each task is atomic and verifiable
-   - Dependencies mapped
-   - Estimated effort per wave
+2. **Create .goopspec/SPEC.md:**
+   - Transform must-haves into formal requirements (MH1, MH2, etc.)
+   - Include acceptance criteria for each
+   - Add traceability section (will be filled after blueprint)
+   - Mark status as "Draft"
 
-4. Initialize .goopspec/CHRONICLE.md with:
+3. **Create .goopspec/BLUEPRINT.md:**
+   - Design wave architecture
+   - Create tasks that cover ALL must-haves
+   - Add spec coverage to each task
+   - Build traceability matrix
+
+4. **Update .goopspec/SPEC.md:**
+   - Fill traceability matrix (must-have → tasks)
+   - Verify 100% coverage
+
+5. **Initialize .goopspec/CHRONICLE.md:**
    - Phase: plan → ready for specify
    - Documents created with timestamps
 
-5. Save key decisions to memory:
-   memory_decision({
-     decision: "[key architectural choice]",
-     reasoning: "[why]",
-     impact: "medium"
-   })
+6. **Save to memory:**
+   - Key architectural decisions
+   - Technology choices with rationale
 
-6. Return: ## PLANNING COMPLETE with summary
+7. **Return XML response envelope** with:
+   - BLUEPRINT COMPLETE status
+   - Wave summary
+   - Traceability summary
+   - Handoff instructions
 
-Write files IMMEDIATELY. Don't draft - commit to disk.
+## VERIFICATION
+Before returning COMPLETE:
+- [ ] Every must-have has mapped tasks
+- [ ] Every task has spec coverage
+- [ ] Traceability matrix shows 100%
+- [ ] SPEC.md has all sections filled
+- [ ] BLUEPRINT.md has verification commands
   `
 })
 ```
 
-### Phase 4: Handle Response
+### Phase 5: Handle Response
 
-**On `## PLANNING COMPLETE`:**
+**Parse XML response from planner.**
 
-Read created documents and present:
+**On `COMPLETE` status:**
 
+Read created documents:
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GOOPSPEC ▸ PLANNING COMPLETE ✓
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Read(".goopspec/SPEC.md")
+Read(".goopspec/BLUEPRINT.md")
+```
+
+Display completion:
+```
+## 🔮 GoopSpec · Planning Complete
+
+✨ Blueprint created successfully
 
 **Feature:** [Name from SPEC.md]
 
-| Artifact   | Status  | Location               |
-|------------|---------|------------------------|
-| Spec       | Created | .goopspec/SPEC.md      |
-| Blueprint  | Created | .goopspec/BLUEPRINT.md |
-| Chronicle  | Created | .goopspec/CHRONICLE.md |
+| Document | Status | Location |
+|----------|--------|----------|
+| Spec | ✓ Created | .goopspec/SPEC.md |
+| Blueprint | ✓ Created | .goopspec/BLUEPRINT.md |
+| Chronicle | ✓ Created | .goopspec/CHRONICLE.md |
 
 **[N] must-haves** | **[M] waves** | **[P] tasks**
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### Traceability
+| Must-Have | Covered By |
+|-----------|------------|
+| MH1 | Wave X, Tasks Y |
+| MH2 | Wave X, Tasks Y |
 
-## ▸ Next Up
+✓ Coverage: 100%
+
+### Next Step
 
 **Lock the specification** — Confirm requirements before execution
 
-`/goop-specify`
+→ `/goop-specify`
 
 ---
 
+Start a **new session** for fresh context, then run the command.
+
 **Also available:**
-- `/goop-research [topic]` — Investigate unknowns before specifying
-- `cat .goopspec/SPEC.md` — Review the specification
-- `cat .goopspec/BLUEPRINT.md` — Review the execution plan
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- `cat .goopspec/SPEC.md` — Review specification
+- `cat .goopspec/BLUEPRINT.md` — Review execution plan
+- `/goop-research [topic]` — Investigate unknowns first
 ```
 
-**On `## PLANNING BLOCKED`:**
+**Generate HANDOFF.md:**
 
-Present blocker to user:
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GOOPSPEC ▸ PLANNING BLOCKED
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Write(".goopspec/HANDOFF.md", `
+# Session Handoff
+
+**Generated:** [timestamp]
+**Phase:** plan
+
+## Accomplished
+- [x] Discovery interview completed
+- [x] SPEC.md created with [N] must-haves
+- [x] BLUEPRINT.md created with [M] waves, [P] tasks
+- [x] 100% traceability achieved
+
+## Current State
+- Phase: plan
+- Interview: complete
+- Spec: draft (not locked)
+
+## Next Session
+Run: /goop-specify
+
+## Files to Read
+1. .goopspec/SPEC.md — Requirements
+2. .goopspec/BLUEPRINT.md — Execution plan
+
+## Context Summary
+Planning complete for [feature]. [N] must-haves mapped to [P] tasks
+across [M] waves. Ready to lock specification.
+`)
+```
+
+**On `BLOCKED` status:**
+
+```
+## 🔮 GoopSpec · Planning Blocked
+
+✗ Cannot proceed
 
 **Blocker:** [From planner response]
 
 **Options:**
-1. Provide more context → continue planning
-2. Research the unknown → /goop-research
-3. Abort → /goop-pause
+1. Provide more context → `/goop-discuss`
+2. Research the unknown → `/goop-research [topic]`
+
+---
 ```
 
 Use `question` tool to get user choice.
 
-**On `## PLANNING PARTIAL`:**
+**On `PARTIAL` status:**
 
 Present what was created, explain gaps, offer to continue or restart.
 
-### Phase 5: Memory Persistence
+### Phase 6: Memory Persistence
 
-After successful planning, persist key context:
+After successful planning:
 
 ```
 memory_save({
   type: "note",
-  title: "Project: [Feature Name]",
-  content: "Building [summary]. Key decisions: [list]. Success = [criteria].",
-  concepts: ["project", "planning", "[domain]"],
-  importance: 0.8
+  title: "Plan: [Feature Name]",
+  content: "Created [N]-wave blueprint. Key decisions: [list]. Must-haves: [summary].",
+  concepts: ["planning", "blueprint", "[domain]"],
+  importance: 0.7
 })
 ```
 
@@ -334,103 +391,100 @@ memory_save({
 
 | File | Purpose |
 |------|---------|
-| `.goopspec/SPEC.md` | Requirements specification (Draft) |
+| `.goopspec/SPEC.md` | Specification (Draft) |
 | `.goopspec/BLUEPRINT.md` | Wave-based execution plan |
 | `.goopspec/CHRONICLE.md` | Progress tracking |
-| `.goopspec/state.json` | Workflow state |
+| `.goopspec/HANDOFF.md` | Session handoff |
+| State (via goop_state) | Workflow state (phase transitions) |
 
 ## Transitions
 
 | Outcome | Next Step |
 |---------|-----------|
-| Planning complete | `/goop-specify` to lock the specification |
+| Planning complete | `/goop-specify` to lock |
+| Missing discovery | `/goop-discuss` to interview |
 | Unknowns remain | `/goop-research` to investigate |
-| Need to pause | `/goop-pause` to save checkpoint |
-| Existing project | `/goop-status` to see current state |
+| Need to pause | `/goop-pause` to checkpoint |
 
 ## Examples
 
-**Simple Feature:**
+**Gate Passed:**
 ```
-User: /goop-plan add a dark mode toggle
+User: /goop-plan
 
-Orchestrator: "Dark mode toggle. A few questions:
+Orchestrator: 
++--------------------------------------------------------+
+|  GOOPSPEC > PLANNING                                    |
++--------------------------------------------------------+
+|  Discovery gate: PASSED                                  |
+|  Creating specification and blueprint...                 |
++--------------------------------------------------------+
 
-1. Should it persist to localStorage across sessions?
-2. Auto-detect system preference (prefers-color-scheme)?
-3. Animate the transition, or instant switch?
-
-[Uses question tool with options for each]"
-
-... gathers answers ...
-
-Orchestrator: "Got it. Creating specification..."
 [Spawns goop-planner]
+
+...
+
++--------------------------------------------------------+
+|  GOOPSPEC > PLANNING COMPLETE                           |
++--------------------------------------------------------+
+
+**Feature:** Dark Mode Toggle
+
+| Document   | Status  |
+|------------|---------|
+| Spec       | Created |
+| Blueprint  | Created |
+
+**3 must-haves** | **2 waves** | **5 tasks**
+
+## > Next Step
+`/goop-specify`
 ```
 
-**Complex Feature:**
+**Gate Blocked:**
 ```
-User: /goop-plan refactor the authentication system
+User: /goop-plan
 
-Orchestrator: "Auth refactor is significant. Let me understand the scope.
-
-I found 3 auth-related modules in the codebase:
-- src/auth/ (main auth logic)
-- src/middleware/auth.ts (route protection)  
-- src/utils/jwt.ts (token handling)
-
-What's driving this refactor?
-
-[Uses question tool]:
-- Security vulnerability found
-- Adding new auth method (OAuth, SSO)
-- Performance issues
-- Technical debt cleanup
-- Other (describe)"
-```
-
-**Existing Project Detected:**
-```
-User: /goop-plan new dashboard widgets
-
-Orchestrator: "I found existing project documents:
-- SPEC.md: 'User Authentication System'
-- Status: Execute phase, Wave 2 of 3
-
-[Uses question tool]:
-- Archive auth project and start fresh on widgets
-- Continue auth project (run /goop-status)
-- Overwrite without archiving"
+Orchestrator:
++--------------------------------------------------------+
+|  GOOPSPEC > GATE BLOCKED                                |
++--------------------------------------------------------+
+|  Discovery interview required before planning.          |
+|                                                         |
+|  Run: /goop-discuss                                     |
++--------------------------------------------------------+
 ```
 
 ## Success Criteria
 
-- [ ] Existing documents detected and handled (archive/continue/overwrite)
-- [ ] Memory searched before asking questions
-- [ ] Interview conducted by orchestrator directly (no agent spawn for conversation)
-- [ ] All context checklist categories gathered
-- [ ] User confirmed strategy (create/research/map/explore)
-- [ ] goop-planner spawned with complete interview context
-- [ ] SPEC.md created with must-haves, nice-to-haves, out-of-scope
-- [ ] BLUEPRINT.md created with waves and tasks
-- [ ] CHRONICLE.md initialized
-- [ ] Key decisions saved to memory
+- [ ] Gate check performed (interview_complete + REQUIREMENTS.md)
+- [ ] If gate fails, refused with clear redirect to /goop-discuss
+- [ ] Existing documents handled (archive/continue/overwrite)
+- [ ] goop-planner spawned with full discovery context
+- [ ] SPEC.md created with traceability
+- [ ] BLUEPRINT.md created with spec coverage
+- [ ] 100% must-have coverage achieved
+- [ ] HANDOFF.md generated
 - [ ] User knows next step is `/goop-specify`
+- [ ] Suggested to start new session for fresh context
 
 ## Anti-Patterns
 
 **DON'T:**
-- Spawn an agent to conduct the interview
-- Ask questions you found answers to in memory
-- Skip the archive check when existing docs exist
-- Create documents without user confirming strategy
-- Leave user without clear next steps
-- Rush through questioning to get to document creation
+- Skip the discovery gate check
+- Conduct interview in /goop-plan (that's /goop-discuss)
+- Create documents without traceability
+- Leave user without next steps
+- Skip handoff generation
 
 **DO:**
-- Search memory before every question category
-- Follow conversation threads naturally
-- Challenge vague requirements ("what do you mean by fast?")
-- Save new preferences to memory immediately
-- Present clear "Next Up" section with copy-paste commands
-- Take time to understand - planning is the highest leverage phase
+- Enforce the gate strictly
+- Spawn planner with complete context
+- Verify 100% traceability
+- Generate HANDOFF.md
+- Suggest new session for clean context
+
+---
+
+*Planning Protocol v0.1.4*
+*"Every must-have traces to tasks."*

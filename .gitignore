@@ -1,5 +1,6 @@
 # GoopSpec local state (not part of the plugin)
 .goopspec/
+.opencode/
 .references/
 test-results.txt
 

@@ -13,6 +13,17 @@ Display help information and available commands.
 /goop-help
 ```
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_reference` | Load reference documentation |
+| `goop_skill` | List available skills |
+
+**Hook Support:** None specific - informational command.
+
+---
+
 ## Available Commands
 
 **Project Management:**

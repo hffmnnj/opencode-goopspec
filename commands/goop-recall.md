@@ -16,6 +16,17 @@ Search the persistent memory system for relevant context. Use this to:
 `/goop-recall recent` - Show recent memories
 `/goop-recall decisions` - Show recent architectural decisions
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `memory_search` | Search persistent memories |
+| `session_search` | Search session history |
+
+**Hook Support:** None specific - read-only query.
+
+---
+
 ## Instructions
 
 When this command is invoked:

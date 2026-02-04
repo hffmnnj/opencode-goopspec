@@ -13,6 +13,18 @@ description: Fast-track a small task
 /goop-quick [task description]
 ```
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_status` | Check current state, skip heavy workflow |
+| `memory_search` | Find relevant prior context |
+| `memory_save` | Persist any discoveries |
+
+**Hook Support:** Minimal - quick mode bypasses most phase enforcement.
+
+---
+
 ## How It Works
 
 Quick mode bypasses the formal Plan/Research/Specify phases while maintaining safety guarantees. Ideal for bug fixes, small refactors, or docs.

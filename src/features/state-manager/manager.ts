@@ -50,6 +50,8 @@ function createDefaultState(projectName: string = "unnamed"): GoopState {
       researchOptIn: false,
       specLocked: false,
       acceptanceConfirmed: false,
+      interviewComplete: false,
+      interviewCompletedAt: null,
       currentWave: 0,
       totalWaves: 0,
       lastActivity: now,
@@ -123,6 +125,11 @@ function migrateOldState(oldState: Record<string, unknown>, projectName?: string
       researchOptIn: (existingWorkflow?.researchOptIn as boolean) || false,
       specLocked: (existingWorkflow?.specLocked as boolean) || false,
       acceptanceConfirmed: (existingWorkflow?.acceptanceConfirmed as boolean) || false,
+      interviewComplete: (existingWorkflow?.interviewComplete as boolean) || 
+        // Support legacy root-level interview_complete
+        (oldState.interview_complete as boolean) || false,
+      interviewCompletedAt: (existingWorkflow?.interviewCompletedAt as string | null) ||
+        (oldState.interview_completed_at as string | null) || null,
       currentWave: (existingWorkflow?.currentWave as number) || 0,
       totalWaves: (existingWorkflow?.totalWaves as number) || 0,
       lastActivity: (existingWorkflow?.lastActivity as string) || new Date().toISOString(),
@@ -542,6 +549,20 @@ This file tracks architectural decisions, deviations, and observations made duri
     log("Spec locked");
   }
 
+  function unlockSpec(): void {
+    const current = loadState();
+    const newState: GoopState = {
+      ...current,
+      workflow: {
+        ...current.workflow,
+        specLocked: false,
+        lastActivity: new Date().toISOString(),
+      },
+    };
+    saveState(newState);
+    log("Spec unlocked");
+  }
+
   function confirmAcceptance(): void {
     const current = loadState();
     const newState: GoopState = {
@@ -554,6 +575,51 @@ This file tracks architectural decisions, deviations, and observations made duri
     };
     saveState(newState);
     log("Acceptance confirmed");
+  }
+
+  function resetAcceptance(): void {
+    const current = loadState();
+    const newState: GoopState = {
+      ...current,
+      workflow: {
+        ...current.workflow,
+        acceptanceConfirmed: false,
+        lastActivity: new Date().toISOString(),
+      },
+    };
+    saveState(newState);
+    log("Acceptance reset");
+  }
+
+  function completeInterview(): void {
+    const current = loadState();
+    const now = new Date().toISOString();
+    const newState: GoopState = {
+      ...current,
+      workflow: {
+        ...current.workflow,
+        interviewComplete: true,
+        interviewCompletedAt: now,
+        lastActivity: now,
+      },
+    };
+    saveState(newState);
+    log("Interview completed");
+  }
+
+  function resetInterview(): void {
+    const current = loadState();
+    const newState: GoopState = {
+      ...current,
+      workflow: {
+        ...current.workflow,
+        interviewComplete: false,
+        interviewCompletedAt: null,
+        lastActivity: new Date().toISOString(),
+      },
+    };
+    saveState(newState);
+    log("Interview reset");
   }
 
   function setMode(mode: TaskMode): void {
@@ -585,15 +651,50 @@ This file tracks architectural decisions, deviations, and observations made duri
     log("Wave progress updated", { currentWave, totalWaves });
   }
 
+  function resetWorkflow(): void {
+    const current = loadState();
+    const now = new Date().toISOString();
+    const newState: GoopState = {
+      ...current,
+      workflow: {
+        currentPhase: null,
+        phase: "idle",
+        mode: "standard",
+        depth: "standard",
+        researchOptIn: false,
+        specLocked: false,
+        acceptanceConfirmed: false,
+        interviewComplete: false,
+        interviewCompletedAt: null,
+        currentWave: 0,
+        totalWaves: 0,
+        lastActivity: now,
+        status: "idle",
+      },
+      execution: {
+        ...current.execution,
+        completedPhases: [],
+        pendingTasks: [],
+      },
+    };
+    saveState(newState);
+    log("Workflow reset");
+  }
+
   return {
     getState,
     setState,
     updateWorkflow,
     transitionPhase,
     lockSpec,
+    unlockSpec,
     confirmAcceptance,
+    resetAcceptance,
+    completeInterview,
+    resetInterview,
     setMode,
     updateWaveProgress,
+    resetWorkflow,
     getADL,
     appendADL,
     saveCheckpoint,

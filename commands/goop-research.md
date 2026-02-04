@@ -23,6 +23,19 @@ alternatives:
 /goop-research [topic or question]
 ```
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_status` | Check current phase allows research |
+| `memory_search` | Find prior research on same topic |
+| `memory_save` | Persist research findings |
+| `goop_skill` | Load specialized research skills |
+
+**Hook Support:** `system.transform` injects prior research context.
+
+---
+
 ## How It Works
 
 Research is an **opt-in** phase used when the path forward isn't clear. It prevents "coding in the dark."

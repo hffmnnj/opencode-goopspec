@@ -14,7 +14,7 @@ Model profiles control which model each GoopSpec agent uses. This enables optima
 | goop-orchestrator | anthropic/claude-opus-4-5 | Complex orchestration, task delegation, context management |
 | goop-planner | anthropic/claude-opus-4-5 | Best for complex architecture decisions, goal decomposition, reasoning-heavy planning |
 | goop-researcher | openai/gpt-5.2 | Best for research, technology evaluation, knowledge synthesis |
-| goop-tester | opencode/kimi-k2.5-free | Cost-effective for test writing, quality assurance, coverage thinking |
+| goop-tester | kimi-for-coding/k2p5 | Cost-effective for test writing, quality assurance, coverage thinking |
 | goop-verifier | openai/gpt-5.2-codex | Best for code verification, security analysis, catching subtle bugs |
 | goop-writer | google/antigravity-gemini-3-pro-high | Documentation, structured writing, comprehensive coverage |
 | memory-distiller | anthropic/claude-haiku-3-5 | Fast, lightweight distillation of events into structured memories |

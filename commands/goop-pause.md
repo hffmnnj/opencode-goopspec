@@ -13,6 +13,18 @@ description: Save a checkpoint and pause work
 /goop-pause [optional message]
 ```
 
+## Tools Used
+
+| Tool | Purpose in This Command |
+|------|------------------------|
+| `goop_checkpoint` | Save execution state for later resume |
+| `goop_status` | Capture current phase and progress |
+| `memory_save` | Persist session context |
+
+**Hook Support:** `system.transform` includes checkpoint in future sessions.
+
+---
+
 ## How It Works
 
 Safely stops the current workflow and saves a snapshot of the context. This allows you to switch tasks or end your session without losing "brain state."
