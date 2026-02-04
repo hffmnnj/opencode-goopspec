@@ -10,6 +10,9 @@ import * as path from "path";
 import { MemoryClient } from "./client.js";
 import type { MemoryManager, MemoryConfig } from "./types.js";
 import type { MemorySystemConfig } from "../../core/types.js";
+import { log } from "../../shared/logger.js";
+
+const DEBUG = process.env.GOOPSPEC_DEBUG === "true";
 
 /**
  * Memory service manager that handles worker lifecycle
@@ -95,11 +98,11 @@ export class MemoryServiceManager {
     this.memoryDir = path.join(projectRoot, ".goopspec", "memory");
     this.pidFile = path.join(this.memoryDir, "worker.pid");
     
-    // Worker entry point path - relative to this file
+    // Worker entry point path - relative to this file (bundled JS)
     this.workerPath = path.join(
       path.dirname(new URL(import.meta.url).pathname),
       "worker",
-      "index.ts"
+      "index.js"
     );
   }
 
@@ -149,20 +152,20 @@ export class MemoryServiceManager {
    */
   async ensureRunning(): Promise<void> {
     if (!this.config.enabled) {
-      console.log("[Memory] Memory system is disabled");
+      log("[Memory] Memory system is disabled");
       return;
     }
 
     // Check if already running via health check
     if (await this.client.healthCheck()) {
-      console.log("[Memory] Worker already running");
+      log("[Memory] Worker already running");
       return;
     }
 
     // Check if running by PID file
     if (await this.isWorkerRunningByPid()) {
       // Process exists but not responding yet, wait a bit
-      console.log("[Memory] Worker process exists, waiting for ready...");
+      log("[Memory] Worker process exists, waiting for ready...");
       await this.waitForReady(5000);
       return;
     }
@@ -177,8 +180,8 @@ export class MemoryServiceManager {
   private async startWorker(): Promise<void> {
     this.ensureDirectory();
 
-    console.log(`[Memory] Starting worker on port ${this.config.workerPort}...`);
-    console.log(`[Memory] Worker path: ${this.workerPath}`);
+    log(`[Memory] Starting worker on port ${this.config.workerPort}...`);
+    log(`[Memory] Worker path: ${this.workerPath}`);
 
     this.worker = spawn(["bun", "run", this.workerPath], {
       env: {
@@ -186,8 +189,9 @@ export class MemoryServiceManager {
         PROJECT_ROOT: this.projectRoot,
         MEMORY_PORT: String(this.config.workerPort),
       },
-      stdout: "inherit",
-      stderr: "inherit",
+      // Only show worker output in debug mode
+      stdout: DEBUG ? "inherit" : "ignore",
+      stderr: DEBUG ? "inherit" : "ignore",
     });
 
     // Wait for worker to be ready
@@ -196,7 +200,7 @@ export class MemoryServiceManager {
       throw new Error("Memory worker failed to start within timeout");
     }
 
-    console.log("[Memory] Worker started successfully");
+    log("[Memory] Worker started successfully");
   }
 
   /**
@@ -234,7 +238,7 @@ export class MemoryServiceManager {
    * Gracefully shutdown the worker
    */
   async shutdown(): Promise<void> {
-    console.log("[Memory] Shutting down worker...");
+    log("[Memory] Shutting down worker...");
 
     try {
       await this.client.shutdown();

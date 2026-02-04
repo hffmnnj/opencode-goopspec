@@ -5,6 +5,7 @@
  */
 
 import type { EmbeddingsConfig, EmbeddingProvider } from "../types.js";
+import { memLog, memWarn, memError } from "../logger.js";
 
 // Transformers.js types
 type FeatureExtractionPipeline = {
@@ -47,9 +48,9 @@ class LocalEmbeddingProvider implements EmbeddingProviderInterface {
         "feature-extraction",
         this.modelName
       )) as unknown as FeatureExtractionPipeline;
-      console.log(`[Memory] Loaded local embedding model: ${this.modelName}`);
+      memLog(`[Memory] Loaded local embedding model: ${this.modelName}`);
     } catch (error) {
-      console.error("[Memory] Failed to load local embedding model:", error);
+      memError("[Memory] Failed to load local embedding model:", error);
       throw error;
     }
   }
@@ -168,8 +169,8 @@ class OllamaEmbeddingProvider implements EmbeddingProviderInterface {
       if (!response.ok) {
         throw new Error("Ollama not responding");
       }
-    } catch (error) {
-      console.warn("[Memory] Ollama not available, will retry on first use");
+    } catch {
+      memWarn("[Memory] Ollama not available, will retry on first use");
     }
   }
 

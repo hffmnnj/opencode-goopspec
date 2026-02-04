@@ -14,6 +14,7 @@ import type {
 import { MemoryStorage } from "./storage/sqlite.js";
 import { VectorStorage } from "./storage/vector.js";
 import { EmbeddingGenerator } from "./storage/embeddings.js";
+import { memWarn } from "./logger.js";
 
 /**
  * Configuration for hybrid retrieval
@@ -105,7 +106,7 @@ export class MemoryRetrieval {
       const queryEmbedding = await this.embeddings.generate(query);
       return this.vectors.searchSimilar(queryEmbedding, limit);
     } catch (error) {
-      console.warn("[Memory Retrieval] Vector search failed:", error);
+      memWarn("[Memory Retrieval] Vector search failed:", error);
       return [];
     }
   }
@@ -201,7 +202,7 @@ export class MemoryRetrieval {
         }))
         .sort((a, b) => b.score - a.score);
     } catch (error) {
-      console.warn("[Memory Retrieval] Re-ranking failed:", error);
+      memWarn("[Memory Retrieval] Re-ranking failed:", error);
       return results;
     }
   }

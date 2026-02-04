@@ -6,6 +6,7 @@
 
 import { z } from "zod";
 import type { MemoryConfig } from "./types.js";
+import { memWarn } from "./logger.js";
 
 /**
  * Capture configuration schema
@@ -101,7 +102,7 @@ export function parseMemoryConfig(config: unknown): MemoryConfig {
   const result = MemoryConfigSchema.safeParse(config);
 
   if (!result.success) {
-    console.warn("[Memory Config] Invalid configuration, using defaults:", result.error.issues);
+    memWarn("[Memory Config] Invalid configuration, using defaults:", result.error.issues);
     // Return defaults with stripPatterns
     return {
       enabled: true,

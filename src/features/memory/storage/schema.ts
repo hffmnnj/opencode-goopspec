@@ -4,6 +4,7 @@
  */
 
 import { Database } from "bun:sqlite";
+import { memLog } from "../logger.js";
 
 export const SCHEMA_VERSION = 1;
 
@@ -168,7 +169,7 @@ export function migrateSchema(db: Database): void {
     //   db.run("INSERT INTO schema_version (version) VALUES (2)");
     // }
 
-    console.log(
+    memLog(
       `[Memory] Migrated schema from v${currentVersion} to v${SCHEMA_VERSION}`
     );
   }
