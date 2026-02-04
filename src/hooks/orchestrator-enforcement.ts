@@ -300,6 +300,76 @@ task({
 }
 
 /**
+ * Generate guidance for blocked research tool operations
+ */
+function generateResearchDelegationGuidance(
+  toolName: string,
+  category: BlockedToolCategory
+): string {
+  const mapping = DELEGATION_MAPPINGS[category];
+  const categoryLabel = category === "research" ? "Research" : "Exploration";
+  const description = category === "research" ? "Research task" : "Explore codebase";
+  const promptBody = category === "research"
+    ? "Research: [Describe what you need to research]\n    \n    Return findings with sources and recommendations."
+    : "Explore: [Describe what you're looking for]\n    \n    Return relevant file paths and code locations.";
+
+  return `
+
+---
+
+## 🎭 Orchestrator Reminder: Delegate ${categoryLabel} Tasks
+
+You attempted to use \`${toolName}\` directly.
+
+As the orchestrator, delegate ${category} work to **${mapping.agent}**:
+
+\`\`\`
+task({
+  subagent_type: "${mapping.agent}",
+  description: "${description}",
+  prompt: \`
+    ${promptBody}
+  \`
+})
+\`\`\`
+
+**Why?** ${mapping.guidance}. Subagents have specialized tools and fresh context.
+`;
+}
+
+/**
+ * Generate guidance for exploration tool delegation (future use)
+ */
+export function generateExplorationDelegationGuidance(toolName: string): string {
+  const mapping = DELEGATION_MAPPINGS.exploration;
+
+  return `
+
+---
+
+## 💡 Suggestion: Consider Delegating Exploration
+
+You're using \`${toolName}\` for exploration.
+
+For extensive codebase exploration, consider delegating to **${mapping.agent}**:
+
+\`\`\`
+task({
+  subagent_type: "${mapping.agent}",
+  description: "Explore codebase",
+  prompt: \`
+    Find: [What you're looking for]
+    
+    Return relevant file paths and code locations.
+  \`
+})
+\`\`\`
+
+This is a suggestion, not a block. Continue if this is a quick lookup.
+`;
+}
+
+/**
  * Parse delegation info from goop_delegate output
  */
 function parseDelegationOutput(output: string): DelegationState | null {
@@ -489,6 +559,23 @@ export function createOrchestratorEnforcementHooks(ctx: PluginContext) {
         
         log("Injected delegation guidance after blocked operation", {
           tool: blocked.tool,
+          sessionID: input.sessionID,
+        });
+      }
+
+      // === Check for blocked RESEARCH operation and inject guidance ===
+      const blockedResearch = blockedResearchOperations.get(input.sessionID);
+      if (blockedResearch && Date.now() - blockedResearch.timestamp < 5000) {
+        blockedResearchOperations.delete(input.sessionID);
+
+        output.output = (output.output || "") + generateResearchDelegationGuidance(
+          blockedResearch.tool,
+          blockedResearch.category
+        );
+
+        log("Injected research delegation guidance after blocked operation", {
+          tool: blockedResearch.tool,
+          category: blockedResearch.category,
           sessionID: input.sessionID,
         });
       }
