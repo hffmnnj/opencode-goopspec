@@ -45,6 +45,10 @@ interface EnforcementConfig {
   codeBlockingEnabled: boolean;
   /** Enable delegation enforcement */
   delegationEnforcementEnabled: boolean;
+  /** Enable research tool blocking */
+  researchBlockingEnabled: boolean;
+  /** Enable exploration nudges (non-blocking) */
+  explorationNudgesEnabled: boolean;
   /** Paths that orchestrator CAN edit (e.g., planning files) */
   allowedPaths: string[];
   /** File extensions that are considered "code" */
@@ -59,6 +63,14 @@ interface DelegationState {
   prompt: string;
   callId: string;
   timestamp: number;
+}
+
+export type BlockedToolCategory = "research" | "exploration";
+
+export interface DelegationMapping {
+  category: BlockedToolCategory;
+  agent: string;
+  guidance: string;
 }
 
 // Track blocked operations to inject guidance
@@ -76,6 +88,8 @@ interface BlockedOperation {
 const DEFAULT_CONFIG: EnforcementConfig = {
   codeBlockingEnabled: true,
   delegationEnforcementEnabled: true,
+  researchBlockingEnabled: true,
+  explorationNudgesEnabled: true,
   allowedPaths: [
     ".goopspec/",
     ".goopspec\\",
@@ -118,6 +132,44 @@ const DEFAULT_CONFIG: EnforcementConfig = {
 
 // Tools that require file permission
 const FILE_TOOLS = ["edit", "mcp_edit", "write", "mcp_write"];
+
+export const RESEARCH_TOOLS = [
+  "exa_web_search_exa",
+  "exa_company_research_exa",
+  "exa_get_code_context_exa",
+  "mcp_google_search",
+  "google_search",
+  "context7_resolve-library-id",
+  "context7_query-docs",
+  "mcp_context7_resolve-library-id",
+  "mcp_context7_query-docs",
+  "webfetch",
+  "mcp_webfetch",
+] as const;
+
+export type ResearchTool = (typeof RESEARCH_TOOLS)[number];
+
+export const EXPLORATION_TOOLS = [
+  "mcp_grep",
+  "mcp_glob",
+  "grep",
+  "glob",
+] as const;
+
+export type ExplorationTool = (typeof EXPLORATION_TOOLS)[number];
+
+export const DELEGATION_MAPPINGS: Record<BlockedToolCategory, DelegationMapping> = {
+  research: {
+    category: "research",
+    agent: "goop-researcher",
+    guidance: "Research tasks should be delegated to goop-researcher",
+  },
+  exploration: {
+    category: "exploration",
+    agent: "goop-explorer",
+    guidance: "Codebase exploration should be delegated to goop-explorer",
+  },
+};
 
 // Track pending delegations per session
 const pendingDelegations = new Map<string, DelegationState>();
