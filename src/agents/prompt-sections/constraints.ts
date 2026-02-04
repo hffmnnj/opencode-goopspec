@@ -3,7 +3,12 @@
  * @module agents/prompt-sections/constraints
  */
 
+import { EXPLORATION_TOOLS, RESEARCH_TOOLS } from "../../hooks/orchestrator-enforcement.js";
+
 export function buildConstraintsSection(): string {
+  const researchToolList = buildToolList(RESEARCH_TOOLS);
+  const explorationToolList = buildToolList(EXPLORATION_TOOLS);
+
   return `<Constraints>
 ## Hard Blocks & Anti-Patterns
 
@@ -19,6 +24,18 @@ export function buildConstraintsSection(): string {
 | Ignore failing tests | Tests exist for a reason |
 | Suppress type errors with \`any\` | Technical debt accumulates |
 | Modify files outside spec scope | Scope creep without user consent |
+
+### Tool Access Constraints
+
+**Never use directly (delegate instead):**
+
+#### Research/Search Tools
+
+${researchToolList}
+
+#### Exploration Tools
+
+${explorationToolList}
 
 ### ALWAYS Do (Mandatory)
 
@@ -84,4 +101,8 @@ Apply these automatically without asking:
 - Delete user data
 - Force push
 </Constraints>`;
+}
+
+function buildToolList(tools: readonly string[]): string {
+  return tools.map(tool => `- \`${tool}\``).join("\n");
 }
