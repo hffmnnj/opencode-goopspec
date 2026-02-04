@@ -14,8 +14,6 @@ import {
   getMemoryTypeForEvent,
   DEFAULT_CAPTURE_CONFIG,
 } from "../features/memory/capture.js";
-import { updateTodoCount } from "./continuation-enforcer.js";
-import { analyzeComments } from "./comment-checker.js";
 
 type ToolExecuteBeforeInput = {
   tool: string;
@@ -119,48 +117,8 @@ export function createToolLifecycleHooks(ctx: PluginContext) {
       const pending = pendingToolCalls.get(input.callID);
       pendingToolCalls.delete(input.callID);
 
-      // === CONTINUATION ENFORCER: Track todo counts ===
-      if (input.tool === "todoread" || input.tool === "todowrite" || 
-          input.tool === "mcp_todoread" || input.tool === "mcp_todowrite") {
-        try {
-          // Parse todo count from output
-          // Output typically contains JSON or structured data about todos
-          const outputStr = output.output || "";
-          const pendingMatches = outputStr.match(/"status"\s*:\s*"pending"/g);
-          const inProgressMatches = outputStr.match(/"status"\s*:\s*"in_progress"/g);
-          const incompleteCount = (pendingMatches?.length || 0) + (inProgressMatches?.length || 0);
-          updateTodoCount(input.sessionID, incompleteCount);
-          log("Updated todo count from tool output", { tool: input.tool, incompleteCount });
-        } catch (err) {
-          logError("Failed to parse todo count", err);
-        }
-      }
-
-      // === COMMENT CHECKER: Analyze code files ===
-      // Only check write operations (edit operations only have diffs, not full content)
-      // Only check if enforcement is enabled (any level)
-      if ((input.tool === "write" || input.tool === "mcp_write") && 
-          ctx.config.enforcement) {
-        try {
-          const args = pending?.args as Record<string, unknown> | undefined;
-          const filePath = args?.filePath as string || args?.path as string;
-          const content = args?.content as string;
-          
-          if (filePath && content && !filePath.endsWith(".md") && !filePath.endsWith(".json")) {
-            const analysis = analyzeComments(filePath, content);
-            if (analysis.excessiveComments) {
-              log("Excessive comments detected", { 
-                filePath, 
-                ratio: analysis.commentRatio,
-                suggestions: analysis.suggestions 
-              });
-              // Note: We just log here. Full injection would require modifying return type.
-            }
-          }
-        } catch (err) {
-          logError("Failed to analyze comments", err);
-        }
-      }
+      // Note: Continuation enforcer and comment checker are now handled by dedicated hooks
+      // in hooks/index.ts that properly integrate with the tool.execute.after chain
 
       // Auto-capture to memory if enabled and tool is worth capturing
       if (ctx.memoryManager && captureConfig.enabled) {

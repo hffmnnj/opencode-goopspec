@@ -1,6 +1,6 @@
 {
   "name": "opencode-goopspec",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A spec-driven development plugin for OpenCode with user-guided planning, wave execution, and verification",
   "type": "module",
   "main": "dist/index.js",

@@ -100,6 +100,21 @@ describe("detectTaskMode", () => {
     });
   });
 
+  describe("default behavior", () => {
+    it("defaults to standard on empty input", () => {
+      const result = detectTaskMode("  ");
+      expect(result.suggestedMode).toBe("standard");
+      expect(result.confidence).toBe(0);
+    });
+  });
+
+  describe("depth hints", () => {
+    it("respects deep hints in the request", () => {
+      const result = detectTaskMode("Do a deep dive on auth refactor");
+      expect(result.suggestedMode).toBe("comprehensive");
+    });
+  });
+
   describe("alternatives detection", () => {
     it("suggests alternatives for ambiguous requests", () => {
       const result = detectTaskMode("Add feature");

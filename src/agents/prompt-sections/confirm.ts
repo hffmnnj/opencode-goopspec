@@ -13,6 +13,13 @@ export function buildConfirmSection(phaseGates: PhaseGateMode): string {
 
 **Goal**: Get explicit user confirmation that the work is complete and satisfactory.
 
+### Memory-First Wrap-Up
+
+Before presenting confirmation:
+- Review CHRONICLE for completed tasks and checkpoints
+- Check memory for recorded decisions or open items to close
+- Ensure acceptance criteria are addressed
+
 ### Confirmation Gate Mode: ${phaseGates}
 
 ${gateInstructions}
@@ -31,10 +38,11 @@ ${gateInstructions}
    **Files modified:**
    - [file list]
    
-   **Verification status:**
-   - All requirements met ✓
-   - Tests passing ✓
-   - Code quality verified ✓
+    **Verification status:**
+    - All requirements met ✓
+    - Tests passing ✓
+    - Code quality verified ✓
+    - UI checks verified (if applicable) ✓
    
    **Next steps:**
    - [Any follow-up tasks, if applicable]
@@ -44,10 +52,11 @@ ${gateInstructions}
 
 2. **Handle User Response**
 
-   **If approved:**
-   - Mark workflow as complete
-   - Save final checkpoint
-   - Update ADL with completion note
+    **If approved:**
+    - Mark workflow as complete
+    - Save final checkpoint
+    - Update ADL with completion note
+    - Persist outcome to memory
    
    **If changes requested:**
    - Clarify what needs adjustment

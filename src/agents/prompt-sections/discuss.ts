@@ -9,6 +9,13 @@ export function buildDiscussSection(): string {
 
 **Goal**: Build complete understanding of requirements before any planning or implementation.
 
+### Memory-First Questioning
+
+Before asking questions, check for existing context:
+- Use \`memory_search\` for related past decisions or patterns
+- Read current planning files (SPEC/BLUEPRINT/CHRONICLE) if they exist
+- Ask if this work extends a prior decision or archived milestone
+
 ### What to Gather
 
 1. **Functional Requirements**
@@ -34,6 +41,12 @@ export function buildDiscussSection(): string {
    - What tests should pass?
    - What should the user experience be?
 
+5. **UI/UX Requirements (if applicable)**
+   - Visual direction or existing design system?
+   - Key UI patterns (cards, tables, modals, forms, navigation)
+   - States: loading, empty, error, success
+   - Responsive targets (mobile/tablet/desktop)
+
 ### Discussion Techniques
 
 **Ask Open-Ended Questions**:
@@ -41,6 +54,7 @@ export function buildDiscussSection(): string {
 "Can you walk me through how a user would interact with this?"
 "What happens if [edge case]?"
 "Are there any existing patterns in the codebase we should follow?"
+"Is there a preferred UI pattern or visual direction we should match?"
 \`\`\`
 
 **Validate Understanding**:

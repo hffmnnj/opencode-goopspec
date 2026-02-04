@@ -1,137 +1,71 @@
 ---
 name: goop-execute
-description: Start the Execute phase - wave-based implementation
+description: Begin wave-based execution
+agent: goop-executor
+spawn: true
+phase: execute
+next-step: "When all waves are complete, verify the work and request acceptance"
+next-command: /goop-accept
+alternatives:
+  - command: /goop-status
+    when: "To check current progress and wave status"
+  - command: /goop-pause
+    when: "To save a checkpoint and continue later"
 ---
 
-# GoopSpec Execute
+# /goop-execute
 
-Implement the specification through wave-based task execution with orchestrated subagents.
+**Start the Execution Phase.** Implement the blueprint using wave-based orchestration.
 
 ## Usage
 
-```
+```bash
 /goop-execute
 ```
 
-## Workflow Position
+## How It Works
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│    PLAN     │ ──▶ │  RESEARCH   │ ──▶ │   SPECIFY   │
-│  (Intent)   │     │  (Explore)  │     │ (Contract)  │
-└─────────────┘     └─────────────┘     └─────────────┘
-                                              │
-       ┌──────────────────────────────────────┘
-       ▼
-┌─────────────┐     ┌─────────────┐
-│   EXECUTE   │ ──▶ │   ACCEPT    │
-│   (Build)   │     │  (Verify)   │
-└─────────────┘     └─────────────┘
-       ↑
- (You are here)
-```
+The **Orchestrator** takes control and manages the implementation process. It does not write code directly but delegates to the **Executor** agent.
 
-The Execute phase answers: **Build exactly what the spec says.**
+### 1. Wave-Based Execution
+Tasks are executed in sequential waves (vertical slices):
+- **Wave 1:** Foundation (Core structure)
+- **Wave 2:** Implementation (Main logic)
+- **Wave 3:** Integration (Wiring it up)
+- **Wave 4:** Polish (Refinement & fixes)
 
-## What Happens
+### 2. Orchestration Loop
+For each task in `BLUEPRINT.md`:
+1. **Delegate:** Send task to `goop-executor`.
+2. **Monitor:** Watch for completion or blocks.
+3. **Verify:** Run tests/checks.
+4. **Update:** Mark task complete in `CHRONICLE.md`.
 
-1. **Wave-Based Execution** - Tasks grouped into sequential waves:
-   - **Wave 1: Foundation** - Setup, configuration, base structures
-   - **Wave 2: Core** - Main feature, business logic, data handling
-   - **Wave 3: Integration** - Connect components, wire to existing system
-   - **Wave 4: Polish** - Error handling, edge cases, documentation
+### 3. Deviation Handling
+The Orchestrator applies rules for issues:
+- **Rule 1-3 (Auto-fix):** Minor bugs, missing imports (fix and continue).
+- **Rule 4 (Architectural):** Major blockers (PAUSE and ask user).
 
-2. **Orchestrator Coordination** - Orchestrator acts as CONDUCTOR:
-   - Delegates tasks to specialized subagents
-   - Tracks progress in CHRONICLE.md
-   - Applies deviation rules automatically
-   - Handles blockers and checkpoints
-   - **NEVER writes code itself**
+### 4. Checkpoints
+If user input is needed, the system pauses and creates a checkpoint.
+- **Decision:** User must choose between options (e.g., architecture trade-off).
+- **Verification:** User must verify something (e.g., UI visual check).
+- **Action:** User must perform an action (e.g., add API key).
 
-3. **Task Execution** - For each task:
-   - Read from BLUEPRINT.md
-   - Check deviation rules
-   - Delegate to goop-executor agent
-   - Agent implements with memory protocol
-   - Atomic commit per task
-   - Update CHRONICLE.md
-   - Verify tests pass
+## Output
 
-4. **Deviation Handling** - Auto-fix without asking:
-   - **Rule 1:** Bugs (type errors, logic errors, crashes)
-   - **Rule 2:** Missing critical functionality (validation, error handling)
-   - **Rule 3:** Blocking issues (missing deps, broken imports)
-   - **Rule 4:** STOP for architectural decisions (new tables, framework changes)
-
-5. **Checkpoint Handling** - Pause for user input when needed:
-   - `checkpoint:verify` - User verifies functionality
-   - `checkpoint:decision` - User makes decision
-   - `checkpoint:action` - User performs action
-
-## Wave Principles
-
-1. **Sequential waves** - Wave N completes before Wave N+1 starts
-2. **Vertical slices** - Each wave delivers working functionality
-3. **Atomic commits** - Each task = one commit
-4. **Verification gates** - Tests must pass between waves
-
-## Artifacts Created/Updated
-
-- `CHRONICLE.md` - Real-time progress tracking:
-  - Current wave and task
-  - Completed tasks with commit hashes
-  - Deviations logged
-  - Blockers noted
-
-- Git commits - One per task:
-  ```
-  feat(wave-task): description
-  
-  - Change 1
-  - Change 2
-  ```
+- **Code:** Modified source files.
+- **Commits:** Atomic commits per task.
+- **Chronicle:** Updated `.goopspec/CHRONICLE.md`.
 
 ## Example
 
-After spec locked for authentication:
+> **User:** `/goop-execute`
+> **Agent:** "Starting Wave 1...
+> [Task 1.1] Setup Auth Context... Done (commit: a1b2c3)
+> [Task 1.2] Create Login Component... Done (commit: d4e5f6)
+> Wave 1 Complete. Verification passed. Starting Wave 2..."
 
-```
-/goop-execute
-```
-
-Orchestrator executes:
-- Wave 1: Setup auth directory, install jose library
-- Wave 2: Implement login function, session management
-- Wave 3: Wire to API routes, connect to user model
-- Wave 4: Add error handling, write tests
-
-Each task delegated to goop-executor, committed atomically.
-
-## Continuation Enforcement
-
-The agent **CANNOT stop** with incomplete tasks:
-- Incomplete todos = forced continuation
-- Only checkpoints allow pause
-- User must explicitly confirm completion
-- Max continuation prompts before escalation
-
-## Next Steps
-
-After execution:
-- `/goop-accept` - Verify and accept completion (ACCEPTANCE GATE)
-
-During execution:
-- `/goop-status` - Check progress
-- `/goop-pause` - Save checkpoint manually
-
-## Quick Mode Execution
-
-For Quick tasks:
-- Abbreviated waves (often just 1-2)
-- Faster delegation
-- Less formal tracking
-- Direct to Accept phase
-
----
-
-**GoopSpec**: Execute with precision, deliver with confidence.
+## Interactive Control
+- Use `/goop-status` to check progress.
+- Use `/goop-pause` to stop safely.

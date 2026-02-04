@@ -17,41 +17,98 @@ function generateProgressBar(progress: number, width: number = 10): string {
   return `[${"█".repeat(filled)}${"░".repeat(empty)}]`;
 }
 
+interface PhaseGuidance {
+  current: string;
+  next: { command: string; description: string };
+  alternatives: Array<{ command: string; when: string }>;
+}
+
 /**
- * Get suggested next steps based on current phase
+ * Get guidance for current phase including next steps
  */
-function getNextSteps(phase: string, specLocked: boolean): string[] {
-  const steps: Record<string, string[]> = {
-    idle: [
-      "`/goop-plan` - Start planning a new feature",
-      "`/goop-quick` - Quick task for small fixes",
-    ],
-    plan: [
-      "`/goop-research` - Research implementation approaches",
-      "Define requirements and success criteria",
-    ],
-    research: [
-      "`/goop-specify` - Lock the specification",
-      "Review RESEARCH.md findings",
-    ],
-    specify: specLocked ? [
-      "`/goop-execute` - Start implementation",
-      "`/goop-amend` - Request spec changes",
-    ] : [
-      "Confirm specification to lock it",
-      "Review must-haves and out-of-scope",
-    ],
-    execute: [
-      "Complete current wave tasks",
-      "`/goop-pause` - Save checkpoint",
-    ],
-    accept: [
-      "Verify all requirements met",
-      "`/goop-complete` - Archive and finish",
-    ],
+function getPhaseGuidance(phase: string, specLocked: boolean): PhaseGuidance {
+  const guidance: Record<string, PhaseGuidance> = {
+    idle: {
+      current: "No active workflow. Ready for a new task.",
+      next: { command: "/goop-plan", description: "Start planning a new feature or task" },
+      alternatives: [
+        { command: "/goop-quick", when: "for small, well-defined fixes" },
+        { command: "/goop-resume", when: "to continue from a saved checkpoint" },
+      ],
+    },
+    plan: {
+      current: "Gathering requirements and defining scope.",
+      next: { command: "/goop-specify", description: "Lock the specification when requirements are clear" },
+      alternatives: [
+        { command: "/goop-research", when: "if there are unknowns to investigate" },
+        { command: "/goop-pause", when: "to save progress and continue later" },
+      ],
+    },
+    research: {
+      current: "Investigating unknowns and gathering technical context.",
+      next: { command: "/goop-specify", description: "Lock the spec with research findings applied" },
+      alternatives: [
+        { command: "/goop-plan", when: "to refine the plan with research insights" },
+        { command: "/goop-research", when: "for additional research on related topics" },
+      ],
+    },
+    specify: specLocked ? {
+      current: "Specification is locked. Ready for implementation.",
+      next: { command: "/goop-execute", description: "Begin wave-based implementation" },
+      alternatives: [
+        { command: "/goop-amend", when: "to modify the locked specification" },
+      ],
+    } : {
+      current: "Reviewing specification before locking.",
+      next: { command: "/goop-specify", description: "Confirm and lock the specification" },
+      alternatives: [
+        { command: "/goop-plan", when: "to revise requirements" },
+      ],
+    },
+    execute: {
+      current: "Implementing the blueprint in waves.",
+      next: { command: "/goop-accept", description: "Verify work and request acceptance when complete" },
+      alternatives: [
+        { command: "/goop-status", when: "to check wave progress" },
+        { command: "/goop-pause", when: "to save a checkpoint and continue later" },
+      ],
+    },
+    accept: {
+      current: "Verifying implementation against specification.",
+      next: { command: "/goop-complete", description: "Archive and mark as complete" },
+      alternatives: [
+        { command: "/goop-execute", when: "if issues need to be fixed" },
+        { command: "/goop-milestone", when: "to start the next milestone" },
+      ],
+    },
   };
   
-  return steps[phase] || ["`/goop-status` - Check current state"];
+  return guidance[phase] || {
+    current: "Unknown phase.",
+    next: { command: "/goop-status", description: "Check current state" },
+    alternatives: [],
+  };
+}
+
+/**
+ * Format next steps from phase guidance
+ */
+function formatNextSteps(guidance: PhaseGuidance): string[] {
+  const lines: string[] = [];
+  
+  lines.push(`**Current:** ${guidance.current}`);
+  lines.push("");
+  lines.push(`👉 **Next:** \`${guidance.next.command}\` - ${guidance.next.description}`);
+  
+  if (guidance.alternatives.length > 0) {
+    lines.push("");
+    lines.push("**Alternatives:**");
+    for (const alt of guidance.alternatives) {
+      lines.push(`- \`${alt.command}\` ${alt.when}`);
+    }
+  }
+  
+  return lines;
 }
 
 /**
@@ -79,6 +136,8 @@ function formatStatus(state: GoopState | null, verbose: boolean, ctx: PluginCont
   const workflow = state.workflow || { 
     phase: "idle", 
     mode: "standard",
+    depth: "standard",
+    researchOptIn: false,
     specLocked: false,
     acceptanceConfirmed: false,
     currentWave: 0,
@@ -166,11 +225,12 @@ function formatStatus(state: GoopState | null, verbose: boolean, ctx: PluginCont
     lines.push("- Use `memory_search` to find relevant context");
   }
   
-  // Quick actions based on current state
+  // Next steps guidance based on current phase
   lines.push("\n## Next Steps");
-  const nextSteps = getNextSteps(workflow.phase, workflow.specLocked);
+  const guidance = getPhaseGuidance(workflow.phase, workflow.specLocked);
+  const nextSteps = formatNextSteps(guidance);
   for (const step of nextSteps) {
-    lines.push(`- ${step}`);
+    lines.push(step);
   }
   
   return lines.join("\n");

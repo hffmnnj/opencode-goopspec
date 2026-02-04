@@ -1,6 +1,8 @@
 # Workflow: Research Phase
 
-The Research phase gathers context and explores implementation approaches before committing to a specification.
+**GoopSpec Voice:** Analytical, Thorough, Skill-Backed.
+
+The Research phase answers: **How should we build this?** It explores the problem space *before* we commit to a contract.
 
 ## Position in Workflow
 
@@ -13,222 +15,112 @@ The Research phase gathers context and explores implementation approaches before
                     (You are here)
 ```
 
-## Purpose
-
-The Research phase answers: **How should we build this?**
-
-It explores the problem space, gathers context, evaluates approaches, and informs specification decisions.
-
 ## Entry Criteria
+*   Plan phase complete.
+*   User selected **Deep Research** (or default for complex tasks).
+*   *Note: Quick Mode skips this phase entirely.*
 
-- Plan phase complete
-- Intent and requirements documented
-- User has confirmed understanding
+## Research Modes
 
-## Parallel Research Agents
+### 1. The Explorer (Codebase Map)
+**Skill:** `octocode-research`
+*   **Goal:** Understand existing patterns.
+*   **Action:** Map relevant files, check conventions, find integration points.
 
-Research phase spawns multiple agents working simultaneously:
-
-| Agent | Focus |
-|-------|-------|
-| **Researcher** | Deep domain research - technologies, patterns, best practices |
-| **Explorer** | Codebase analysis - existing patterns, conventions, integration points |
-| **Librarian** | Documentation gathering - API docs, library guides, examples |
-| **Designer** | (For UI tasks) Visual research - patterns, components, UX |
-
-### Research Delegation
-
-```
-task({
-  subagent_type: "general",
-  description: "Research topic",
-  prompt: "Research [topic] for [project intent]. Focus on: ..."
-})
-
-task({
-  subagent_type: "explore",
-  description: "Explore codebase",
-  prompt: "Explore codebase for patterns related to [feature]. Map: ..."
-})
-
-task({
-  subagent_type: "general",
-  description: "Gather documentation",
-  prompt: "Gather documentation for [library/API]. Find: ..."
-})
+```text
+⬢ Exploring Codebase...
+  └─ ⚡ Mapped "src/auth/" (Found 3 files)
+  └─ ⚡ Identified pattern: "Repository Pattern"
 ```
 
-## Research Areas
+### 2. The Scholar (External Knowledge)
+**Skill:** `exa_web_search`, `context7_query-docs`
+*   **Goal:** Find best practices and documentation.
+*   **Action:** Read docs, find libraries, compare options.
 
-### 1. Technology Research
+```text
+⬢ Researching: "Auth0 React SDK vs NextAuth"
+  └─ ⚡ Reading documentation...
+  └─ ⚡ Comparing community usage...
+```
 
-- Available libraries/frameworks
-- Tradeoffs between approaches
-- Performance characteristics
-- Security considerations
-- Community support/maturity
+## Research Output: RESEARCH.md
 
-### 2. Codebase Exploration
-
-- Existing patterns and conventions
-- Related implementations
-- Integration points
-- Potential conflicts
-- Test coverage gaps
-
-### 3. Domain Knowledge
-
-- Business rules
-- Edge cases
-- User expectations
-- Industry standards
-- Compliance requirements
-
-### 4. Visual Research (UI Tasks)
-
-- Design patterns
-- Component libraries
-- Accessibility requirements
-- Responsive considerations
-- Animation/interaction patterns
-
-## RESEARCH.md Output
-
-Research findings are consolidated into RESEARCH.md:
+Findings are consolidated into a structured document.
 
 ```markdown
 # Research: [Feature Name]
 
-## Domain Analysis
+## Analysis
+*   **Pattern:** Repository Pattern (matches codebase)
+*   **Library:** Auth0 SDK (matches preference)
 
-### Technology Options
+## Options
 | Option | Pros | Cons | Recommendation |
-|--------|------|------|----------------|
-| Option A | ... | ... | Recommended |
-| Option B | ... | ... | Alternative |
+| :--- | :--- | :--- | :--- |
+| **A: Auth0 SDK** | Native support, secure | Vendor lock-in | ✅ Recommended |
+| **B: NextAuth** | Flexible provider | More setup | |
 
-### Relevant Documentation
-- [Link 1]: Key insight
-- [Link 2]: Key insight
-
-## Codebase Analysis
-
-### Existing Patterns
-- Pattern 1: Used in [files], suitable for [use case]
-- Pattern 2: Used in [files], suitable for [use case]
-
-### Integration Points
-- Component A: Will need [modification]
-- Service B: Already supports [capability]
-
-### Conventions Discovered
-- Naming: [convention]
-- Structure: [convention]
-- Testing: [convention]
-
-## Recommendations
-
-### Approach
-[Recommended implementation approach]
-
-### Key Decisions Needed
-- Decision 1: [options]
-- Decision 2: [options]
-
-### Risks
-- Risk 1: [description, mitigation]
-- Risk 2: [description, mitigation]
-
-### Estimated Complexity
-[Low / Medium / High] - [rationale]
+## Risks
+*   Risk: API Rate limits on free tier.
+*   Mitigation: Implement caching.
 ```
 
-## Research Quality Criteria
+## Interactive Decision Protocol
 
-### Good Research
-- Multiple sources consulted
-- Alternatives considered
-- Tradeoffs explicitly stated
-- Recommendations justified
-- Risks identified
+When research reveals a fork in the road, use a **Skill-Backed Question**.
 
-### Bad Research
-- Single source only
-- First option accepted
-- No alternatives considered
-- Recommendations without rationale
-- No risk assessment
+```text
+⬢ Decision Required: State Management
 
-## Transition to Specify Phase
-
-Research phase is complete when:
-
-- [ ] All parallel agents have reported findings
-- [ ] RESEARCH.md consolidated and saved
-- [ ] Key decisions identified
-- [ ] Recommended approach documented
-- [ ] Risks catalogued
-
-**Transition prompt:**
-```
-"Research complete. Key findings:
-
-Recommended approach: [summary]
-Key decisions needed: [list]
-Main risks: [list]
-
-Ready to lock the specification?"
+  I found two viable patterns for this feature:
+  
+  1. **Zustand** (Used in 'Settings' module, simpler)
+  2. **Redux** (Used in 'Core', but verbose)
+  
+  ► Recommendation: Zustand (Lower complexity).
+  ► Select [1-2]:
 ```
 
-## Quick Mode Shortcut
+## The Specification Gate
 
-For Quick tasks, Research phase is SKIPPED entirely:
-- Assume existing patterns are sufficient
-- No parallel agent spawning
-- Jump directly from Plan to Execute
+The transition to Specify is a formal handoff.
 
-## Comprehensive Mode Extension
-
-For Comprehensive tasks:
-- Deeper research per agent
-- More alternatives explored
-- Extended timeframe
-- User reviews RESEARCH.md before Specify
-
-## Memory Protocol
-
-### Before Starting
-```
-memory_search({ 
-  query: "past research on [topic]",
-  concepts: ["technology", "pattern"]
-})
-```
-
-### During Research
-Each agent saves findings:
-```
-memory_save({
-  type: "observation",
-  title: "Research: [specific finding]",
-  concepts: ["relevant", "concepts"]
-})
-```
-
-### After Completing
-```
-memory_save({
-  type: "observation",
-  title: "Research Summary: [feature]",
-  content: "[key findings]",
-  concepts: ["tech-choices", "patterns"]
-})
+```text
+╭─ ⬢ GoopSpec ───────────────────────────────────────╮
+│                                                    │
+│  🚩 SPECIFICATION GATE                             │
+│                                                    │
+│  Research complete. I have a recommended approach. │
+│                                                    │
+│  • Approach: Use Auth0 SDK with Context API        │
+│  • Key Decision: Zustand for local state           │
+│  • Risks: None blocking                            │
+│                                                    │
+│  ► Type "proceed" to Draft Specification.          │
+│  ► Type "discuss" to review findings in detail.    │
+│                                                    │
+╰────────────────────────────────────────────────────╯
 ```
 
 ## Commands
 
 | Command | Effect |
-|---------|--------|
-| `/goop-research` | Start Research phase |
-| `/goop-status` | Check research progress |
-| `/goop-recall [query]` | Search past research |
+| :--- | :--- |
+| `/goop-research` | Start deep research. |
+| `/goop-map-codebase` | Trigger specific codebase mapping task. |
+| `/goop-recall [query]` | Search past research. |
+
+## Memory Triggers
+
+*   **Save:** New technology choices and rationale.
+*   **Save:** Discovered codebase patterns (for future "Explorer" runs).
+
+```javascript
+memory_save({
+  type: "observation",
+  title: "Research: Auth0 Pattern",
+  content: "Project uses Auth0 SDK wrapped in a custom provider.",
+  concepts: ["auth", "pattern", "react"]
+})
+```

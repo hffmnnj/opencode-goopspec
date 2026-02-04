@@ -3,6 +3,10 @@
  * Analyzes code changes to detect excessive commenting patterns
  * AI code should be indistinguishable from human code
  * 
+ * Based on oh-my-opencode pattern:
+ * - Uses tool.execute.before to capture pending writes
+ * - Uses tool.execute.after to analyze and append warnings to output
+ * 
  * @module hooks/comment-checker
  */
 
@@ -10,9 +14,9 @@ import { log } from "../shared/logger.js";
 
 export interface CommentCheckerConfig {
   enabled: boolean;
-  maxCommentRatio: number;  // Max ratio of comment lines to code lines (e.g., 0.3 = 30%)
-  warnThreshold: number;    // Ratio at which to warn
-  excludePatterns: string[];  // File patterns to exclude
+  maxCommentRatio: number;
+  warnThreshold: number;
+  excludePatterns: string[];
 }
 
 const DEFAULT_CONFIG: CommentCheckerConfig = {
@@ -32,6 +36,15 @@ export interface CommentAnalysis {
   excessiveComments: boolean;
   suggestions: string[];
 }
+
+interface PendingCall {
+  filePath: string;
+  content?: string;
+  tool: "write" | "edit";
+  timestamp: number;
+}
+
+const PENDING_CALL_TTL = 60_000;
 
 /**
  * Analyze a code file for comment density
@@ -54,7 +67,6 @@ export function analyzeComments(filePath: string, content: string): CommentAnaly
       continue;
     }
     
-    // Check for block comment start/end
     if (commentPatterns.blockStart && trimmed.includes(commentPatterns.blockStart)) {
       inBlockComment = true;
     }
@@ -67,15 +79,12 @@ export function analyzeComments(filePath: string, content: string): CommentAnaly
       continue;
     }
     
-    // Check for line comments
     if (commentPatterns.line && trimmed.startsWith(commentPatterns.line)) {
       commentLines++;
       continue;
     }
     
-    // Check for inline comments (line has both code and comment)
     if (commentPatterns.line && trimmed.includes(commentPatterns.line)) {
-      // Has inline comment but also has code
       codeLines++;
       continue;
     }
@@ -167,61 +176,98 @@ export function formatAnalysis(analysis: CommentAnalysis): string {
 }
 
 /**
- * Create the comment checker hook
+ * Create the comment checker hooks
+ * 
+ * Returns both before and after hooks for tool execution.
+ * - Before: Captures file path and content for write operations
+ * - After: Analyzes comments and appends warning to output if excessive
  */
-export function createCommentCheckerHook(config: Partial<CommentCheckerConfig> = {}) {
+export function createCommentCheckerHooks(config: Partial<CommentCheckerConfig> = {}) {
   const cfg = { ...DEFAULT_CONFIG, ...config };
+  const pendingCalls = new Map<string, PendingCall>();
+  
+  // Cleanup old pending calls periodically
+  setInterval(() => {
+    const now = Date.now();
+    for (const [callID, call] of pendingCalls) {
+      if (now - call.timestamp > PENDING_CALL_TTL) {
+        pendingCalls.delete(callID);
+      }
+    }
+  }, 10_000);
   
   return {
-    name: "comment-checker",
-    
-    /**
-     * PostToolUse hook - check after write/edit operations
-     */
-    async postToolUse(params: {
-      toolName: string;
-      args: Record<string, unknown>;
-      result: unknown;
-    }): Promise<{ inject?: string } | void> {
-      if (!cfg.enabled) {
+    "tool.execute.before": async (
+      input: { tool: string; sessionID: string; callID: string },
+      output: { args: Record<string, unknown> }
+    ): Promise<void> => {
+      if (!cfg.enabled) return;
+      
+      const toolLower = input.tool.toLowerCase().replace(/^mcp_/, "");
+      if (toolLower !== "write" && toolLower !== "edit") {
         return;
       }
+
+      const filePath = (output.args.filePath ?? output.args.file_path ?? output.args.path) as string | undefined;
+      const content = output.args.content as string | undefined;
+
+      if (!filePath) return;
       
-      // Only check write and edit tools
-      if (!["write", "edit"].includes(params.toolName)) {
-        return;
-      }
-      
-      const filePath = params.args.filePath as string || params.args.path as string;
-      if (!filePath) {
-        return;
-      }
-      
-      // Check if file should be excluded
+      // Check exclusion patterns
       for (const pattern of cfg.excludePatterns) {
         if (filePath.endsWith(pattern.replace("*", ""))) {
           return;
         }
       }
+
+      pendingCalls.set(input.callID, {
+        filePath,
+        content,
+        tool: toolLower as "write" | "edit",
+        timestamp: Date.now(),
+      });
       
-      // Get file content from result or args
-      const content = params.args.content as string;
-      if (!content) {
+      log("[comment-checker] Registered pending call", { callID: input.callID, filePath });
+    },
+
+    "tool.execute.after": async (
+      input: { tool: string; sessionID: string; callID: string },
+      output: { title: string; output: string; metadata: unknown }
+    ): Promise<void> => {
+      if (!cfg.enabled) return;
+      
+      const pendingCall = pendingCalls.get(input.callID);
+      if (!pendingCall) return;
+
+      pendingCalls.delete(input.callID);
+
+      // Skip if tool execution failed
+      const outputLower = output.output.toLowerCase();
+      if (outputLower.includes("error:") || outputLower.includes("failed to")) {
         return;
       }
+
+      // Only analyze writes with content
+      if (pendingCall.tool !== "write" || !pendingCall.content) {
+        return;
+      }
+
+      const analysis = analyzeComments(pendingCall.filePath, pendingCall.content);
       
-      const analysis = analyzeComments(filePath, content);
-      
+      log("[comment-checker] Analysis complete", {
+        filePath: pendingCall.filePath,
+        ratio: analysis.commentRatio,
+        excessive: analysis.excessiveComments,
+      });
+
       if (analysis.commentRatio > cfg.warnThreshold) {
-        log("High comment density detected", {
-          filePath,
-          ratio: analysis.commentRatio,
-        });
-        
         if (analysis.excessiveComments) {
-          return {
-            inject: `\n\n⚠️ **Comment Check Warning**\n\nThe file \`${filePath}\` has ${(analysis.commentRatio * 100).toFixed(0)}% comments.\nAI-generated code should be clean and self-documenting.\n\nSuggestions:\n${analysis.suggestions.map(s => `- ${s}`).join("\n")}`
-          };
+          // Append warning to output - this is the key pattern from oh-my-opencode!
+          const warning = `\n\n⚠️ **Comment Check Warning**\n\nThe file \`${pendingCall.filePath}\` has ${(analysis.commentRatio * 100).toFixed(0)}% comments.\nAI-generated code should be clean and self-documenting.\n\nSuggestions:\n${analysis.suggestions.map(s => `- ${s}`).join("\n")}`;
+          
+          output.output += warning;
+          
+          log("[comment-checker] Warning appended to output", { filePath: pendingCall.filePath });
         }
       }
     },

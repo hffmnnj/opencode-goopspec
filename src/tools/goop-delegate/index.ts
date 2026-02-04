@@ -7,19 +7,9 @@
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, AgentDefinition, ToolContext, ResolvedResource } from "../../core/types.js";
-import { log, logError } from "../../shared/logger.js";
+import { log } from "../../shared/logger.js";
 import { loadPluginConfig } from "../../core/config.js";
-
-/**
- * OpenCode client interface (minimal typing for what we need)
- */
-interface OpenCodeClient {
-  app?: {
-    agents(): Promise<{
-      data?: Array<{ name: string; mode?: string; model?: { providerID: string; modelID: string } }>;
-    }>;
-  };
-}
+import { fetchAvailableAgents, type OpenCodeClient } from "../../shared/opencode-client.js";
 
 function normalizeReferencePath(name: string): string {
   return name.trim().replace(/\\/g, "/").replace(/^\.\/?/, "");
@@ -306,15 +296,8 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       // Build composed prompt (used as system content)
       const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, args.context);
       
-      const client = ctx.input.client as OpenCodeClient | undefined;
-      let availableSubagents: string[] = [];
-
-      try {
-        const agentResult = await client?.app?.agents?.();
-        availableSubagents = agentResult?.data?.map((agent) => agent.name) ?? [];
-      } catch (error) {
-        logError("Failed to load available subagents", error);
-      }
+      const client = ctx.input.client as OpenCodeClient;
+      const availableSubagents = await fetchAvailableAgents(client);
 
       const subagentType = resolveSubagentType(agentDef, availableSubagents);
 

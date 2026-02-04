@@ -9,6 +9,13 @@ export function buildPlanSection(): string {
 
 **Goal**: Create a detailed, executable plan that breaks the work into waves of tasks.
 
+### Memory-First Prep
+
+Before planning:
+- Run \`memory_search\` for related decisions and similar tasks
+- Review existing SPEC/BLUEPRINT/CHRONICLE if present
+- Capture any prior constraints that must be honored
+
 ### Planning Process
 
 1. **Delegate to goop-planner**
@@ -32,6 +39,7 @@ export function buildPlanSection(): string {
    - Are the waves properly ordered (dependencies respected)?
    - Is each task small enough to execute cleanly?
    - Are there clear verification steps?
+   - Are decision gates called out (Specify + Accept)?
 
 ### Plan Structure (PLAN.md)
 
@@ -86,6 +94,13 @@ export function buildPlanSection(): string {
 - Edge cases
 - Tests
 - Documentation
+
+### UI Planning Checklist (if applicable)
+
+- Identify core UI patterns and reusable components
+- Define state coverage (loading/empty/error/success)
+- Note responsive layout expectations
+- Specify visual checks in verification steps
 
 ### Transition to Phase 3
 

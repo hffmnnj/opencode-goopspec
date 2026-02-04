@@ -1,6 +1,8 @@
 # Workflow: Plan Phase
 
-The Plan phase captures user intent and establishes the foundation for all subsequent work.
+**GoopSpec Voice:** Direct, Purposeful, Memory-First.
+
+The Plan phase captures user intent and establishes the foundation for all subsequent work. It answers: **What does the user want and why?**
 
 ## Position in Workflow
 
@@ -13,167 +15,118 @@ The Plan phase captures user intent and establishes the foundation for all subse
 (You are here)
 ```
 
-## Purpose
+## Core Protocol
 
-The Plan phase answers: **What does the user want and why?**
+### 1. Memory-First Context Loading
+**Before** asking the user anything, the agent **MUST** search memory.
 
-This is NOT about HOW to build it - that comes later. The Plan phase focuses purely on understanding intent, constraints, and success criteria.
+```javascript
+// Search for similar past requests, preferences, and project context
+memory_search({ query: "intent similar requests [project_name]" })
+```
 
-## Entry Criteria
+### 2. Intent Capture
+Extract the core intent using the **Interactive Questioning Protocol**.
 
-- User has expressed a need or request
-- Orchestrator has classified the work (Quick, Standard, Comprehensive, Milestone)
+*   **Goal:** Move from "vague request" to "structured intent".
+*   **Method:** Progressive Disclosure.
 
-## Activities
+**Example Interaction:**
+```text
+⬢ User Request: "I need a login page."
 
-### 1. Intent Capture
+⬢ Memory Recall: You prefer **Auth0** for authentication (Confidence: High).
+  Proceed with Auth0? [Y/n]
+```
 
-Extract the core intent from the user's request:
+### 3. The "Why" and "Success"
+Every plan must have a defined outcome.
+
+*   **Intent:** Action + Target + Context.
+*   **Motivation:** Why now? What problem does this solve?
+*   **Success Criteria:** Observable outcomes (e.g., "User can log in", "Response time < 200ms").
+
+## Clarifying Questions Protocol
+
+**Rule:** Only ask if it resolves ambiguity that changes effort by 2x+.
+
+1.  **Search:** Do I already know this?
+2.  **Skill:** Can I deduce this? (e.g., "Standard practice for React is...")
+3.  **Ask:** If neither, ask a **Structured Prompt**.
+
+```text
+⬢ Decision Required: UI Framework
+  
+  1. Tailwind CSS (Consistent with project)
+  2. CSS Modules (Used in legacy components)
+  
+  ► Select [1-2]:
+```
+
+## Output: PLAN.md
+
+The result of this phase is a clear `PLAN.md` (internal state) or simple structured context.
 
 ```markdown
+# Plan: [Feature Name]
+
 ## Intent
+**User wants to:** Create a login page
+**Because:** Users need to access private dashboards
+**Success:** Successful login redirects to /dashboard
 
-**User wants to:** [Action] [Target] [Context]
-**Because:** [Motivation/Problem being solved]
-**Success looks like:** [Observable outcome]
-```
-
-### 2. Clarifying Questions
-
-Ask questions to resolve ambiguity:
-
-- **Scope questions:** "Should this include X or just Y?"
-- **Priority questions:** "Is A more important than B?"
-- **Constraint questions:** "Are there performance/security requirements?"
-- **Integration questions:** "How should this work with existing feature Z?"
-
-**Rule:** If ambiguity could lead to 2x+ effort difference, MUST ask before proceeding.
-
-### 3. Requirements Gathering
-
-Categorize requirements:
-
-```markdown
 ## Requirements
+### Must Have
+- Email/Password form
+- "Forgot Password" link
 
-### Must Have (Non-negotiable)
-- Requirement 1
-- Requirement 2
-
-### Should Have (Important)
-- Requirement 3
-- Requirement 4
-
-### Could Have (Nice to have)
-- Requirement 5
-
-### Won't Have (Explicitly excluded)
-- Out of scope item 1
+### Constraints
+- Must use existing Auth0 tenant
+- Mobile responsive
 ```
 
-### 4. Constraint Identification
+## The Research Gate
 
-Document known constraints:
+The transition to Research is a formal **Decision Gate**.
 
-- Technical constraints (existing stack, compatibility)
-- Time constraints (deadlines, urgency)
-- Resource constraints (budget, team)
-- Business constraints (compliance, brand)
-
-### 5. Success Criteria Definition
-
-Define how we'll know when we're done:
-
-```markdown
-## Success Criteria
-
-1. [Observable behavior 1]
-2. [Observable behavior 2]
-3. [Measurable outcome]
-```
-
-## Artifacts Produced
-
-| Artifact | Purpose |
-|----------|---------|
-| Intent statement | Clear understanding of what and why |
-| Requirements list | Categorized list of needs |
-| Constraints | Known limitations |
-| Success criteria | Acceptance conditions |
-
-## Transition to Research Phase
-
-The Plan phase is complete when:
-
-- [ ] Intent is clearly understood and documented
-- [ ] All critical ambiguities resolved
-- [ ] Requirements categorized (must/should/could/won't)
-- [ ] Success criteria defined
-- [ ] User confirms understanding is correct
-
-**Transition prompt:**
-```
-"I understand you want to [intent summary].
-
-Must haves:
-- [list]
-
-Success looks like:
-- [criteria]
-
-Is this understanding correct? Ready to research implementation approaches?"
-```
-
-## Quick Mode Shortcut
-
-For Quick tasks, Plan phase is abbreviated:
-- Capture intent in 1-2 sentences
-- Skip detailed requirements (scope is small)
-- Define one clear success criterion
-- Proceed directly to Execute
-
-## Common Pitfalls
-
-### Over-planning
-**Symptom:** Spending hours documenting a 30-minute fix
-**Fix:** Match planning depth to task complexity
-
-### Under-planning
-**Symptom:** Starting work without clear success criteria
-**Fix:** Always define at least one observable success criterion
-
-### Assumption accumulation
-**Symptom:** Making multiple assumptions without noting them
-**Fix:** Document assumptions explicitly, validate critical ones
-
-### Scope creep during planning
-**Symptom:** Requirements keep growing
-**Fix:** Establish must-haves first, push additions to could-have
-
-## Memory Protocol
-
-### Before Starting
-```
-memory_search({ query: "similar features, past requirements" })
-```
-
-### During Planning
-```
-memory_note({ note: "User prefers X approach over Y" })
-```
-
-### After Completing
-```
-memory_save({ 
-  type: "note",
-  title: "Project Intent: [name]",
-  content: "[intent summary]"
-})
+```text
+╭─ ⬢ GoopSpec ───────────────────────────────────────╮
+│                                                    │
+│  🚩 RESEARCH GATE                                  │
+│                                                    │
+│  I understand the intent. How should we proceed?   │
+│                                                    │
+│  1. ⚡ Quick Mode                                  │
+│     Skip research. Use standard patterns.          │
+│     Best for: Simple fixes, standard features.     │
+│                                                    │
+│  2. 🔍 Deep Research                               │
+│     Explore options, read docs, map codebase.      │
+│     Best for: New tech, complex feats, unknown.    │
+│                                                    │
+│  ► Select [1-2]:                                   │
+│                                                    │
+╰────────────────────────────────────────────────────╯
 ```
 
 ## Commands
 
 | Command | Effect |
-|---------|--------|
-| `/goop-plan [intent]` | Start Plan phase with initial intent |
-| `/goop-status` | Check current phase status |
+| :--- | :--- |
+| `/goop-plan [intent]` | Start Plan phase with initial intent. |
+| `/goop-discuss` | Open-ended discussion to clarify vague intent. |
+| `/goop-status` | Check current phase status. |
+
+## Memory Triggers
+
+*   **Save:** User preferences discovered during questioning.
+*   **Save:** The finalized "Project Intent" for future reference.
+
+```javascript
+memory_save({
+  type: "note",
+  title: "Project Intent: [Name]",
+  content: "User wants to... [Summary]",
+  concepts: ["intent", "scope"]
+})
+```

@@ -14,7 +14,8 @@ import type {
   CheckpointData, 
   HistoryEntry,
   WorkflowPhase,
-  TaskMode
+  TaskMode,
+  TaskInfo
 } from "../../core/types.js";
 import { getProjectGoopspecDir } from "../../shared/paths.js";
 import { log, logError } from "../../shared/logger.js";
@@ -45,6 +46,8 @@ function createDefaultState(projectName: string = "unnamed"): GoopState {
       currentPhase: null,
       phase: "idle" as WorkflowPhase,
       mode: "standard" as TaskMode,
+      depth: "standard",
+      researchOptIn: false,
       specLocked: false,
       acceptanceConfirmed: false,
       currentWave: 0,
@@ -56,6 +59,111 @@ function createDefaultState(projectName: string = "unnamed"): GoopState {
       activeCheckpointId: null,
       completedPhases: [],
       pendingTasks: [],
+    },
+  };
+}
+
+/**
+ * Migrate old state format to new format
+ * Old format had: active, project_state, continuation_prompt_count, memory_notes
+ * New format has: version, project, workflow, execution
+ * 
+ * Also handles hybrid states where partial new format exists but no version
+ */
+function migrateOldState(oldState: Record<string, unknown>, projectName?: string): GoopState {
+  log("Migrating state to new format (version " + STATE_VERSION + ")");
+  
+  // Extract data from old format if present
+  const projectState = oldState.project_state as Record<string, unknown> | undefined;
+  
+  // Extract any existing new format data (hybrid case)
+  const existingWorkflow = oldState.workflow as Record<string, unknown> | undefined;
+  const existingExecution = oldState.execution as Record<string, unknown> | undefined;
+  const existingProject = oldState.project as Record<string, unknown> | undefined;
+  
+  // Determine project name from various sources
+  const resolvedProjectName = 
+    projectName || 
+    (existingProject?.name as string) ||
+    (projectState?.name as string) || 
+    (projectState?.project_path as string)?.split('/').pop() ||
+    "unnamed";
+  
+  // Determine initialized date
+  const initializedDate = 
+    (existingProject?.initialized as string) ||
+    (typeof projectState?.initialized === 'string' ? projectState.initialized : null) ||
+    new Date().toISOString();
+  
+  // Parse depth with validation
+  const rawDepth = existingWorkflow?.depth as string | undefined;
+  const validDepths = ["shallow", "standard", "deep"] as const;
+  const depth = (rawDepth && validDepths.includes(rawDepth as typeof validDepths[number])) 
+    ? rawDepth as typeof validDepths[number]
+    : "standard";
+  
+  // Parse pendingTasks - ensure it's an array of TaskInfo, not strings
+  const rawPendingTasks = existingExecution?.pendingTasks;
+  const pendingTasks: TaskInfo[] = Array.isArray(rawPendingTasks) 
+    ? rawPendingTasks.filter((t): t is TaskInfo => 
+        typeof t === 'object' && t !== null && 'id' in t && 'name' in t)
+    : [];
+  
+  return {
+    version: STATE_VERSION,
+    project: {
+      name: resolvedProjectName,
+      initialized: initializedDate,
+    },
+    workflow: {
+      currentPhase: (existingWorkflow?.currentPhase as string | null) || null,
+      phase: (existingWorkflow?.phase as WorkflowPhase) || "idle",
+      mode: (existingWorkflow?.mode as TaskMode) || "standard",
+      depth,
+      researchOptIn: (existingWorkflow?.researchOptIn as boolean) || false,
+      specLocked: (existingWorkflow?.specLocked as boolean) || false,
+      acceptanceConfirmed: (existingWorkflow?.acceptanceConfirmed as boolean) || false,
+      currentWave: (existingWorkflow?.currentWave as number) || 0,
+      totalWaves: (existingWorkflow?.totalWaves as number) || 0,
+      lastActivity: (existingWorkflow?.lastActivity as string) || new Date().toISOString(),
+      status: (existingWorkflow?.status as WorkflowPhase) || (existingWorkflow?.phase as WorkflowPhase) || "idle",
+    },
+    execution: {
+      activeCheckpointId: (existingExecution?.activeCheckpointId as string) || null,
+      completedPhases: (existingExecution?.completedPhases as WorkflowPhase[]) || [],
+      pendingTasks,
+    },
+  };
+}
+
+function normalizeState(state: GoopState | Record<string, unknown>, projectName?: string): GoopState {
+  // Check if migration is needed:
+  // 1. Has old format keys (project_state) without version
+  // 2. Has no version key at all (hybrid state from partial updates)
+  const hasOldFormat = 'project_state' in state;
+  const hasVersion = 'version' in state;
+  
+  if (hasOldFormat || !hasVersion) {
+    return migrateOldState(state as Record<string, unknown>, projectName);
+  }
+  
+  const defaults = createDefaultState(projectName);
+  const typedState = state as GoopState;
+  
+  return {
+    ...defaults,
+    ...typedState,
+    project: {
+      ...defaults.project,
+      ...typedState.project,
+    },
+    workflow: {
+      ...defaults.workflow,
+      ...typedState.workflow,
+    },
+    execution: {
+      ...defaults.execution,
+      ...typedState.execution,
     },
   };
 }
@@ -164,7 +272,19 @@ export function createStateManager(
     }
 
     try {
-      cachedState = JSON.parse(content) as GoopState;
+      const parsed = JSON.parse(content) as Record<string, unknown>;
+      
+      // Check if migration is needed
+      const needsMigration = !('version' in parsed) || ('project_state' in parsed);
+      
+      cachedState = normalizeState(parsed, projectName);
+      
+      // If migration occurred, persist the migrated state to disk
+      if (needsMigration) {
+        log("Persisting migrated state to disk");
+        saveState(cachedState);
+      }
+      
       return cachedState;
     } catch (error) {
       logError("Failed to parse state.json, using default", error);

@@ -49,10 +49,15 @@ const GoopSpecPlugin: Plugin = async (input) => {
       setDebug(true);
     }
 
-    // Extract project name from id or use directory name
-    const projectName = input.project?.id 
-      ? input.project.id.split("/").pop() || "unnamed"
-      : input.directory.split("/").pop() || "unnamed";
+    // Extract project name - prefer directory name as it's human-readable
+    // input.project?.id is often a hash/UUID which isn't useful for display
+    const directoryName = input.directory.split("/").pop() || "unnamed";
+    const projectIdName = input.project?.id?.split("/").pop();
+    
+    // Use directory name unless projectId looks like a path (contains meaningful name)
+    // Hashes (40+ chars, alphanumeric only) are not useful project names
+    const isHashLike = projectIdName && /^[a-f0-9]{32,}$/i.test(projectIdName);
+    const projectName = isHashLike ? directoryName : (projectIdName || directoryName);
 
     log("GoopSpec plugin initializing...", { 
       directory: input.directory,
@@ -85,10 +90,13 @@ const GoopSpecPlugin: Plugin = async (input) => {
     log("State manager created");
 
     // Initialize memory service manager
-    // Memory is DISABLED by default - worker architecture needs rework for bundled plugins
-    // Users can enable with memory.enabled: true in config, but it may not work in all setups
+    // Memory is ENABLED by default but gracefully degrades if worker fails
+    // Worker architecture may have issues in some bundled plugin setups
+    // Disable with memory.enabled: false in config if needed
     let memoryClient: import("./features/memory/types.js").MemoryManager | undefined;
-    if (config.memory?.enabled === true) {
+    const memoryEnabled = config.memory?.enabled !== false; // Default to true
+    
+    if (memoryEnabled) {
       try {
         const memoryManager = new MemoryServiceManager(input.directory, config.memory);
         // Try to start the memory worker (best effort)
@@ -100,14 +108,19 @@ const GoopSpecPlugin: Plugin = async (input) => {
             port: config.memory?.workerPort ?? 37777,
           });
         } catch (err) {
-          logError("Failed to start memory worker, memory features disabled", err);
+          // Log but continue - memory is nice to have, not required
+          log("Memory worker unavailable, memory features will be limited", {
+            error: err instanceof Error ? err.message : String(err),
+          });
         }
       } catch (error) {
-        logError("Failed to initialize memory service manager", error);
+        log("Memory service init failed, continuing without memory", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         // Continue without memory - graceful degradation
       }
     } else {
-      log("Memory system disabled (enable with memory.enabled: true in config)");
+      log("Memory system disabled via config");
     }
 
     // Build plugin context
@@ -123,8 +136,8 @@ const GoopSpecPlugin: Plugin = async (input) => {
     const tools = createTools(ctx);
     log("Tools created", { toolCount: Object.keys(tools).length });
 
-    // Create all hooks
-    const hooksFromFactory = createHooks(ctx);
+    // Create all hooks (pass input for hooks that need client access)
+    const hooksFromFactory = createHooks(ctx, input);
     log("Hooks created");
 
     // Create config handler for orchestrator agent registration

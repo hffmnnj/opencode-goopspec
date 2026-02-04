@@ -1,145 +1,69 @@
 ---
 name: goop-specify
-description: Lock the specification - the CONTRACT between user and agent
+description: Lock the specification contract
+phase: specify
+next-step: "Once the spec is locked and confirmed, begin implementation"
+next-command: /goop-execute
+alternatives:
+  - command: /goop-amend
+    when: "If you need to modify the locked specification"
+  - command: /goop-pause
+    when: "To save progress and continue later"
 ---
 
-# GoopSpec Specify
+# /goop-specify
 
-Lock the specification - the binding contract that defines exactly what will be delivered.
+**Lock the specification.** Create a binding contract between user and agent.
 
 ## Usage
 
-```
+```bash
 /goop-specify
 ```
 
-## Workflow Position
+## How It Works
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│    PLAN     │ ──▶ │  RESEARCH   │ ──▶ │   SPECIFY   │
-│  (Intent)   │     │  (Explore)  │     │ (Contract)  │
-└─────────────┘     └─────────────┘     └─────────────┘
-                                              ↑
-                                        (You are here)
+This command marks the transition from planning to commitment. It generates the `SPEC.md` and `BLUEPRINT.md` files and presents them for user confirmation.
 
-       ╔══════════════════════════════════════════════╗
-       ║          CONTRACT GATE                        ║
-       ║   User MUST confirm before execution begins   ║
-       ╚══════════════════════════════════════════════╝
-```
+### 1. Artifact Generation
+Based on the plan (and optional research), the agent generates:
+- **SPEC.md:** The requirements contract.
+- **BLUEPRINT.md:** The execution plan (Waves & Tasks).
 
-The Specify phase answers: **What exactly will we deliver?**
+### 2. The Contract Gate
+The agent displays a summary of the contract:
+- **Must Haves:** Guaranteed deliverables.
+- **Nice to Haves:** Best-effort items.
+- **Out of Scope:** Explicit exclusions.
 
-## What Happens
+### 3. User Confirmation
+The user **MUST** type "confirm" to lock the spec. 
+- If the user types "amend", the agent enters amendment mode to adjust requirements.
 
-1. **Synthesize Plan + Research** - Combine intent with technical approach
-2. **Define Must-Haves** - Observable, achievable, specific deliverables (3-7 items)
-3. **Set Boundaries** - Explicitly state what's out of scope
-4. **Create SPEC.md** - The locked specification document
-5. **Create BLUEPRINT.md** - Wave-based execution plan
-6. **Present Contract** - Show must-haves, nice-to-haves, out-of-scope
-7. **Wait for Confirmation** - User MUST type "confirm" to proceed
+## Output
 
-## The Contract Concept
+- `.goopspec/SPEC.md` (Locked)
+- `.goopspec/BLUEPRINT.md` (Ready for execution)
+- **State Transition:** `plan` -> `execute`
 
-Once locked, the specification becomes a binding agreement:
-- **Agent commits** to delivering must-haves
-- **User commits** to accepting if must-haves are met
-- **Changes require** explicit amendment via `/goop-amend`
+## Example Interaction
 
-### Why Contracts Matter
+> **User:** `/goop-specify`
+> **Agent:** 
+> ```
+> 🔒 CONTRACT GATE
+> 
+> MUST HAVES:
+> • Email/Password Login
+> • Session Persistence
+> 
+> OUT OF SCOPE:
+> • OAuth (Google/Github)
+> 
+> Type "confirm" to lock, or "amend" to change.
+> ```
+> **User:** `confirm`
+> **Agent:** "Spec locked. Ready to execute."
 
-**Without a locked spec:**
-- Scope creeps silently
-- "Almost done" never ends
-- Success criteria shift
-- Both parties frustrated
-
-**With a locked spec:**
-- Clear deliverables
-- Measurable completion
-- Explicit change process
-- Satisfied expectations
-
-## Artifacts Created
-
-- `SPEC.md` - Locked specification with:
-  - Intent summary
-  - Must-haves (guaranteed)
-  - Nice-to-haves (best effort)
-  - Out-of-scope (explicitly excluded)
-  - Technical approach
-  - Target files
-  - Acceptance criteria
-
-- `BLUEPRINT.md` - Wave-based execution plan with:
-  - Wave 1: Foundation tasks
-  - Wave 2: Core tasks
-  - Wave 3: Integration tasks
-  - Wave 4: Polish tasks
-
-## Confirmation Prompt
-
-```
-╭─ ⬢ GoopSpec ───────────────────────────────────────╮
-│                                                    │
-│  🔒 CONTRACT GATE                                  │
-│                                                    │
-│  I'm ready to lock the specification.              │
-│                                                    │
-│  MUST HAVES (I commit to delivering):              │
-│  • User can log in with email/password             │
-│  • Session persists across refresh                 │
-│  • Error messages displayed                        │
-│                                                    │
-│  NICE TO HAVES (Best effort):                      │
-│  • Remember me option                              │
-│                                                    │
-│  OUT OF SCOPE:                                     │
-│  • OAuth providers (future enhancement)            │
-│  • Password reset (separate feature)               │
-│                                                    │
-│  ACCEPTANCE CRITERIA:                              │
-│  1. User can successfully log in                   │
-│  2. Tests pass for auth flow                       │
-│  3. Session management works                       │
-│                                                    │
-│  ─────────────────────────────────────────────     │
-│  Type "confirm" to lock and proceed.               │
-│  Type "amend" to request changes.                  │
-│                                                    │
-╰────────────────────────────────────────────────────╯
-```
-
-## Example
-
-After research on authentication:
-
-```
-/goop-specify
-```
-
-Agent creates SPEC.md and BLUEPRINT.md, then presents contract for confirmation.
-
-## Next Steps
-
-After confirmation:
-- `/goop-execute` - Start wave-based implementation
-
-If changes needed:
-- Type "amend" to modify specification before locking
-
-After locking:
-- `/goop-amend [change]` - Propose changes to locked spec
-
-## Quick Mode Shortcut
-
-For Quick tasks, Specify phase is **SKIPPED**:
-- Intent from Plan phase serves as implicit spec
-- No formal SPEC.md
-- Jumps directly to Execute
-
----
-
-**GoopSpec**: Lock the contract, deliver with confidence.
+## Quick Mode
+For `/goop-quick` tasks, this phase is skipped. The intent captured in the plan serves as the implicit spec.

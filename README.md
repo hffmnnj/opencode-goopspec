@@ -21,73 +21,75 @@ GoopSpec is a plugin for [OpenCode](https://opencode.ai) that transforms how you
 
 **The Problem:** AI assistants are powerful but unpredictable. They start coding before understanding requirements, miss edge cases, forget context, and deliver work that doesn't match what you actually wanted.
 
-**The Solution:** GoopSpec introduces **contracts**, **phases**, and **verification gates** that ensure the AI understands what you want before it writes a single line of code.
+**The Solution:** GoopSpec introduces **interactive questioning**, **contracts**, and **verification gates** that ensure the AI understands what you want before it writes a single line of code.
 
 ```
-Your Idea → Plan → Research → Specify (CONTRACT) → Execute → Accept (VERIFY)
+Your Idea → Interactive Plan → Research (Opt-in) → Specify → Execute → Accept
 ```
 
 ---
 
 ## Core Philosophy
 
+### "Ask, Don't Assume"
+GoopSpec is interactive by default. It interviews you to uncover hidden requirements and ambiguities. If something is unclear, it asks clarifying questions rather than guessing.
+
 ### "Spec as Contract"
 The specification is a binding agreement. Once locked, both you and the AI know exactly what will be delivered. No scope creep. No surprises.
-
-### "Orchestrator as Conductor"
-The GoopSpec Orchestrator never writes code itself. It coordinates specialized sub-agents, maintains clean context, and ensures quality. Like a conductor leading an orchestra - directing, not playing.
 
 ### "Memory-First"
 Every agent searches memory before starting work, saves decisions during work, and persists learnings after. GoopSpec gets smarter with every project you complete.
 
+### "Unified Experience"
+A consistent, rich terminal UI (powered by Clack) keeps you informed with clear status indicators, spinners for long tasks, and human-friendly prompts.
+
 ### "Scale to the Task"
-Quick bug fix? Use Quick Mode. Major feature? Use Standard Mode. Full system overhaul? Use Comprehensive Mode. GoopSpec adapts to your task size.
+Quick bug fix? GoopSpec routes to a lightweight path. Major feature? Full 5-phase workflow. The system detects task complexity and adapts.
 
 ---
 
-## The 5-Phase Workflow
+## The Workflow
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│    PLAN     │ ──▶ │  RESEARCH   │ ──▶ │   SPECIFY   │
-│  (Intent)   │     │  (Explore)  │     │ (CONTRACT)  │
-└─────────────┘     └─────────────┘     └─────────────┘
-                                              │
-       ┌──────────────────────────────────────┘
+┌─────────────┐     ┌─────────────┐
+│    PLAN     │ ◀──▶ │  RESEARCH   │
+│ (Interview) │     │  (Opt-in)   │
+└─────────────┘     └─────────────┘
+       │
        ▼
 ┌─────────────┐     ┌─────────────┐
-│   EXECUTE   │ ──▶ │   ACCEPT    │
-│   (Build)   │     │  (VERIFY)   │
-└─────────────┘     └─────────────┘
+│   SPECIFY   │ ──▶ │   EXECUTE   │ ──▶ │   ACCEPT    │
+│ (Contract)  │     │   (Build)   │     │  (Verify)   │
+└─────────────┘     └─────────────┘     └─────────────┘
 ```
 
-### Phase 1: Plan
-Capture your intent. What do you want to build and why? GoopSpec asks clarifying questions, identifies requirements, and ensures nothing is ambiguous before moving forward.
+### Phase 1: Plan (Interactive)
+Capture your intent. GoopSpec acts as a product manager, conducting an interview to:
+- Clarify ambiguous requirements
+- Identify edge cases
+- Suggest technical approaches
+- confirm the "Definition of Done"
 
-### Phase 2: Research
-Multiple agents explore in parallel:
-- **Researcher** - Deep domain knowledge, technology options, best practices
-- **Explorer** - Existing codebase patterns, conventions, integration points
-- **Librarian** - Documentation, API references, code examples
+### Phase 2: Research (Opt-in)
+Triggered only when needed or requested. Specialized agents explore:
+- **Researcher** - Deep domain knowledge & options
+- **Explorer** - Existing codebase patterns
+- **Librarian** - Documentation & APIs
 
 ### Phase 3: Specify (CONTRACT GATE)
-Lock the specification. This is the contract between you and the AI:
-- **Must-Haves** - Non-negotiable requirements (guaranteed delivery)
-- **Nice-to-Haves** - Best effort if time permits
-- **Out of Scope** - Explicitly excluded items
-
-**You must confirm before execution begins.**
+Lock the specification. This is the contract:
+- **Must-Haves** - Non-negotiable requirements
+- **Out of Scope** - Explicit exclusions
+- **You must confirm before execution begins.**
 
 ### Phase 4: Execute
 Wave-based implementation with atomic commits:
 - Tasks grouped into sequential waves
-- Each task = one commit
-- Progress tracked in real-time
+- Real-time progress tracking via Unified UI
 - Checkpoints for pausing/resuming
 
 ### Phase 5: Accept (ACCEPTANCE GATE)
 Verify the implementation:
-- All must-haves checked against spec
 - Automated tests run
 - Security audit performed
 - **You must confirm completion**

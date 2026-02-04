@@ -1,57 +1,36 @@
 ---
 name: goop-resume
-description: Resume from a checkpoint
+description: Resume from a saved checkpoint
 ---
 
-# GoopSpec Resume
+# /goop-resume
 
-Resume your work from a saved checkpoint.
+**Resume from a checkpoint.** Restore context and continue work.
 
 ## Usage
 
-```
+```bash
 /goop-resume [checkpoint-id]
 ```
 
-## What Gets Restored
+## How It Works
 
-When resuming:
-- Session context is restored
-- Current phase is set
-- Active spec is loaded
-- Todos are displayed
-- Modified files list is shown
+Loads a saved state, restores the workflow context, and prepares the agent to continue exactly where it left off.
 
-## Without Checkpoint ID
+### Behavior
+- **No ID:** Resumes the most recent checkpoint.
+- **With ID:** Resumes specific checkpoint (e.g., `/goop-resume cp-123`).
 
-If no checkpoint ID is provided, loads the **most recent** checkpoint.
+### What Happens
+1. **Load State:** Reads the checkpoint JSON.
+2. **Restore Context:** Re-initializes the Orchestrator at the correct phase/wave.
+3. **Status Check:** Runs a quick status check to confirm environment matches.
+4. **Prompt:** Reminds user of the next pending task.
 
 ## Example
 
-```
-/goop-resume
-```
-
-Or specify a specific checkpoint:
-```
-/goop-resume checkpoint-abc123
-```
-
-## Workflow
-
-1. **Load checkpoint data**
-2. **Restore session context**
-3. **Display current todos**
-4. **Show relevant files**
-5. **Ready to continue work**
-
-## See Available Checkpoints
-
-To list all checkpoints:
-```
-Use the goop_checkpoint tool with action: "list"
-```
-
----
-
-**GoopSpec**: Pick up exactly where you left off.
+> **User:** `/goop-resume`
+> **Agent:** "Resuming session from 2 hours ago.
+> Phase: Execute (Wave 2).
+> Next Task: [2.2] Implement handler.
+> Ready to continue?"
