@@ -416,5 +416,5 @@ Orchestrator: Resuming with Option A...
 
 ---
 
-*Execution Protocol v0.1.4*
+*Execution Protocol v0.1.5*
 *"Execute in waves. Checkpoint often. Handoff clean."*

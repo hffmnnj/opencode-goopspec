@@ -295,5 +295,5 @@ User: /goop-status
 
 ---
 
-*Status Protocol v0.1.4*
+*Status Protocol v0.1.5*
 *"Know where you are. Know where to go."*

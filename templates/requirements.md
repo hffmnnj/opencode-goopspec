@@ -117,5 +117,5 @@ Questions that need answers before or during planning:
 
 ---
 
-*Discovery interview output - GoopSpec v0.1.4*
+*Discovery interview output - GoopSpec v0.1.5*
 *Run `/goop-plan` when ready for planning.*

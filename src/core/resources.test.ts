@@ -62,7 +62,7 @@ describe("Resource Integration", () => {
   });
 
   describe("Commands", () => {
-    // Updated for GoopSpec 0.1.0 workflow
+    // Updated for GoopSpec 0.1.5 workflow
     // Removed: goop-new (replaced by goop-plan), goop-verify (replaced by goop-accept)
     // Added: goop-discuss, goop-specify, goop-accept, goop-amend, goop-complete, goop-milestone
     const EXPECTED_COMMANDS = [
@@ -183,7 +183,7 @@ describe("Resource Integration", () => {
       const agent = resolver.resolve("agent", "goop-planner");
       expect(agent).not.toBeNull();
       
-      // goop-plan replaced goop-new in GoopSpec 0.1.0
+      // goop-plan replaced goop-new in GoopSpec 0.1.5
       const cmd = resolver.resolve("command", "goop-plan");
       expect(cmd).not.toBeNull();
     });

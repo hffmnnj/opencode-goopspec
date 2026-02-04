@@ -210,4 +210,4 @@ Ensure memory injection is enabled in config:
 
 ---
 
-*GoopSpec v0.1.0 - Enforcement System Documentation*
+*GoopSpec v0.1.5 - Enforcement System Documentation*

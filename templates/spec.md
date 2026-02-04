@@ -165,4 +165,4 @@ Before acceptance, verify:
 ---
 
 *This specification is a CONTRACT. Changes require explicit amendment via `/goop-amend`.*
-*GoopSpec v0.1.4*
+*GoopSpec v0.1.5*

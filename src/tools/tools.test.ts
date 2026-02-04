@@ -547,7 +547,7 @@ describe("Tools", () => {
       const ctx = createTestContext();
       const tool = createSlashcommandTool(ctx);
       
-      // Should include bundled commands (goop-plan replaced goop-new in 0.1.0)
+      // Should include bundled commands (goop-plan replaced goop-new in 0.1.5)
       expect(tool.description).toContain("goop-plan");
       expect(tool.description).toContain("goop-execute");
     });

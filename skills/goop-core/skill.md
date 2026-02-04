@@ -1,6 +1,6 @@
 ---
 name: goop-core
-description: Core GoopSpec 0.1.0 operations - the 5-phase spec-driven workflow
+description: Core GoopSpec 0.1.5 operations - the 5-phase spec-driven workflow
 category: core
 triggers:
   - goop
@@ -8,10 +8,10 @@ triggers:
   - workflow
   - plan
   - execute
-version: 0.1.0
+version: 0.1.5
 ---
 
-# GoopSpec 0.1.0 Core Operations
+# GoopSpec 0.1.5 Core Operations
 
 ## The 5-Phase Workflow
 

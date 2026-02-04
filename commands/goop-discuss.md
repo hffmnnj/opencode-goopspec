@@ -430,5 +430,5 @@ planning. Want to do that first?"
 
 ---
 
-*Discovery Interview Protocol v0.1.4*
+*Discovery Interview Protocol v0.1.5*
 *"Nail the spec before you write the code."*

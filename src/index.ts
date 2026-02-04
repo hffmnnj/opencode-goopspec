@@ -1,5 +1,5 @@
 /**
- * GoopSpec Plugin v0.1.0
+ * GoopSpec Plugin v0.1.5
  * A spec-driven development plugin for OpenCode
  * 
  * @module index

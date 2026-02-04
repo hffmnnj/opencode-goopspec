@@ -7,7 +7,7 @@ triggers:
   - unexpected
   - bug
   - blocker
-version: 0.1.0
+version: 0.1.5
 requires:
   - goop-core
 ---

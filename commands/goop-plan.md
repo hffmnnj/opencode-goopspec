@@ -552,5 +552,5 @@ Orchestrator:
 
 ---
 
-*Planning Protocol v0.1.4*
+*Planning Protocol v0.1.5*
 *"Every must-have traces to tasks."*

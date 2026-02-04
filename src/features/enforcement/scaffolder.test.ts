@@ -82,8 +82,8 @@ describe("scaffoldPhaseDocuments", () => {
     const chroniclePath = join(result.phaseDir, "CHRONICLE.md");
     expect(existsSync(specPath)).toBe(true);
     expect(existsSync(chroniclePath)).toBe(true);
-    expect(readFileSync(specPath, "utf-8")).toContain("GoopSpec v0.1.0");
-    expect(readFileSync(chroniclePath, "utf-8")).toContain("GoopSpec v0.1.0");
+    expect(readFileSync(specPath, "utf-8")).toContain("GoopSpec v0.1.5");
+    expect(readFileSync(chroniclePath, "utf-8")).toContain("GoopSpec v0.1.5");
   });
 });
 
