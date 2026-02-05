@@ -38,6 +38,7 @@ references:
   - references/response-format.md
   - references/deviation-rules.md
   - references/boundary-system.md
+  - references/git-workflow.md
   - references/xml-response-schema.md
   - references/discovery-interview.md
   - references/handoff-protocol.md

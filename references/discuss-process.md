@@ -15,7 +15,41 @@ goop_state({ action: "get" })        # NEVER read state.json directly
 
 **CRITICAL: Never read or edit .goopspec/state.json directly. Always use `goop_state` tool.**
 
-### 1.2 Check for existing project documents
+### 1.2 Git branch check (Session Start)
+
+Check current branch and offer to create a new one for this work:
+
+```bash
+git branch --show-current
+git status
+```
+
+Use `question` tool:
+- header: "Git Branch"
+- question: "You're on branch `[current-branch]`. How would you like to proceed?"
+- options:
+  - "Create new feature branch (Recommended)" — Create a clean branch for this work
+  - "Stay on current branch" — Continue on [current-branch]
+
+**On "Create new feature branch":**
+
+Ask for branch name context (or infer from topic):
+```
+Branch name will be: feat/[short-description]
+```
+
+Then create branch:
+```bash
+git checkout -b feat/[short-description]
+```
+
+**Branch naming rules:**
+- Format: `type/short-description`
+- Types: `feat/`, `fix/`, `refactor/`, `chore/`
+- Keep descriptions short and kebab-case
+- Check existing branches first: `git branch --list`
+
+### 1.3 Check for existing project documents
 
 ```
 Read(".goopspec/SPEC.md")
@@ -45,13 +79,13 @@ Then continue with discovery.
 **On "Continue":** Exit and suggest `/goop-status`.
 **On "Overwrite":** Warn about losing history, then continue.
 
-### 1.3 Check for existing REQUIREMENTS.md
+### 1.4 Check for existing REQUIREMENTS.md
 
 ```
 Read(".goopspec/REQUIREMENTS.md")    # If exists, interview was done
 ```
 
-### 1.4 If REQUIREMENTS.md exists
+### 1.5 If REQUIREMENTS.md exists
 
 Use `question` tool:
 - header: "Existing Discovery"
@@ -61,13 +95,13 @@ Use `question` tool:
   - "Review and update" — Load previous answers, modify as needed
   - "Use existing" — Skip interview, go straight to /goop-plan
 
-### 1.5 Initialize if needed
+### 1.6 Initialize if needed
 
 ```bash
 mkdir -p .goopspec
 ```
 
-### 1.6 Search memory for context
+### 1.7 Search memory for context
 
 ```
 memory_search({ query: "project preferences architecture [user's topic]", limit: 5 })
