@@ -30,3 +30,10 @@ export {
   generateConflictWarning,
   suggestAgentFilePath,
 } from "./conflict.js";
+
+export type { CleanupResult } from "./cleanup.js";
+export {
+  cleanupStaleAgents,
+  cleanupAllAgents,
+  getStaleAgentCount,
+} from "./cleanup.js";
