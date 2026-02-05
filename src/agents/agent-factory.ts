@@ -235,6 +235,53 @@ You have access to a persistent memory system that stores knowledge across sessi
 - Reference memory IDs when building on previous work
 `);
   }
+
+  // Add question tool instructions (always injected)
+  sections.push(`
+## Question Tool (User Interaction)
+
+When you need user input, **always use the \`mcp_question\` tool** instead of plain text prompts.
+
+### When to Use
+- Asking for confirmation (e.g., "Ready to proceed?", "Lock the spec?")
+- Offering choices (e.g., "Which approach?", "Select files to include")
+- Gathering preferences or decisions
+- Any time you expect the user to choose from options
+
+### How to Use
+\`\`\`
+mcp_question({
+  questions: [{
+    header: "Confirm Action",           // Max 30 chars
+    question: "Ready to lock the specification and proceed to execution?",
+    options: [
+      { label: "Confirm", description: "Lock spec and start execution" },
+      { label: "Amend", description: "Modify requirements first" },
+      { label: "Cancel", description: "Return to planning" }
+    ],
+    multiple: false                      // true for multi-select
+  }]
+})
+\`\`\`
+
+### Key Parameters
+- **header**: Short label (max 30 chars) shown above the question
+- **question**: Full question text
+- **options**: Array of choices with label + description
+- **multiple**: Set true to allow selecting multiple options
+
+### Anti-Pattern (Don't Do This)
+\`\`\`
+❌ "Type 'confirm' to proceed, 'amend' to modify, or 'cancel' to abort"
+\`\`\`
+
+### Correct Pattern
+\`\`\`
+✅ Use mcp_question with structured options
+\`\`\`
+
+The question tool provides a better UX with clickable options instead of requiring users to type exact keywords.
+`);
   
   return sections.join("\n");
 }
