@@ -16,6 +16,11 @@ import { log, logError } from "../../shared/logger.js";
 import { loadPluginConfig } from "../../core/config.js";
 import { fetchAvailableAgents, type OpenCodeClient } from "../../shared/opencode-client.js";
 import { getActiveAgents, registerAgent } from "../../features/team/index.js";
+import {
+  checkFileConflict,
+  generateConflictWarning,
+  type ConflictInfo,
+} from "../../features/team/conflict.js";
 import type { AgentRegistration } from "../../features/team/types.js";
 
 function normalizeReferencePath(name: string): string {
@@ -87,6 +92,87 @@ function mergeTeamContexts(
 
   const mergedSiblings = Array.from(siblings.values());
   return mergedSiblings.length > 0 ? { siblings: mergedSiblings } : {};
+}
+
+function normalizeFileReference(value: string): string | null {
+  const trimmed = value.trim().replace(/^`|`$/g, "");
+  if (!trimmed) {
+    return null;
+  }
+
+  const candidate = trimmed.split(/\s+-\s+|\s+—\s+/)[0]?.trim();
+  if (!candidate) {
+    return null;
+  }
+
+  if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
+    return null;
+  }
+
+  if (!candidate.includes("/") && !candidate.includes(".")) {
+    return null;
+  }
+
+  return candidate;
+}
+
+function extractFilePathsFromContext(...contexts: Array<string | undefined>): string[] {
+  const results = new Set<string>();
+  const sectionHeaderPattern = /^#{1,6}\s+/;
+  const filesHeaderPattern = /^files?(\s+to\s+modify|\s+to\s+read)?\s*:/i;
+
+  for (const context of contexts) {
+    if (!context) {
+      continue;
+    }
+
+    let inFilesSection = false;
+    const lines = context.split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        continue;
+      }
+
+      if (sectionHeaderPattern.test(trimmed)) {
+        inFilesSection = /files?/i.test(trimmed);
+        continue;
+      }
+
+      if (filesHeaderPattern.test(trimmed)) {
+        inFilesSection = true;
+        const inlineList = trimmed.replace(filesHeaderPattern, "").trim();
+        if (inlineList) {
+          const parts = inlineList.split(",");
+          for (const part of parts) {
+            const normalized = normalizeFileReference(part);
+            if (normalized) {
+              results.add(normalized);
+            }
+          }
+        }
+        continue;
+      }
+
+      if (!inFilesSection) {
+        continue;
+      }
+
+      if (/^[A-Za-z].*:$/.test(trimmed)) {
+        inFilesSection = false;
+        continue;
+      }
+
+      const bulletMatch = trimmed.match(/^[-*]\s+(.+)$/);
+      const candidate = bulletMatch ? bulletMatch[1] : trimmed;
+      const normalized = normalizeFileReference(candidate);
+      if (normalized) {
+        results.add(normalized);
+      }
+    }
+  }
+
+  return Array.from(results);
 }
 
 async function buildAutoTeamContext(currentAgentId: string): Promise<TeamAwarenessContext> {
@@ -248,7 +334,9 @@ function formatTaskDelegation(
   composedPrompt: string,
   subagentType: string,
   availableSubagents: string[],
-  teamContext: TeamAwarenessContext
+  teamContext: TeamAwarenessContext,
+  conflicts: ConflictInfo[] = [],
+  conflictWarnings: string[] = []
 ): string {
   const memoryProtocol = `
 ## Memory Protocol (Required)
@@ -283,9 +371,15 @@ function formatTaskDelegation(
     userPrompt: userPrompt,
     composedPrompt: enrichedPrompt,
     team_context: teamContext,
+    conflicts: conflicts,
+    conflict_warnings: conflictWarnings,
   };
-  
-  return `<goop_delegation>
+
+  const warningSection = conflictWarnings.length > 0
+    ? `## Delegation Warning\n\n${conflictWarnings.join("\n\n")}\n\n`
+    : "";
+
+  return `${warningSection}<goop_delegation>
 ${JSON.stringify(delegationPayload, null, 2)}
 </goop_delegation>
 
@@ -376,6 +470,9 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       const agentId = generateAgentId();
       const parentId = args.session_id;
       let autoTeamContext: TeamAwarenessContext | undefined;
+      const contextFilePaths = extractFilePathsFromContext(args.context, args.prompt);
+      const conflicts: ConflictInfo[] = [];
+      const conflictWarnings: string[] = [];
 
       const registration: AgentRegistration = {
         id: agentId,
@@ -391,6 +488,23 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
         logError("Failed to register delegated agent", registrationResult.error);
       }
 
+      if (contextFilePaths.length > 0) {
+        try {
+          for (const filePath of contextFilePaths) {
+            const conflict = await checkFileConflict(filePath, agentId);
+            if (conflict.hasConflict) {
+              conflicts.push(conflict);
+              const warning = conflict.warningMessage || generateConflictWarning(conflict);
+              if (warning) {
+                conflictWarnings.push(warning);
+              }
+            }
+          }
+        } catch (error) {
+          logError("Failed to check file conflicts for delegation", error);
+        }
+      }
+
       try {
         autoTeamContext = await buildAutoTeamContext(agentId);
       } catch (error) {
@@ -398,9 +512,13 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       }
 
       const mergedTeamContext = mergeTeamContexts(teamContext, autoTeamContext);
+      const conflictContext = conflictWarnings.length > 0
+        ? ["## File Conflict Warnings", "", ...conflictWarnings].join("\n")
+        : "";
+      const combinedContext = [args.context, conflictContext].filter(Boolean).join("\n\n");
 
       // Build composed prompt (used as system content)
-      const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, args.context, mergedTeamContext);
+      const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, combinedContext, mergedTeamContext);
       
       const client = ctx.input.client as OpenCodeClient;
       const availableSubagents = await fetchAvailableAgents(client);
@@ -424,7 +542,9 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
         composedPrompt,
         subagentType,
         availableSubagents,
-        mergedTeamContext
+        mergedTeamContext,
+        conflicts,
+        conflictWarnings
       );
     },
   });
