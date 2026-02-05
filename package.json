@@ -27,6 +27,7 @@
     "typecheck": "bunx tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "bun test",
+    "version:bump": "bun scripts/version-bump.ts",
     "prepublishOnly": "bun run build"
   },
   "keywords": [
