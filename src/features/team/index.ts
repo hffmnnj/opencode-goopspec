@@ -20,3 +20,6 @@ export {
   generateAgentFilePath,
   getCanonicalPath,
 } from "./file-patterns.js";
+
+export type { MergeOptions, MergeResult } from "./merge.js";
+export { mergeAgentOutputs } from "./merge.js";
