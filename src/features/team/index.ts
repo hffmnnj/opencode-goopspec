@@ -23,3 +23,10 @@ export {
 
 export type { MergeOptions, MergeResult } from "./merge.js";
 export { mergeAgentOutputs } from "./merge.js";
+
+export type { ConflictInfo } from "./conflict.js";
+export {
+  checkFileConflict,
+  generateConflictWarning,
+  suggestAgentFilePath,
+} from "./conflict.js";
