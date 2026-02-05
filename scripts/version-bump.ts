@@ -22,6 +22,10 @@ type PatternRegistryEntry = {
   patterns: UpdatePattern[];
 };
 
+class UsageError extends Error {
+  override name = "UsageError";
+}
+
 const USAGE = `Usage: bun scripts/version-bump.ts <version> [--dry-run]
 
 Options:
@@ -89,6 +93,13 @@ const PATTERN_REGISTRY: PatternRegistryEntry[] = [
 ];
 
 const knownFlags = new Set(["--dry-run", "--help", "-h"]);
+const supportsColor = Boolean(process.stdout.isTTY) && !process.env.NO_COLOR;
+const colorize = {
+  green: (value: string) => (supportsColor ? `\x1b[32m${value}\x1b[0m` : value),
+  yellow: (value: string) => (supportsColor ? `\x1b[33m${value}\x1b[0m` : value),
+  red: (value: string) => (supportsColor ? `\x1b[31m${value}\x1b[0m` : value),
+  dim: (value: string) => (supportsColor ? `\x1b[2m${value}\x1b[0m` : value),
+};
 
 function parseArgs(args: string[]): CliOptions {
   let version: string | undefined;
@@ -106,16 +117,28 @@ function parseArgs(args: string[]): CliOptions {
     }
     if (arg.startsWith("-")) {
       if (!knownFlags.has(arg)) {
-        throw new Error(`Unknown flag: ${arg}`);
+        throw new UsageError(`Unknown flag: ${arg}`);
       }
       continue;
     }
     if (!version) {
       version = arg;
+      continue;
     }
-  }
-
+    throw new UsageError(`Unexpected argument: ${arg}`);
+    }
+  
   return { version, dryRun, help };
+}
+
+function formatCount(value: number, label: string): string {
+  return `${value} ${label}${value === 1 ? "" : "s"}`;
+}
+
+function printUsageError(message: string): void {
+  console.error(colorize.red(`Error: ${message}`));
+  console.error("");
+  console.error(USAGE);
 }
 
 function normalizePath(path: string): string {
@@ -232,22 +255,27 @@ async function run(): Promise<void> {
   }
 
   if (!args.version) {
-    console.error("Error: version argument is required.\n");
-    console.log(USAGE);
+    printUsageError("version argument is required.");
     process.exit(1);
+    return;
   }
 
   const currentVersion = await readPackageVersion();
   const targetVersion = args.version;
 
-  console.log(`Current version: ${currentVersion}`);
-  console.log(`Target version: ${targetVersion}`);
+  if (currentVersion === targetVersion) {
+    console.log(colorize.yellow("Warning: target version matches current version."));
+  }
+
+  console.log(`Current version: ${colorize.dim(currentVersion)}`);
+  console.log(`Target version: ${colorize.dim(targetVersion)}`);
 
   const files = await discoverFiles();
-  console.log(`Discovered ${files.length} files.`);
+  console.log(`Discovered ${formatCount(files.length, "file")}.`);
 
   let updatedFiles = 0;
   let totalChanges = 0;
+  const changedEntries: Array<{ path: string; changeCount: number }> = [];
 
   for (const filePath of files) {
     const file = Bun.file(filePath);
@@ -262,24 +290,52 @@ async function run(): Promise<void> {
     if (changeCount > 0) {
       updatedFiles += 1;
       totalChanges += changeCount;
+      changedEntries.push({ path: filePath, changeCount });
       if (!args.dryRun) {
         await Bun.write(filePath, updated);
       }
     }
   }
 
-  console.log(`Files updated: ${updatedFiles}`);
-  console.log(`Total changes: ${totalChanges}`);
   if (args.dryRun) {
-    console.log("Dry run: no files were written.");
+    if (changedEntries.length === 0) {
+      console.log(colorize.yellow("Dry run: no matching version strings found."));
+    } else {
+      console.log(colorize.yellow("Dry run preview:"));
+      for (const entry of changedEntries) {
+        console.log(
+          `${colorize.yellow("- Would update")}: ${entry.path} (${formatCount(
+            entry.changeCount,
+            "change",
+          )})`,
+        );
+      }
+    }
+    console.log(colorize.yellow("Dry run: no files were written."));
+  } else if (changedEntries.length > 0) {
+    for (const entry of changedEntries) {
+      console.log(
+        `${colorize.green("- Updated")}: ${entry.path} (${formatCount(
+          entry.changeCount,
+          "change",
+        )})`,
+      );
+    }
   }
+
+  console.log(`Files updated: ${colorize.green(String(updatedFiles))}`);
+  console.log(`Total changes: ${colorize.green(String(totalChanges))}`);
 }
 
 try {
   await run();
 } catch (error) {
+  if (error instanceof UsageError) {
+    printUsageError(error.message);
+    process.exit(1);
+  }
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`Error: ${message}`);
+  console.error(colorize.red(`Error: ${message}`));
   process.exit(1);
 }
 
