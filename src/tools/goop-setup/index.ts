@@ -40,7 +40,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
 }> = {
   "goop-debugger": {
     suggestions: [
-      "openai/gpt-5.2-codex",
+      "openai/gpt-5.3-codex",
       "anthropic/claude-opus-4-5",
       "kimi-for-coding/k2p5",
     ],
@@ -56,7 +56,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   },
   "goop-executor": {
     suggestions: [
-      "openai/gpt-5.2-codex",
+      "openai/gpt-5.3-codex",
       "anthropic/claude-opus-4-5",
       "anthropic/claude-sonnet-4-5",
       "kimi-for-coding/k2p5",
@@ -83,7 +83,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   },
   "goop-orchestrator": {
     suggestions: [
-      "openai/gpt-5.2-codex",
+      "openai/gpt-5.3-codex",
       "anthropic/claude-opus-4-5",
       "kimi-for-coding/k2p5",
       "anthropic/claude-sonnet-4-5",
@@ -92,7 +92,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   },
   "goop-planner": {
     suggestions: [
-      "openai/gpt-5.2-codex",
+      "openai/gpt-5.3-codex",
       "anthropic/claude-opus-4-5",
       "kimi-for-coding/k2p5",
       "anthropic/claude-sonnet-4-5",
@@ -118,7 +118,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   },
   "goop-verifier": {
     suggestions: [
-      "openai/gpt-5.2-codex",
+      "openai/gpt-5.3-codex",
       "anthropic/claude-opus-4-5",
     ],
     description: "Post-execution verification with security focus",
