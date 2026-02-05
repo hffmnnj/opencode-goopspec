@@ -7,9 +7,21 @@
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, AgentDefinition, ToolContext, ResolvedResource } from "../../core/types.js";
-import { log } from "../../shared/logger.js";
+import {
+  generateTeamAwarenessSection,
+  type TeamAwarenessContext,
+  type TeamAwarenessSibling,
+} from "../../agents/prompt-sections/team-awareness.js";
+import { log, logError } from "../../shared/logger.js";
 import { loadPluginConfig } from "../../core/config.js";
 import { fetchAvailableAgents, type OpenCodeClient } from "../../shared/opencode-client.js";
+import { getActiveAgents, registerAgent } from "../../features/team/index.js";
+import {
+  checkFileConflict,
+  generateConflictWarning,
+  type ConflictInfo,
+} from "../../features/team/conflict.js";
+import type { AgentRegistration } from "../../features/team/types.js";
 
 function normalizeReferencePath(name: string): string {
   return name.trim().replace(/\\/g, "/").replace(/^\.\/?/, "");
@@ -46,6 +58,136 @@ function resolveReferenceResource(
   return null;
 }
 
+function parseTeamContext(raw?: string): TeamAwarenessContext | undefined {
+  if (!raw) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as TeamAwarenessContext;
+    if (parsed && typeof parsed === "object") {
+      return parsed;
+    }
+  } catch (error) {
+    log("Invalid team_context JSON", { error });
+  }
+
+  return undefined;
+}
+
+function generateAgentId(): string {
+  return crypto.randomUUID().slice(0, 8);
+}
+
+function mergeTeamContexts(
+  base: TeamAwarenessContext | undefined,
+  extra: TeamAwarenessContext | undefined
+): TeamAwarenessContext {
+  const siblings = new Map<string, TeamAwarenessSibling>();
+  const allSiblings = [...(base?.siblings ?? []), ...(extra?.siblings ?? [])];
+
+  for (const sibling of allSiblings) {
+    siblings.set(sibling.id, sibling);
+  }
+
+  const mergedSiblings = Array.from(siblings.values());
+  return mergedSiblings.length > 0 ? { siblings: mergedSiblings } : {};
+}
+
+function normalizeFileReference(value: string): string | null {
+  const trimmed = value.trim().replace(/^`|`$/g, "");
+  if (!trimmed) {
+    return null;
+  }
+
+  const candidate = trimmed.split(/\s+-\s+|\s+—\s+/)[0]?.trim();
+  if (!candidate) {
+    return null;
+  }
+
+  if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
+    return null;
+  }
+
+  if (!candidate.includes("/") && !candidate.includes(".")) {
+    return null;
+  }
+
+  return candidate;
+}
+
+function extractFilePathsFromContext(...contexts: Array<string | undefined>): string[] {
+  const results = new Set<string>();
+  const sectionHeaderPattern = /^#{1,6}\s+/;
+  const filesHeaderPattern = /^files?(\s+to\s+modify|\s+to\s+read)?\s*:/i;
+
+  for (const context of contexts) {
+    if (!context) {
+      continue;
+    }
+
+    let inFilesSection = false;
+    const lines = context.split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        continue;
+      }
+
+      if (sectionHeaderPattern.test(trimmed)) {
+        inFilesSection = /files?/i.test(trimmed);
+        continue;
+      }
+
+      if (filesHeaderPattern.test(trimmed)) {
+        inFilesSection = true;
+        const inlineList = trimmed.replace(filesHeaderPattern, "").trim();
+        if (inlineList) {
+          const parts = inlineList.split(",");
+          for (const part of parts) {
+            const normalized = normalizeFileReference(part);
+            if (normalized) {
+              results.add(normalized);
+            }
+          }
+        }
+        continue;
+      }
+
+      if (!inFilesSection) {
+        continue;
+      }
+
+      if (/^[A-Za-z].*:$/.test(trimmed)) {
+        inFilesSection = false;
+        continue;
+      }
+
+      const bulletMatch = trimmed.match(/^[-*]\s+(.+)$/);
+      const candidate = bulletMatch ? bulletMatch[1] : trimmed;
+      const normalized = normalizeFileReference(candidate);
+      if (normalized) {
+        results.add(normalized);
+      }
+    }
+  }
+
+  return Array.from(results);
+}
+
+async function buildAutoTeamContext(currentAgentId: string): Promise<TeamAwarenessContext> {
+  const activeAgents = await getActiveAgents();
+  const siblings = activeAgents
+    .filter(agent => agent.id !== currentAgentId)
+    .map(agent => ({
+      id: agent.id,
+      type: agent.type,
+      task: agent.task,
+    }));
+
+  return siblings.length > 0 ? { siblings } : {};
+}
+
 /**
  * Build agent prompt with skills and references
  */
@@ -53,7 +195,8 @@ function buildAgentPrompt(
   ctx: PluginContext,
   agentDef: AgentDefinition,
   userPrompt: string,
-  additionalContext?: string
+  additionalContext?: string,
+  teamContext?: TeamAwarenessContext
 ): string {
   const sections: string[] = [];
   
@@ -98,6 +241,11 @@ function buildAgentPrompt(
         sections.push("");
       }
     }
+  }
+
+  if (teamContext) {
+    sections.push(generateTeamAwarenessSection(teamContext));
+    sections.push("");
   }
   
   // Additional context
@@ -177,13 +325,21 @@ function resolveSubagentType(agentDef: AgentDefinition, available: string[]): st
 
 /**
  * Format a task delegation response that uses the native task tool.
+ * 
+ * This is the "prompt engineering" output - it prepares everything the orchestrator
+ * needs to invoke the task tool with the correct parameters.
  */
 function formatTaskDelegation(
   agentDef: AgentDefinition,
+  agentId: string,
+  parentId: string | undefined,
   userPrompt: string,
   composedPrompt: string,
   subagentType: string,
-  availableSubagents: string[]
+  availableSubagents: string[],
+  teamContext: TeamAwarenessContext,
+  conflicts: ConflictInfo[] = [],
+  conflictWarnings: string[] = []
 ): string {
   const memoryProtocol = `
 ## Memory Protocol (Required)
@@ -204,8 +360,13 @@ function formatTaskDelegation(
 
   const enrichedPrompt = composedPrompt + "\n\n" + memoryProtocol;
 
+  // Create a short task description from the user prompt
+  const taskDescription = userPrompt.slice(0, 50).replace(/\n/g, ' ').trim() + (userPrompt.length > 50 ? '...' : '');
+
   const delegationPayload = {
     action: "delegate_via_task",
+    agent_id: agentId,
+    parent_id: parentId,
     agent: agentDef.name,
     subagent_type: subagentType,
     available_subagents: availableSubagents,
@@ -215,16 +376,54 @@ function formatTaskDelegation(
     references: agentDef.references,
     userPrompt: userPrompt,
     composedPrompt: enrichedPrompt,
+    team_context: teamContext,
+    conflicts: conflicts,
+    conflict_warnings: conflictWarnings,
   };
-  
-  return `<goop_delegation>
+
+  const warningSection = conflictWarnings.length > 0
+    ? `## ⚠️ Delegation Warning\n\n${conflictWarnings.join("\n\n")}\n\n`
+    : "";
+
+  // Escape backticks in the prompt for safe embedding in template literal
+  const escapedPrompt = enrichedPrompt.replace(/`/g, '\\`');
+
+  return `${warningSection}# Prompt Engineered for ${agentDef.name}
+
+\`goop_delegate\` has prepared this delegation. **You MUST now invoke the \`task\` tool.**
+
+<goop_delegation>
 ${JSON.stringify(delegationPayload, null, 2)}
 </goop_delegation>
 
-**Use native \`task\` tool:**
-- subagent_type: "${subagentType}"
-- description: "[3-5 word task summary]"
-- prompt: [composedPrompt from JSON above]`;
+---
+
+## 🚀 REQUIRED: Execute This Task Invocation
+
+Copy and execute this \`task\` tool call:
+
+\`\`\`
+task({
+  subagent_type: "${subagentType}",
+  description: "${taskDescription}",
+  prompt: \`${escapedPrompt}\`
+})
+\`\`\`
+
+---
+
+### Why Two Steps?
+
+1. **\`goop_delegate\`** (just completed) = Prompt Engineering
+   - Loaded agent definition, skills, references
+   - Injected team awareness and memory protocol
+   - Prepared the complete context package
+
+2. **\`task\`** (do this NOW) = Execution
+   - Spawns the subagent with the engineered prompt
+   - Returns results back to you
+
+**Do NOT skip the task invocation. The delegation is incomplete without it.**`;
 }
 
 /**
@@ -237,10 +436,21 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       agent: tool.schema.string().optional(),
       prompt: tool.schema.string().optional(),
       context: tool.schema.string().optional(),
+      team_context: tool.schema.string().optional(),
       list: tool.schema.boolean().optional(),
       session_id: tool.schema.string().optional(),
     },
-    async execute(args: { agent?: string; prompt?: string; context?: string; list?: boolean; session_id?: string }, _context: ToolContext): Promise<string> {
+    async execute(
+      args: {
+        agent?: string;
+        prompt?: string;
+        context?: string;
+        team_context?: string;
+        list?: boolean;
+        session_id?: string;
+      },
+      _context: ToolContext
+    ): Promise<string> {
       // List agents
       if (args.list || !args.agent) {
         const agents = ctx.resolver.resolveAll("agent");
@@ -293,8 +503,59 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
         prompt: agentResource.body,
       };
       
+      const teamContext = parseTeamContext(args.team_context);
+      const agentId = generateAgentId();
+      const parentId = args.session_id;
+      let autoTeamContext: TeamAwarenessContext | undefined;
+      const contextFilePaths = extractFilePathsFromContext(args.context, args.prompt);
+      const conflicts: ConflictInfo[] = [];
+      const conflictWarnings: string[] = [];
+
+      const registration: AgentRegistration = {
+        id: agentId,
+        type: agentDef.name,
+        task: args.prompt,
+        claimedFiles: [],
+        parentId: parentId,
+        startedAt: Date.now(),
+      };
+
+      const registrationResult = await registerAgent(registration);
+      if (!registrationResult.ok) {
+        logError("Failed to register delegated agent", registrationResult.error);
+      }
+
+      if (contextFilePaths.length > 0) {
+        try {
+          for (const filePath of contextFilePaths) {
+            const conflict = await checkFileConflict(filePath, agentId);
+            if (conflict.hasConflict) {
+              conflicts.push(conflict);
+              const warning = conflict.warningMessage || generateConflictWarning(conflict);
+              if (warning) {
+                conflictWarnings.push(warning);
+              }
+            }
+          }
+        } catch (error) {
+          logError("Failed to check file conflicts for delegation", error);
+        }
+      }
+
+      try {
+        autoTeamContext = await buildAutoTeamContext(agentId);
+      } catch (error) {
+        logError("Failed to build team context for delegation", error);
+      }
+
+      const mergedTeamContext = mergeTeamContexts(teamContext, autoTeamContext);
+      const conflictContext = conflictWarnings.length > 0
+        ? ["## File Conflict Warnings", "", ...conflictWarnings].join("\n")
+        : "";
+      const combinedContext = [args.context, conflictContext].filter(Boolean).join("\n\n");
+
       // Build composed prompt (used as system content)
-      const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, args.context);
+      const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, combinedContext, mergedTeamContext);
       
       const client = ctx.input.client as OpenCodeClient;
       const availableSubagents = await fetchAvailableAgents(client);
@@ -303,6 +564,8 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
 
       log("Delegation prepared", {
         agent: agentDef.name,
+        agentId,
+        parentId,
         subagentType,
         availableSubagents,
         modelSource: configModel ? "config" : "frontmatter",
@@ -310,10 +573,15 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
 
       return formatTaskDelegation(
         agentDef,
+        agentId,
+        parentId,
         args.prompt,
         composedPrompt,
         subagentType,
-        availableSubagents
+        availableSubagents,
+        mergedTeamContext,
+        conflicts,
+        conflictWarnings
       );
     },
   });

@@ -1,6 +1,6 @@
 {
   "name": "opencode-goopspec",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "A spec-driven development plugin for OpenCode with user-guided planning, wave execution, and verification",
   "type": "module",
   "main": "dist/index.js",
@@ -27,6 +27,7 @@
     "typecheck": "bunx tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "bun test",
+    "version:bump": "bun scripts/version-bump.ts",
     "prepublishOnly": "bun run build"
   },
   "keywords": [

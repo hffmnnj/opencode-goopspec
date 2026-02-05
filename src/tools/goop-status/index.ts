@@ -7,6 +7,7 @@
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, GoopState, ToolContext } from "../../core/types.js";
+import { getActiveAgents } from "../../features/team/registry.js";
 
 /**
  * Generate a text progress bar
@@ -114,7 +115,7 @@ function formatNextSteps(guidance: PhaseGuidance): string[] {
 /**
  * Format workflow status for display
  */
-function formatStatus(state: GoopState | null, verbose: boolean, ctx: PluginContext): string {
+async function formatStatus(state: GoopState | null, verbose: boolean, ctx: PluginContext): Promise<string> {
   const lines: string[] = [];
   
   // Handle missing or incomplete state
@@ -227,6 +228,19 @@ function formatStatus(state: GoopState | null, verbose: boolean, ctx: PluginCont
     }
   }
   
+  const activeAgents = await getActiveAgents();
+  if (activeAgents.length > 0) {
+    lines.push("\n## Active Agents");
+    for (const agent of activeAgents) {
+      const taskSummary = agent.task?.trim() || "No task specified";
+      const claimedFiles = agent.claimedFiles.length > 0
+        ? agent.claimedFiles.join(", ")
+        : "None";
+      lines.push(`- **${agent.type}** — ${taskSummary}`);
+      lines.push(`  **Claimed Files:** ${claimedFiles}`);
+    }
+  }
+
   // Recent memory (if available and verbose)
   if (verbose && ctx.memoryManager) {
     lines.push("\n## Recent Memory");
@@ -256,7 +270,7 @@ export function createGoopStatusTool(ctx: PluginContext): ToolDefinition {
     },
     async execute(args, _context: ToolContext): Promise<string> {
       const state = ctx.stateManager.getState();
-      return formatStatus(state, args.verbose ?? false, ctx);
+      return await formatStatus(state, args.verbose ?? false, ctx);
     },
   });
 }

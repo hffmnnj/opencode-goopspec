@@ -62,7 +62,7 @@ describe("Resource Integration", () => {
   });
 
   describe("Commands", () => {
-    // Updated for GoopSpec 0.1.5 workflow
+    // Updated for GoopSpec 5-phase workflow
     // Removed: goop-new (replaced by goop-plan), goop-verify (replaced by goop-accept)
     // Added: goop-discuss, goop-specify, goop-accept, goop-amend, goop-complete, goop-milestone
     const EXPECTED_COMMANDS = [

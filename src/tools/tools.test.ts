@@ -221,7 +221,7 @@ describe("Tools", () => {
       
       const result = await tool.execute({ verbose: false }, mockToolContext);
       
-      expect(result).toContain("# GoopSpec Status");
+      expect(result).toContain("GoopSpec · Status");
       expect(result).toContain("**Project:**");
       expect(result).toContain("## Workflow");
       expect(result).toContain("## Execution");
@@ -547,7 +547,7 @@ describe("Tools", () => {
       const ctx = createTestContext();
       const tool = createSlashcommandTool(ctx);
       
-      // Should include bundled commands (goop-plan replaced goop-new in 0.1.5)
+      // Should include bundled commands (goop-plan replaced goop-new)
       expect(tool.description).toContain("goop-plan");
       expect(tool.description).toContain("goop-execute");
     });

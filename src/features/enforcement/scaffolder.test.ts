@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { scaffoldPhaseDocuments, checkPhaseDocuments, getPhaseDir } from "./scaffolder.js";
+import { GOOPSPEC_VERSION } from "../../core/version.js";
 import { createMockPluginContext, setupTestEnvironment, type PluginContext } from "../../test-utils.js";
 
 function writeTemplates(rootDir: string, templates: Record<string, string>): void {
@@ -82,8 +83,8 @@ describe("scaffoldPhaseDocuments", () => {
     const chroniclePath = join(result.phaseDir, "CHRONICLE.md");
     expect(existsSync(specPath)).toBe(true);
     expect(existsSync(chroniclePath)).toBe(true);
-    expect(readFileSync(specPath, "utf-8")).toContain("GoopSpec v0.1.5");
-    expect(readFileSync(chroniclePath, "utf-8")).toContain("GoopSpec v0.1.5");
+    expect(readFileSync(specPath, "utf-8")).toContain(`GoopSpec v${GOOPSPEC_VERSION}`);
+    expect(readFileSync(chroniclePath, "utf-8")).toContain(`GoopSpec v${GOOPSPEC_VERSION}`);
   });
 });
 

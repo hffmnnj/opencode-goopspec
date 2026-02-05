@@ -180,6 +180,32 @@ This command should NOT spawn an agent.
     });
   });
 
+  describe("immediate action extraction", () => {
+    let ctx: PluginContext;
+
+    beforeEach(() => {
+      ctx = createProjectContext();
+    });
+
+    it("extracts immediate action and puts it at the top", async () => {
+      const tool = createSlashcommandTool(ctx);
+      const result = await tool.execute(
+        { command: "goop-plan" },
+        createMockToolContext()
+      );
+      
+      // Should have MANDATORY section
+      expect(result).toContain("MANDATORY: Execute Immediately");
+      expect(result).toContain("goop_reference({ name: \"plan-process\" })");
+      expect(result).toContain("Do NOT process any user message");
+      
+      // MANDATORY should appear before Full Instructions
+      const mandatoryIndex = result.indexOf("MANDATORY");
+      const instructionsIndex = result.indexOf("## Full Instructions");
+      expect(mandatoryIndex).toBeLessThan(instructionsIndex);
+    });
+  });
+
   describe("real commands with spawn", () => {
     let ctx: PluginContext;
 
@@ -197,8 +223,8 @@ This command should NOT spawn an agent.
       );
       
       expect(result).not.toContain("AUTOMATIC AGENT SPAWN");
-      expect(result).toContain("Planning Phase"); // Command description
-      expect(result).toContain("Orchestrator"); // Orchestrator-driven
+      expect(result).toContain("# /goop-plan Command");
+      expect(result).toContain("Create specification and blueprint");
     });
 
     it("goop-execute includes spawn instruction", async () => {
@@ -208,7 +234,7 @@ This command should NOT spawn an agent.
         createMockToolContext()
       );
       
-      expect(result).toContain("AUTOMATIC AGENT SPAWN");
+      expect(result).not.toContain("AUTOMATIC AGENT SPAWN");
       expect(result).toContain("goop-executor");
     });
 

@@ -200,3 +200,8 @@ export { buildAuditSection } from "./audit.js";
 export { buildConfirmSection } from "./confirm.js";
 export { buildDelegationSection } from "./delegation.js";
 export { buildConstraintsSection } from "./constraints.js";
+export {
+  generateTeamAwarenessSection,
+  type TeamAwarenessContext,
+  type TeamAwarenessSibling,
+} from "./team-awareness.js";

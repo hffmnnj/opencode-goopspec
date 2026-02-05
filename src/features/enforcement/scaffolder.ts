@@ -8,6 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import type { PluginContext, WorkflowPhase } from "../../core/types.js";
+import { GOOPSPEC_VERSION } from "../../core/version.js";
 import { renderTemplate, createDefaultContext, type TemplateContext } from "../../shared/template-engine.js";
 import { getProjectGoopspecDir } from "../../shared/paths.js";
 import { log, logError } from "../../shared/logger.js";
@@ -245,7 +246,7 @@ function createMinimalDocument(docType: DocumentType, context: TemplateContext):
 
 ---
 
-*GoopSpec v0.1.5*
+*GoopSpec v${GOOPSPEC_VERSION}*
 `;
 
     case "blueprint":
@@ -272,7 +273,7 @@ function createMinimalDocument(docType: DocumentType, context: TemplateContext):
 
 ---
 
-*GoopSpec v0.1.5*
+*GoopSpec v${GOOPSPEC_VERSION}*
 `;
 
     case "chronicle":
@@ -300,7 +301,7 @@ function createMinimalDocument(docType: DocumentType, context: TemplateContext):
 
 ---
 
-*GoopSpec v0.1.5*
+*GoopSpec v${GOOPSPEC_VERSION}*
 `;
 
     case "research":
@@ -329,7 +330,7 @@ function createMinimalDocument(docType: DocumentType, context: TemplateContext):
 
 ---
 
-*GoopSpec v0.1.5*
+*GoopSpec v${GOOPSPEC_VERSION}*
 `;
 
     default:

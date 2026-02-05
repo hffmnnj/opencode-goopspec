@@ -1,6 +1,6 @@
 ---
 name: goop-core
-description: Core GoopSpec 0.1.5 operations - the 5-phase spec-driven workflow
+description: Core GoopSpec 0.1.6 operations - the 5-phase spec-driven workflow
 category: core
 triggers:
   - goop
@@ -8,10 +8,10 @@ triggers:
   - workflow
   - plan
   - execute
-version: 0.1.5
+version: 0.1.6
 ---
 
-# GoopSpec 0.1.5 Core Operations
+# GoopSpec 0.1.6 Core Operations
 
 ## The 5-Phase Workflow
 
@@ -299,25 +299,62 @@ STOP and ask user for:
 
 ---
 
-## Commit Format
+## Git Workflow
+
+**CRITICAL:** All commits and PRs must use universal language. Never reference:
+- GoopSpec phases, waves, or task IDs (W1.T2, Phase 3, etc.)
+- Internal documents (SPEC.md, BLUEPRINT.md, must-have IDs)
+- Agent names or orchestration concepts
+
+Write as if no one knows GoopSpec exists.
+
+### Commit Format
 
 ```
-type(wave-task): description
+type(scope): concise but descriptive title (max 72 chars)
 
-- Detail 1
-- Detail 2
+[2-4 sentence paragraph explaining context and motivation.
+Why was this change needed? What problem does it solve?]
+
+Changes:
+- Specific change with context
+- Another change with why it matters
 ```
 
 Types: `feat`, `fix`, `test`, `refactor`, `docs`, `perf`, `chore`
 
-Example:
+**Good Example:**
 ```
-feat(w1-t2): implement user authentication API
+feat(auth): Add OAuth2 login with Google and GitHub
 
+Users can now sign in using their Google or GitHub accounts.
+This reduces friction for new user onboarding and improves security.
+
+Changes:
 - Add /auth/login and /auth/logout endpoints
-- Integrate JWT token generation
-- Add refresh token rotation
+- Integrate JWT token generation with OAuth providers
+- Add refresh token rotation for session persistence
 ```
+
+**Bad Example:**
+```
+feat(w1-t2): implement user authentication API (per MH-03)
+```
+
+### Branch Naming
+
+At session start, agents offer to create a feature branch:
+- Format: `type/short-description`
+- Types: `feat/`, `fix/`, `refactor/`, `chore/`
+
+### Pull Requests
+
+At end of phases, agents offer to create PRs:
+- Title: `type(scope): Descriptive summary`
+- Body: Summary, Changes, Testing, Notes
+- No internal terminology
+
+For complete guidance: `goop_reference({ name: "git-workflow" })`
 
 ---
 

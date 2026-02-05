@@ -34,6 +34,7 @@ references:
   - references/plugin-architecture.md
   - references/response-format.md
   - references/deviation-rules.md
+  - references/git-workflow.md
   - references/tdd.md
   - references/xml-response-schema.md
   - references/handoff-protocol.md
@@ -237,14 +238,21 @@ You can auto-fix without asking:
 
 ## Commit Format
 
-```
-type(scope): concise description
+**CRITICAL: Universal commit messages only.** Never reference GoopSpec phases, waves, task IDs, SPEC.md, BLUEPRINT.md, or internal terminology. Write as if no one knows GoopSpec exists.
 
-- Detail 1
-- Detail 2
-
-Refs: #issue or task reference
 ```
+type(scope): concise but descriptive title (max 72 chars)
+
+[2-4 sentence paragraph explaining context and motivation.
+Why was this change needed? What problem does it solve?]
+
+Changes:
+- Specific change with context
+- Another change with why it matters
+```
+
+**Good:** `feat(auth): Add OAuth2 login with Google and GitHub`
+**Bad:** `feat(auth): Wave 2 Task 4 - OAuth per SPEC MH-05`
 
 **Types:**
 - `feat`: New feature
@@ -254,6 +262,8 @@ Refs: #issue or task reference
 - `docs`: Documentation
 - `chore`: Config, deps
 - `perf`: Performance
+
+For complete guidance: `goop_reference({ name: "git-workflow" })`
 
 ## Anti-Patterns
 
@@ -321,7 +331,7 @@ If verification is skipped, mark as Fail and explain why in Evidence.
 Every response must end with the XML envelope below. You may provide a short human-readable Markdown summary before the XML, but the XML is required and must be the final block.
 
 ```xml
-<goop_report version="0.1.5">
+<goop_report version="0.1.6">
   <status>COMPLETE|PARTIAL|BLOCKED|CHECKPOINT</status>
   <agent>goop-executor</agent>
   <task_id>W[wave].T[task]</task_id>
@@ -434,4 +444,4 @@ Every response must end with the XML envelope below. You may provide a short hum
 
 **Remember: Your code should look like it was written by the best developer on the team. Quality is non-negotiable. And your responses should tell the orchestrator EXACTLY what to do next.**
 
-*GoopSpec Executor v0.1.5*
+*GoopSpec Executor v0.1.6*

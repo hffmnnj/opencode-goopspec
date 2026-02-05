@@ -2,40 +2,65 @@
 
 GoopSpec supports multiple patterns for spawning and coordinating specialized agents. Choose the right pattern based on task characteristics.
 
-## The Dispatch Tool (CRITICAL)
+## Two-Step Delegation System
 
-**ALWAYS use the native `task` tool to dispatch agents.**
+GoopSpec uses two tools for delegation, each with a distinct purpose:
+
+| Tool | Purpose | Required? |
+|------|---------|-----------|
+| `goop_delegate` | **Prompt Engineering** - prepares rich prompts with skills, references, team context | Optional but recommended |
+| `task` | **Agent Execution** - spawns the subagent and runs the work | **Always required** |
+
+### Full Delegation Pattern (Complex Tasks)
+
+For complex tasks that benefit from skills, references, and team awareness:
 
 ```typescript
-// Correct: Use task tool directly
+// Step 1: Engineer the prompt
+goop_delegate({
+  agent: "goop-executor",
+  prompt: "Implement user authentication",
+  context: "Stack: Next.js + NextAuth, Wave 2 Task 3"
+})
+// Output: Rich prompt with skills, refs, memory protocol, team context
+
+// Step 2: Execute (REQUIRED - copy from goop_delegate output)
 task({
-  subagent_type: "goop-executor",  // Agent to spawn
-  description: "Implement auth",    // 3-5 word summary
-  prompt: `[Detailed task...]`      // Full context and instructions
+  subagent_type: "goop-executor",
+  description: "Implement auth",
+  prompt: `[The composedPrompt from goop_delegate output]`
 })
 ```
 
-### Do NOT Use
+### Direct Delegation Pattern (Simple Tasks)
 
-| Tool | Why Not |
-|------|---------|
-| `delegate` | Different system (async delegation), not GoopSpec |
-| `goop_delegate` alone | Only composes prompts, doesn't execute |
-
-### Optional: goop_delegate for Prompt Composition
-
-If you need help composing a rich prompt with skills/references injected:
+For simple, well-defined tasks:
 
 ```typescript
-// Step 1: Compose prompt (optional)
-goop_delegate({ agent: "goop-executor", prompt: "..." })
-// Returns: <goop_delegation> with composedPrompt
-
-// Step 2: Execute with task (REQUIRED)
-task({ subagent_type: "goop-executor", prompt: composedPrompt })
+task({
+  subagent_type: "goop-executor",
+  description: "Implement auth",
+  prompt: `[Your own prompt with context]`
+})
 ```
 
-**Most cases: Just use `task` directly.**
+### When to Use Each Pattern
+
+| Situation | Pattern | Why |
+|-----------|---------|-----|
+| Task needs agent's skills | `goop_delegate` → `task` | Skills are auto-injected |
+| Task needs team awareness | `goop_delegate` → `task` | Avoids file conflicts |
+| Complex multi-file work | `goop_delegate` → `task` | Full context package |
+| Quick exploration | `task` directly | Faster, less overhead |
+| Simple single-file fix | `task` directly | Sufficient context |
+
+### Common Mistakes
+
+| Mistake | Symptom | Fix |
+|---------|---------|-----|
+| `goop_delegate` without `task` | Prompt prepared but agent never runs | Always follow with `task` |
+| Using `delegate` tool | Different async system | Use `task` for GoopSpec |
+| Skipping `goop_delegate` for complex work | Missing skills/team context | Use full two-step |
 
 ## Dispatch Modes
 
