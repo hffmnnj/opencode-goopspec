@@ -181,12 +181,12 @@ The Conductor never writes implementation code. It directs specialists.
 
 | Agent | Alias | Default Model | What They Do |
 |-------|-------|---------------|--------------|
-| `goop-executor` | The Builder | `openai/gpt-5.2-codex` | Writes implementation code |
+| `goop-executor` | The Builder | `openai/gpt-5.3-codex` | Writes implementation code |
 | `goop-planner` | The Architect | `anthropic/claude-opus-4-5` | Creates specs and blueprints |
 | `goop-researcher` | The Scholar | `openai/gpt-5.2` | Deep domain research |
 | `goop-explorer` | The Scout | `google/gemini-3-flash` | Fast codebase mapping |
-| `goop-verifier` | The Auditor | `openai/gpt-5.2-codex` | Verifies against spec |
-| `goop-debugger` | The Detective | `openai/gpt-5.2-codex` | Scientific debugging |
+| `goop-verifier` | The Auditor | `openai/gpt-5.3-codex` | Verifies against spec |
+| `goop-debugger` | The Detective | `openai/gpt-5.3-codex` | Scientific debugging |
 | `goop-designer` | The Artisan | `anthropic/claude-opus-4-5` | UI/UX design |
 | `goop-tester` | The Guardian | `kimi-for-coding/k2p5` | Test writing |
 | `goop-writer` | The Scribe | `google/gemini-3-pro-high` | Documentation |
