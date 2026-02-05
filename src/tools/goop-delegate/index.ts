@@ -10,10 +10,13 @@ import type { PluginContext, AgentDefinition, ToolContext, ResolvedResource } fr
 import {
   generateTeamAwarenessSection,
   type TeamAwarenessContext,
+  type TeamAwarenessSibling,
 } from "../../agents/prompt-sections/team-awareness.js";
-import { log } from "../../shared/logger.js";
+import { log, logError } from "../../shared/logger.js";
 import { loadPluginConfig } from "../../core/config.js";
 import { fetchAvailableAgents, type OpenCodeClient } from "../../shared/opencode-client.js";
+import { getActiveAgents, registerAgent } from "../../features/team/index.js";
+import type { AgentRegistration } from "../../features/team/types.js";
 
 function normalizeReferencePath(name: string): string {
   return name.trim().replace(/\\/g, "/").replace(/^\.\/?/, "");
@@ -65,6 +68,38 @@ function parseTeamContext(raw?: string): TeamAwarenessContext | undefined {
   }
 
   return undefined;
+}
+
+function generateAgentId(): string {
+  return crypto.randomUUID().slice(0, 8);
+}
+
+function mergeTeamContexts(
+  base: TeamAwarenessContext | undefined,
+  extra: TeamAwarenessContext | undefined
+): TeamAwarenessContext {
+  const siblings = new Map<string, TeamAwarenessSibling>();
+  const allSiblings = [...(base?.siblings ?? []), ...(extra?.siblings ?? [])];
+
+  for (const sibling of allSiblings) {
+    siblings.set(sibling.id, sibling);
+  }
+
+  const mergedSiblings = Array.from(siblings.values());
+  return mergedSiblings.length > 0 ? { siblings: mergedSiblings } : {};
+}
+
+async function buildAutoTeamContext(currentAgentId: string): Promise<TeamAwarenessContext> {
+  const activeAgents = await getActiveAgents();
+  const siblings = activeAgents
+    .filter(agent => agent.id !== currentAgentId)
+    .map(agent => ({
+      id: agent.id,
+      type: agent.type,
+      task: agent.task,
+    }));
+
+  return siblings.length > 0 ? { siblings } : {};
 }
 
 /**
@@ -207,10 +242,13 @@ function resolveSubagentType(agentDef: AgentDefinition, available: string[]): st
  */
 function formatTaskDelegation(
   agentDef: AgentDefinition,
+  agentId: string,
+  parentId: string | undefined,
   userPrompt: string,
   composedPrompt: string,
   subagentType: string,
-  availableSubagents: string[]
+  availableSubagents: string[],
+  teamContext: TeamAwarenessContext
 ): string {
   const memoryProtocol = `
 ## Memory Protocol (Required)
@@ -233,6 +271,8 @@ function formatTaskDelegation(
 
   const delegationPayload = {
     action: "delegate_via_task",
+    agent_id: agentId,
+    parent_id: parentId,
     agent: agentDef.name,
     subagent_type: subagentType,
     available_subagents: availableSubagents,
@@ -242,6 +282,7 @@ function formatTaskDelegation(
     references: agentDef.references,
     userPrompt: userPrompt,
     composedPrompt: enrichedPrompt,
+    team_context: teamContext,
   };
   
   return `<goop_delegation>
@@ -332,9 +373,34 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       };
       
       const teamContext = parseTeamContext(args.team_context);
+      const agentId = generateAgentId();
+      const parentId = args.session_id;
+      let autoTeamContext: TeamAwarenessContext | undefined;
+
+      const registration: AgentRegistration = {
+        id: agentId,
+        type: agentDef.name,
+        task: args.prompt,
+        claimedFiles: [],
+        parentId: parentId,
+        startedAt: Date.now(),
+      };
+
+      const registrationResult = await registerAgent(registration);
+      if (!registrationResult.ok) {
+        logError("Failed to register delegated agent", registrationResult.error);
+      }
+
+      try {
+        autoTeamContext = await buildAutoTeamContext(agentId);
+      } catch (error) {
+        logError("Failed to build team context for delegation", error);
+      }
+
+      const mergedTeamContext = mergeTeamContexts(teamContext, autoTeamContext);
 
       // Build composed prompt (used as system content)
-      const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, args.context, teamContext);
+      const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, args.context, mergedTeamContext);
       
       const client = ctx.input.client as OpenCodeClient;
       const availableSubagents = await fetchAvailableAgents(client);
@@ -343,6 +409,8 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
 
       log("Delegation prepared", {
         agent: agentDef.name,
+        agentId,
+        parentId,
         subagentType,
         availableSubagents,
         modelSource: configModel ? "config" : "frontmatter",
@@ -350,10 +418,13 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
 
       return formatTaskDelegation(
         agentDef,
+        agentId,
+        parentId,
         args.prompt,
         composedPrompt,
         subagentType,
-        availableSubagents
+        availableSubagents,
+        mergedTeamContext
       );
     },
   });
