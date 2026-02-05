@@ -13,7 +13,13 @@ type UpdateResult = {
 
 type UpdatePattern = {
   name: string;
-  apply: (content: string, fromVersion: string, toVersion: string) => UpdateResult;
+  regex: RegExp;
+};
+
+type PatternRegistryEntry = {
+  name: string;
+  match: (filePath: string) => boolean;
+  patterns: UpdatePattern[];
 };
 
 const USAGE = `Usage: bun scripts/version-bump.ts <version> [--dry-run]
@@ -38,7 +44,49 @@ const FILE_PATTERNS = [
 
 const EXPLICIT_FILES = ["package.json", "README.md"];
 
-const updatePatterns: UpdatePattern[] = [];
+const JSON_VERSION_PATTERN: UpdatePattern = {
+  name: "json-version-field",
+  regex: /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/g,
+};
+
+const YAML_FRONTMATTER_PATTERN: UpdatePattern = {
+  name: "yaml-frontmatter-version",
+  regex: /(^version:\s*)(\d+\.\d+\.\d+)(\s*$)/gm,
+};
+
+const MARKDOWN_FOOTER_PATTERN: UpdatePattern = {
+  name: "markdown-footer-version",
+  regex: /(\*[^*]*\s+v)(\d+\.\d+\.\d+)(\*)/g,
+};
+
+const XML_ATTRIBUTE_PATTERN: UpdatePattern = {
+  name: "xml-version-attribute",
+  regex: /(version=")(\d+\.\d+\.\d+)(")/g,
+};
+
+const BADGE_URL_PATTERN: UpdatePattern = {
+  name: "badge-url-version",
+  regex: /(version-)(\d+\.\d+\.\d+)(-[a-z]+)/g,
+};
+
+const PATTERN_REGISTRY: PatternRegistryEntry[] = [
+  {
+    name: "json-config",
+    match: (filePath) =>
+      filePath === "package.json" || filePath.endsWith(".example.json"),
+    patterns: [JSON_VERSION_PATTERN],
+  },
+  {
+    name: "markdown",
+    match: (filePath) => filePath.endsWith(".md"),
+    patterns: [YAML_FRONTMATTER_PATTERN, MARKDOWN_FOOTER_PATTERN, XML_ATTRIBUTE_PATTERN],
+  },
+  {
+    name: "readme-badge",
+    match: (filePath) => filePath === "README.md",
+    patterns: [BADGE_URL_PATTERN],
+  },
+];
 
 const knownFlags = new Set(["--dry-run", "--help", "-h"]);
 
@@ -125,17 +173,49 @@ async function discoverFiles(): Promise<string[]> {
   return Array.from(discovered).sort();
 }
 
-function applyPatterns(
+function applyPattern(
   content: string,
   fromVersion: string,
   toVersion: string,
-  patterns: UpdatePattern[],
+  pattern: UpdatePattern,
 ): UpdateResult {
+  let changeCount = 0;
+  const updated = content.replace(
+    pattern.regex,
+    (match, prefix: string, version: string, suffix: string) => {
+      if (version !== fromVersion) {
+        return match;
+      }
+      changeCount += 1;
+      return `${prefix}${toVersion}${suffix}`;
+    },
+  );
+
+  return { content: updated, changeCount };
+}
+
+function resolvePatterns(filePath: string): UpdatePattern[] {
+  const patterns: UpdatePattern[] = [];
+  for (const entry of PATTERN_REGISTRY) {
+    if (entry.match(filePath)) {
+      patterns.push(...entry.patterns);
+    }
+  }
+  return patterns;
+}
+
+function applyPatterns(
+  filePath: string,
+  content: string,
+  fromVersion: string,
+  toVersion: string,
+): UpdateResult {
+  const patterns = resolvePatterns(filePath);
   let updated = content;
   let changeCount = 0;
 
   for (const pattern of patterns) {
-    const result = pattern.apply(updated, fromVersion, toVersion);
+    const result = applyPattern(updated, fromVersion, toVersion, pattern);
     updated = result.content;
     changeCount += result.changeCount;
   }
@@ -166,11 +246,6 @@ async function run(): Promise<void> {
   const files = await discoverFiles();
   console.log(`Discovered ${files.length} files.`);
 
-  if (updatePatterns.length === 0) {
-    console.log("No update patterns configured yet.");
-    return;
-  }
-
   let updatedFiles = 0;
   let totalChanges = 0;
 
@@ -178,10 +253,10 @@ async function run(): Promise<void> {
     const file = Bun.file(filePath);
     const original = await file.text();
     const { content: updated, changeCount } = applyPatterns(
+      filePath,
       original,
       currentVersion,
       targetVersion,
-      updatePatterns,
     );
 
     if (changeCount > 0) {
