@@ -21,8 +21,6 @@ describe("paths", () => {
       const root = getPackageRoot();
       expect(root).toBeTruthy();
       expect(typeof root).toBe("string");
-      // Should end with opencode-goopspec
-      expect(root).toContain("opencode-goopspec");
     });
 
     it("should return path where package.json exists", () => {

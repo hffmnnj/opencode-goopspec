@@ -221,7 +221,7 @@ describe("Tools", () => {
       
       const result = await tool.execute({ verbose: false }, mockToolContext);
       
-      expect(result).toContain("# GoopSpec Status");
+      expect(result).toContain("GoopSpec · Status");
       expect(result).toContain("**Project:**");
       expect(result).toContain("## Workflow");
       expect(result).toContain("## Execution");

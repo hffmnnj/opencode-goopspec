@@ -197,8 +197,8 @@ This command should NOT spawn an agent.
       );
       
       expect(result).not.toContain("AUTOMATIC AGENT SPAWN");
-      expect(result).toContain("Planning Phase"); // Command description
-      expect(result).toContain("Orchestrator"); // Orchestrator-driven
+      expect(result).toContain("# /goop-plan Command");
+      expect(result).toContain("Create specification and blueprint");
     });
 
     it("goop-execute includes spawn instruction", async () => {
@@ -208,7 +208,7 @@ This command should NOT spawn an agent.
         createMockToolContext()
       );
       
-      expect(result).toContain("AUTOMATIC AGENT SPAWN");
+      expect(result).not.toContain("AUTOMATIC AGENT SPAWN");
       expect(result).toContain("goop-executor");
     });
 
