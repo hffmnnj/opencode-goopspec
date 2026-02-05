@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { createGoopStatusTool } from "./index.js";
+import { registerAgent } from "../../features/team/registry.js";
 import {
   createMockPluginContext,
   createMockToolContext,
@@ -17,15 +18,19 @@ describe("goop_status tool", () => {
   let ctx: PluginContext;
   let toolContext: ReturnType<typeof createMockToolContext>;
   let cleanup: () => void;
+  let originalCwd: string;
 
   beforeEach(() => {
     const env = setupTestEnvironment("goop-status-test");
     cleanup = env.cleanup;
     ctx = createMockPluginContext({ testDir: env.testDir });
     toolContext = createMockToolContext({ directory: env.testDir });
+    originalCwd = process.cwd();
+    process.chdir(env.testDir);
   });
 
   afterEach(() => {
+    process.chdir(originalCwd);
     cleanup();
   });
 
@@ -49,7 +54,7 @@ describe("goop_status tool", () => {
       const tool = createGoopStatusTool(ctx);
       const result = await tool.execute({}, toolContext);
 
-      expect(result).toContain("# GoopSpec Status");
+      expect(result).toContain("GoopSpec · Status");
       expect(result).toContain("idle");
     });
 
@@ -73,8 +78,35 @@ describe("goop_status tool", () => {
       const tool = createGoopStatusTool(ctx);
       const result = await tool.execute({}, toolContext);
 
-      expect(result).toContain("## Next Steps");
+      expect(result).toContain("Next Steps");
       expect(result).toContain("goop-plan");
+    });
+
+    it("does not show active agents when registry empty", async () => {
+      const tool = createGoopStatusTool(ctx);
+      const result = await tool.execute({}, toolContext);
+
+      expect(result).not.toContain("## Active Agents");
+    });
+  });
+
+  describe("active agents", () => {
+    it("shows active agents when registry has entries", async () => {
+      await registerAgent({
+        id: "agent-123",
+        type: "goop-executor",
+        task: "Handle status display",
+        claimedFiles: ["src/tools/goop-status/index.ts"],
+        startedAt: Date.now(),
+      });
+
+      const tool = createGoopStatusTool(ctx);
+      const result = await tool.execute({}, toolContext);
+
+      expect(result).toContain("## Active Agents");
+      expect(result).toContain("goop-executor");
+      expect(result).toContain("Handle status display");
+      expect(result).toContain("Claimed Files");
     });
   });
 
