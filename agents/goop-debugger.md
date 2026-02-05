@@ -1,7 +1,7 @@
 ---
 name: goop-debugger
 description: The Detective - scientific debugging, hypothesis testing, evidence-based conclusions
-model: openai/gpt-5.2-codex
+model: openai/gpt-5.3-codex
 temperature: 0.2
 thinking_budget: 16000
 mode: subagent
