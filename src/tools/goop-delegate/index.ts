@@ -7,6 +7,10 @@
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, AgentDefinition, ToolContext, ResolvedResource } from "../../core/types.js";
+import {
+  generateTeamAwarenessSection,
+  type TeamAwarenessContext,
+} from "../../agents/prompt-sections/team-awareness.js";
 import { log } from "../../shared/logger.js";
 import { loadPluginConfig } from "../../core/config.js";
 import { fetchAvailableAgents, type OpenCodeClient } from "../../shared/opencode-client.js";
@@ -46,6 +50,23 @@ function resolveReferenceResource(
   return null;
 }
 
+function parseTeamContext(raw?: string): TeamAwarenessContext | undefined {
+  if (!raw) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as TeamAwarenessContext;
+    if (parsed && typeof parsed === "object") {
+      return parsed;
+    }
+  } catch (error) {
+    log("Invalid team_context JSON", { error });
+  }
+
+  return undefined;
+}
+
 /**
  * Build agent prompt with skills and references
  */
@@ -53,7 +74,8 @@ function buildAgentPrompt(
   ctx: PluginContext,
   agentDef: AgentDefinition,
   userPrompt: string,
-  additionalContext?: string
+  additionalContext?: string,
+  teamContext?: TeamAwarenessContext
 ): string {
   const sections: string[] = [];
   
@@ -98,6 +120,11 @@ function buildAgentPrompt(
         sections.push("");
       }
     }
+  }
+
+  if (teamContext) {
+    sections.push(generateTeamAwarenessSection(teamContext));
+    sections.push("");
   }
   
   // Additional context
@@ -237,10 +264,21 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       agent: tool.schema.string().optional(),
       prompt: tool.schema.string().optional(),
       context: tool.schema.string().optional(),
+      team_context: tool.schema.string().optional(),
       list: tool.schema.boolean().optional(),
       session_id: tool.schema.string().optional(),
     },
-    async execute(args: { agent?: string; prompt?: string; context?: string; list?: boolean; session_id?: string }, _context: ToolContext): Promise<string> {
+    async execute(
+      args: {
+        agent?: string;
+        prompt?: string;
+        context?: string;
+        team_context?: string;
+        list?: boolean;
+        session_id?: string;
+      },
+      _context: ToolContext
+    ): Promise<string> {
       // List agents
       if (args.list || !args.agent) {
         const agents = ctx.resolver.resolveAll("agent");
@@ -293,8 +331,10 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
         prompt: agentResource.body,
       };
       
+      const teamContext = parseTeamContext(args.team_context);
+
       // Build composed prompt (used as system content)
-      const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, args.context);
+      const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, args.context, teamContext);
       
       const client = ctx.input.client as OpenCodeClient;
       const availableSubagents = await fetchAvailableAgents(client);
