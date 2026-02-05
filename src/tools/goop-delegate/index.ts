@@ -325,6 +325,9 @@ function resolveSubagentType(agentDef: AgentDefinition, available: string[]): st
 
 /**
  * Format a task delegation response that uses the native task tool.
+ * 
+ * This is the "prompt engineering" output - it prepares everything the orchestrator
+ * needs to invoke the task tool with the correct parameters.
  */
 function formatTaskDelegation(
   agentDef: AgentDefinition,
@@ -357,6 +360,9 @@ function formatTaskDelegation(
 
   const enrichedPrompt = composedPrompt + "\n\n" + memoryProtocol;
 
+  // Create a short task description from the user prompt
+  const taskDescription = userPrompt.slice(0, 50).replace(/\n/g, ' ').trim() + (userPrompt.length > 50 ? '...' : '');
+
   const delegationPayload = {
     action: "delegate_via_task",
     agent_id: agentId,
@@ -376,17 +382,48 @@ function formatTaskDelegation(
   };
 
   const warningSection = conflictWarnings.length > 0
-    ? `## Delegation Warning\n\n${conflictWarnings.join("\n\n")}\n\n`
+    ? `## ⚠️ Delegation Warning\n\n${conflictWarnings.join("\n\n")}\n\n`
     : "";
 
-  return `${warningSection}<goop_delegation>
+  // Escape backticks in the prompt for safe embedding in template literal
+  const escapedPrompt = enrichedPrompt.replace(/`/g, '\\`');
+
+  return `${warningSection}# Prompt Engineered for ${agentDef.name}
+
+\`goop_delegate\` has prepared this delegation. **You MUST now invoke the \`task\` tool.**
+
+<goop_delegation>
 ${JSON.stringify(delegationPayload, null, 2)}
 </goop_delegation>
 
-**Use native \`task\` tool:**
-- subagent_type: "${subagentType}"
-- description: "[3-5 word task summary]"
-- prompt: [composedPrompt from JSON above]`;
+---
+
+## 🚀 REQUIRED: Execute This Task Invocation
+
+Copy and execute this \`task\` tool call:
+
+\`\`\`
+task({
+  subagent_type: "${subagentType}",
+  description: "${taskDescription}",
+  prompt: \`${escapedPrompt}\`
+})
+\`\`\`
+
+---
+
+### Why Two Steps?
+
+1. **\`goop_delegate\`** (just completed) = Prompt Engineering
+   - Loaded agent definition, skills, references
+   - Injected team awareness and memory protocol
+   - Prepared the complete context package
+
+2. **\`task\`** (do this NOW) = Execution
+   - Spawns the subagent with the engineered prompt
+   - Returns results back to you
+
+**Do NOT skip the task invocation. The delegation is incomplete without it.**`;
 }
 
 /**

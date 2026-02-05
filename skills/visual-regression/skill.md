@@ -7,7 +7,7 @@ triggers:
   - screenshots
   - ui testing
   - diff
-version: 0.1.5
+version: 0.1.6
 ---
 
 # Visual Regression Testing Skill

@@ -111,4 +111,4 @@ When complete, we will have:
 
 ---
 
-*Project foundation document - GoopSpec v0.1.5*
+*Project foundation document - GoopSpec v0.1.6*

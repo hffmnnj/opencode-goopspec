@@ -253,7 +253,7 @@ describe("orchestrator-enforcement hooks", () => {
         output
       );
       
-      expect(output.output).toContain("ACTION REQUIRED");
+      expect(output.output).toContain("MANDATORY NEXT STEP");
       expect(output.output).toContain("goop-executor");
       expect(hasPendingDelegation("test-session")).toBe(true);
     });

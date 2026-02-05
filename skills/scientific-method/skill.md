@@ -7,7 +7,7 @@ triggers:
   - experiment
   - evidence
   - method
-version: 0.1.5
+version: 0.1.6
 ---
 
 # Scientific Method Skill

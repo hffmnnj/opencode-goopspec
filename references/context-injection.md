@@ -303,5 +303,5 @@ Delegating to agent with 5000 tokens of context
 
 ---
 
-*Context Injection Protocol v0.1.5*
+*Context Injection Protocol v0.1.6*
 *"Shared knowledge, consistent decisions."*

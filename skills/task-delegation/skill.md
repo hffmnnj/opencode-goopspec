@@ -7,7 +7,7 @@ triggers:
   - spawn
   - subagent
   - task
-version: 0.1.5
+version: 0.1.6
 requires:
   - goop-core
 ---
@@ -94,30 +94,48 @@ Don't pass:
 - Unrelated file contents
 - Completed task details
 
-## The Dispatch Tool (CRITICAL)
+## Two-Step Delegation (CRITICAL)
 
-**ALWAYS use the native `task` tool to dispatch agents.**
+Delegation in GoopSpec uses **two distinct tools** with different purposes:
+
+### Step 1: `goop_delegate` — Prompt Engineering
+
+This tool **prepares** a rich, production-ready prompt by:
+- Loading the agent's definition (skills, references, model)
+- Injecting team awareness context
+- Adding memory protocols
+- Checking for file conflicts with other agents
+
+```typescript
+goop_delegate({
+  agent: "goop-executor",
+  prompt: "Implement user authentication",
+  context: "Stack: Next.js + NextAuth"
+})
+```
+
+**Output**: A structured prompt package with the exact `task()` call to execute.
+
+### Step 2: `task` — Agent Execution
+
+This tool **spawns** the subagent with the engineered prompt:
 
 ```typescript
 task({
-  subagent_type: "goop-executor",  // Use goop-[agent-name]
-  description: "Implement authentication",
-  prompt: `
-    ## TASK
-    Implement user authentication
-
-    ## CONTEXT
-    - SPEC: .goopspec/SPEC.md
-    - BLUEPRINT: .goopspec/BLUEPRINT.md
-    
-    ## REQUIREMENTS
-    [Specific requirements from SPEC.md]
-    
-    ## VERIFICATION
-    [How to confirm task completion]
-  `
+  subagent_type: "goop-executor",
+  description: "Implement auth",
+  prompt: `[Copy composedPrompt from goop_delegate output]`
 })
 ```
+
+### When to Use Each Pattern
+
+| Situation | Recommended Pattern |
+|-----------|---------------------|
+| Complex task needing skills/refs | `goop_delegate` → `task` |
+| Task needing team awareness | `goop_delegate` → `task` |
+| Simple, well-defined task | `task` directly |
+| Quick exploration | `task` directly |
 
 ### Available subagent_types
 
@@ -135,27 +153,35 @@ task({
 | `goop-librarian` | Code/docs search, information retrieval |
 | `general` | Fallback for any task |
 
-### Do NOT Use These Tools for Delegation
+### Common Mistakes
 
-| Tool | Why NOT |
-|------|---------|
-| `delegate` | Different system (async delegation), NOT GoopSpec agents |
-| `goop_delegate` alone | Only composes prompts, doesn't execute - must follow with `task` |
+| Mistake | Problem | Fix |
+|---------|---------|-----|
+| Using `goop_delegate` without `task` | Prompt is prepared but agent never runs | Always follow `goop_delegate` with `task` |
+| Using `delegate` instead | Different system, not GoopSpec agents | Use `task` for GoopSpec agents |
+| Skipping `goop_delegate` for complex tasks | Miss skills/refs/team context | Use full two-step for complex work |
 
-### Optional: goop_delegate for Rich Prompts
-
-Use `goop_delegate` only when you need skills/references auto-injected:
+### Full Example
 
 ```typescript
-// Step 1: Compose prompt with goop_delegate (optional)
-const result = goop_delegate({ agent: "goop-executor", prompt: "..." })
-// Returns: <goop_delegation> JSON with composedPrompt
+// Step 1: Engineer the prompt
+goop_delegate({
+  agent: "goop-executor",
+  prompt: "Implement password reset flow",
+  context: `
+    Stack: Next.js 14, Prisma, Resend
+    Task from BLUEPRINT.md Wave 2, Task 3
+    Must follow existing auth patterns in src/auth/
+  `
+})
 
-// Step 2: Execute with task (REQUIRED)
-task({ subagent_type: "goop-executor", prompt: composedPrompt })
+// Step 2: Execute (copy the task call from goop_delegate output)
+task({
+  subagent_type: "goop-executor",
+  description: "Implement password reset",
+  prompt: `[The full composedPrompt from goop_delegate]`
+})
 ```
-
-**For most cases: Just use `task` directly.**
 
 ## Error Handling
 

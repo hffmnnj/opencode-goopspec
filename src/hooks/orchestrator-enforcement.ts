@@ -574,33 +574,31 @@ function parseDelegationOutput(output: string): DelegationState | null {
 
 /**
  * Generate mandatory task invocation instruction
+ * 
+ * This is injected AFTER goop_delegate output to remind the orchestrator
+ * that they MUST follow up with a task tool call.
  */
 function generateTaskInvocation(delegation: DelegationState): string {
-  // Truncate prompt to avoid massive output
-  const promptPreview = delegation.prompt.slice(0, 500).replace(/`/g, "'");
-    
   return `
 
 ---
 
-## 🚀 ACTION REQUIRED: Execute Delegation
+## ⚠️ MANDATORY NEXT STEP
 
-You called \`goop_delegate\` to delegate to **${delegation.agent}**.
+You just used \`goop_delegate\` to engineer a prompt for **${delegation.agent}**.
 
-**Now invoke the task tool:**
+**The delegation is NOT complete.** You MUST now call the \`task\` tool with the engineered prompt.
+
+The \`goop_delegate\` output above contains the exact \`task()\` invocation to execute.
+Copy it and run it NOW.
 
 \`\`\`
-task({
-  subagent_type: "${delegation.agent}",
-  description: "Delegated task",
-  prompt: "[Full prompt from composedPrompt above]"
-})
+Two-Step Delegation Flow:
+1. goop_delegate ✓ (just completed - prompt engineered)
+2. task         ← YOU ARE HERE (execute the prompt)
 \`\`\`
 
-Preview of prompt:
-> ${promptPreview}...
-
-**Do not skip this step.** The delegation is not complete until you invoke \`task\`.
+**If you do not call \`task\`, the subagent will not be spawned and no work will happen.**
 `;
 }
 

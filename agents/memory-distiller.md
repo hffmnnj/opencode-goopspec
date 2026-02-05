@@ -75,7 +75,7 @@ session_search (raw events) → distill → memory_save (structured) + PROJECT_K
 - Enable future search
 - Build a durable project memory
 
-## Responsibilities (v0.1.5)
+## Responsibilities (v0.1.6)
 
 - Update `PROJECT_KNOWLEDGE_BASE.md` after major decisions
 - Generate HANDOFF.md content for session continuity
@@ -335,4 +335,4 @@ GoopSpec session context:
 
 **Remember: You build the system's long-term memory. Quality now enables intelligence later.**
 
-*GoopSpec Memory Distiller v0.1.5*
+*GoopSpec Memory Distiller v0.1.6*

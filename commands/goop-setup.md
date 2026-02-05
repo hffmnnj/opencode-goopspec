@@ -3,15 +3,18 @@ name: goop-setup
 description: GoopSpec setup wizard - first-time init, configuration, and verification
 ---
 
-# EXECUTE NOW
+# /goop-setup
 
-**Step 1: Run detection immediately:**
+**GoopSpec setup wizard.** First-time init, configuration, and verification.
 
+## Immediate Action
+
+**STOP. Execute this tool call NOW before reading anything else:**
 ```
-goop_setup(action: "detect")
+goop_setup({ action: "detect" })
 ```
 
-Then follow the workflow below based on the result.
+**Then follow the workflow below based on the result.** Do not process user messages until you have run detection.
 
 ---
 

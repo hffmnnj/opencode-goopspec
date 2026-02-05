@@ -1,6 +1,14 @@
 ---
 name: goop-quick
 description: Fast-track a small task
+phase: quick
+next-step: "After verification, confirm completion with the user"
+next-command: null
+alternatives:
+  - command: /goop-discuss
+    when: "If the task is complex or requires multiple waves"
+  - command: /goop-debug
+    when: "If the task is debugging a specific issue"
 ---
 
 # /goop-quick
@@ -13,49 +21,68 @@ description: Fast-track a small task
 /goop-quick [task description]
 ```
 
-## Tools Used
+## Immediate Action
 
-| Tool | Purpose in This Command |
-|------|------------------------|
-| `goop_status` | Check current state, skip heavy workflow |
+**STOP. Execute this tool call NOW before reading anything else:**
+```
+goop_reference({ name: "quick-process" })
+```
+
+**Then follow the process from that reference.** Do not process user messages until you have loaded and understood the protocol.
+
+## Quick Summary
+
+**Bypass formal planning for small, well-defined tasks.** Still maintains safety guarantees.
+
+### Tools Used
+
+| Tool | Purpose |
+|------|---------|
+| `goop_status` | Check current state |
+| `goop_state` | Set quick mode (NEVER edit state.json directly) |
 | `memory_search` | Find relevant prior context |
 | `memory_save` | Persist any discoveries |
+| `goop_adl` | Log the quick fix decision |
+| `goop_reference` | Load detailed process |
 
-**Hook Support:** Minimal - quick mode bypasses most phase enforcement.
+### Process Overview
 
----
+1. **Qualify** — Verify task is truly "quick" (single concern, known location)
+2. **Capture** — One-line plan, one success criterion
+3. **Execute** — Implement with atomic commit
+4. **Verify** — Confirm fix works, ask user to accept
 
-## How It Works
+### Quick Criteria
 
-Quick mode bypasses the formal Plan/Research/Specify phases while maintaining safety guarantees. Ideal for bug fixes, small refactors, or docs.
-
-### 1. Implicit Planning
-- Captures intent in 1 sentence.
-- Defines 1 clear success criterion.
-- Skips formal `SPEC.md`.
-
-### 2. Rapid Execution
-- Creates a simplified 1-Wave Blueprint.
-- Executes immediately.
-- Still performs atomic commits.
-
-### 3. Quick Acceptance
-- Verifies the fix.
-- Asks for confirmation.
-
-## When to Use
-- **Good:** "Fix the typo in the navbar", "Update dependency X", "Add a unit test".
-- **Bad:** "Add user auth", "Refactor entire API". (Use `/goop-plan` for these).
+A task qualifies for quick mode if ALL of these are true:
+- [ ] Single file OR tightly coupled files (max 3)
+- [ ] Clear, unambiguous intent
+- [ ] No architectural decisions required
+- [ ] Estimated < 15 minutes of work
+- [ ] No new dependencies needed
 
 ## Output
 
-- Atomic commits.
-- `.goopspec/quick/` logs (for history).
+| File | Purpose |
+|------|---------|
+| Source files | Implementation |
+| Commit | Atomic change |
+| `.goopspec/ADL.md` | Quick fix logged |
 
-## Example
+## Success Criteria
 
-> **User:** `/goop-quick Fix the z-index on the modal`
-> **Agent:** "Plan: Adjust z-index in `Modal.css`. Success: Modal appears above overlay.
-> Executing...
-> Done (commit: x9y8z7). Modal z-index set to 1000.
-> Verified. Type 'accept' to close."
+- [ ] Quick criteria validated (5 checkboxes)
+- [ ] Intent captured in one sentence
+- [ ] Success criterion defined before execution
+- [ ] Atomic commit created
+- [ ] Fix verified working
+- [ ] User confirmed acceptance
+
+## Anti-Patterns
+
+**DON'T:** Use for multi-wave work, skip verification, force complex tasks into quick mode
+**DO:** Escalate to `/goop-discuss` if scope grows, verify before declaring done, document in ADL
+
+---
+
+*Load `goop_reference({ name: "quick-process" })` for full process details.*

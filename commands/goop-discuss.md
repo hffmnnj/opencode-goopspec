@@ -17,12 +17,12 @@ alternatives:
 
 ## Immediate Action
 
-**Load detailed protocol:**
+**STOP. Execute this tool call NOW before reading anything else:**
 ```
 goop_reference({ name: "discuss-process" })
 ```
 
-Then follow the 4-phase process in that reference.
+**Then follow the process from that reference.** Do not process user messages until you have loaded and understood the protocol.
 
 ## Quick Summary
 

@@ -90,10 +90,30 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
       const shouldSpawn = command.frontmatter.spawn === true;
       const spawnAgent = cmdDef.agent;
       
+      // Check for immediate action in command content
+      const immediateActionMatch = cmdDef.content.match(/## Immediate Action[\s\S]*?```\n([\s\S]*?)\n```/);
+      const immediateAction = immediateActionMatch ? immediateActionMatch[1].trim() : null;
+      
       const lines = [
         `# /${cmdDef.name} Command`,
         "",
       ];
+      
+      // Add MANDATORY EXECUTION NOTICE at the very top
+      if (immediateAction) {
+        lines.push("## ⚠️ MANDATORY: Execute Immediately");
+        lines.push("");
+        lines.push("**Before reading anything else, execute this tool call:**");
+        lines.push("");
+        lines.push("```");
+        lines.push(immediateAction);
+        lines.push("```");
+        lines.push("");
+        lines.push("**Do NOT process any user message until you have executed the above.**");
+        lines.push("");
+        lines.push("---");
+        lines.push("");
+      }
       
       if (cmdDef.description) {
         lines.push(`**Description:** ${cmdDef.description}`, "");
@@ -111,7 +131,7 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
         lines.push(`**Agent:** ${cmdDef.agent}`, "");
       }
       
-      lines.push("---", "", "## Instructions", "", cmdDef.content);
+      lines.push("---", "", "## Full Instructions", "", cmdDef.content);
       
       // Add Next Steps section from frontmatter
       const nextStep = command.frontmatter["next-step"] as string | undefined;

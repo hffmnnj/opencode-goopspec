@@ -56,6 +56,11 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Atomic write: write to temp file, then rename.
+ *
+ * NOTE: We intentionally use a lockfile + atomic rename pattern here because
+ * goop_state is scoped to workflow state.json operations and doesn't expose a
+ * generic atomic registry API. This keeps registry read-modify-write sequences
+ * race-condition safe without changing the goop_state surface area.
  */
 function atomicWriteFile(path: string, content: string): void {
   const tempPath = `${path}.tmp.${Date.now()}`;
