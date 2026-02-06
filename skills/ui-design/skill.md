@@ -7,7 +7,7 @@ triggers:
   - visual
   - layout
   - interface
-version: 0.1.6
+version: 0.2.0
 ---
 
 # UI Design Skill

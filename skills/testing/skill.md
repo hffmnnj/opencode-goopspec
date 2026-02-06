@@ -7,7 +7,7 @@ triggers:
   - spec
   - assert
   - coverage
-version: 0.1.6
+version: 0.2.0
 requires:
   - goop-core
 ---
