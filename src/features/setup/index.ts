@@ -127,7 +127,7 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
       ...DEFAULT_CONFIG,
       defaultModel: input.models.default ?? DEFAULT_CONFIG.defaultModel,
       orchestrator: {
-        model: input.models.orchestrator ?? "anthropic/claude-opus-4-5",
+        model: input.models.orchestrator ?? "anthropic/claude-opus-4-6",
         thinkingBudget: 32000,
       },
       mcp: {

@@ -76,7 +76,7 @@ export function createGoopSpecOrchestrator(options: OrchestratorOptions): Orches
     // OpenCode looks up agents by name when switching via Tab
     name: "goopspec",
     mode: "primary",
-    model: options.model ?? "anthropic/claude-opus-4-5",
+    model: options.model ?? "anthropic/claude-opus-4-6",
     thinking: { 
       type: "enabled", 
       budgetTokens: options.thinkingBudget ?? 32000 

@@ -41,14 +41,14 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   "goop-debugger": {
     suggestions: [
       "openai/gpt-5.3-codex",
-      "anthropic/claude-opus-4-5",
+      "anthropic/claude-opus-4-6",
       "kimi-for-coding/k2p5",
     ],
     description: "Systematic debugging with hypothesis testing",
   },
   "goop-designer": {
     suggestions: [
-      "anthropic/claude-opus-4-5",
+      "anthropic/claude-opus-4-6",
       "kimi-for-coding/k2p5",
       "google/antigravity-gemini-3-pro-high",
     ],
@@ -57,7 +57,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   "goop-executor": {
     suggestions: [
       "openai/gpt-5.3-codex",
-      "anthropic/claude-opus-4-5",
+      "anthropic/claude-opus-4-6",
       "anthropic/claude-sonnet-4-5",
       "kimi-for-coding/k2p5",
       "google/antigravity-gemini-3-pro-high",
@@ -84,7 +84,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   "goop-orchestrator": {
     suggestions: [
       "openai/gpt-5.3-codex",
-      "anthropic/claude-opus-4-5",
+      "anthropic/claude-opus-4-6",
       "kimi-for-coding/k2p5",
       "anthropic/claude-sonnet-4-5",
     ],
@@ -93,7 +93,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   "goop-planner": {
     suggestions: [
       "openai/gpt-5.3-codex",
-      "anthropic/claude-opus-4-5",
+      "anthropic/claude-opus-4-6",
       "kimi-for-coding/k2p5",
       "anthropic/claude-sonnet-4-5",
     ],
@@ -119,7 +119,7 @@ export const AGENT_MODEL_SUGGESTIONS: Record<string, {
   "goop-verifier": {
     suggestions: [
       "openai/gpt-5.3-codex",
-      "anthropic/claude-opus-4-5",
+      "anthropic/claude-opus-4-6",
     ],
     description: "Post-execution verification with security focus",
   },
@@ -218,7 +218,7 @@ function formatModelSuggestions(): string {
   lines.push("To configure agent models, use:");
   lines.push("```");
   lines.push('goop_setup(action: "apply", scope: "project", agentModels: {');
-  lines.push('  "goop-orchestrator": "anthropic/claude-opus-4-5",');
+  lines.push('  "goop-orchestrator": "anthropic/claude-opus-4-6",');
   lines.push('  "goop-executor": "anthropic/claude-sonnet-4-5",');
   lines.push('  "goop-explorer": "anthropic/claude-haiku-4-5"');
   lines.push("})");
