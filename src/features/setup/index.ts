@@ -129,7 +129,9 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
       defaultModel: input.models.default ?? DEFAULT_CONFIG.defaultModel,
       orchestrator: {
         model: input.models.orchestrator ?? "anthropic/claude-opus-4-6",
-        thinkingBudget: 32000,
+        thinkingBudget: input.thinkingBudget ?? 32000,
+        phaseGates: input.phaseGates ?? "ask",
+        waveExecution: input.waveExecution ?? "sequential",
       },
       mcp: {
         ...DEFAULT_CONFIG.mcp,
@@ -182,9 +184,10 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
       projectName: input.projectName,
       orchestrator: {
         model: input.models.orchestrator ?? "anthropic/claude-opus-4-6",
+        thinkingBudget: input.thinkingBudget ?? 32000,
         enableAsDefault: input.enableOrchestrator ?? false,
-        phaseGates: "ask",
-        waveExecution: "sequential",
+        phaseGates: input.phaseGates ?? "ask",
+        waveExecution: input.waveExecution ?? "sequential",
       },
     };
     
