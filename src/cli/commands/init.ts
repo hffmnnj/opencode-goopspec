@@ -2,6 +2,8 @@
  * GoopSpec CLI - Init Command
  * Full interactive setup wizard
  */
+import { basename } from "node:path";
+
 import pc from "picocolors";
 
 import {
@@ -14,12 +16,18 @@ import {
   select,
   showBanner,
   showError,
+  showInfo,
   showSuccess,
   showWarning,
   spinner,
   text,
 } from "../ui.js";
-import { applyInit, detectEnvironment, planInit } from "../../features/setup/index.js";
+import {
+  applyInit,
+  detectEnvironment,
+  planInit,
+  setupMemoryDependencies,
+} from "../../features/setup/index.js";
 import { AGENT_MODEL_SUGGESTIONS, ALL_AGENTS } from "../../features/setup/model-suggestions.js";
 import { MCP_PRESETS } from "../../features/setup/types.js";
 import type { MemorySetupInput, SetupInput } from "../../features/setup/types.js";
@@ -28,26 +36,26 @@ type SetupScope = SetupInput["scope"];
 type McpPreset = SetupInput["mcpPreset"];
 type MemoryProvider = NonNullable<NonNullable<MemorySetupInput["embeddings"]>["provider"]>;
 
-function handleCancel<T>(value: T | symbol): asserts value is T {
+function handleCancel(value: unknown): void {
   if (isCancel(value)) {
-    cancel("Setup cancelled.");
+    cancel("Setup cancelled");
     process.exit(0);
   }
 }
 
 function resolveText(value: string | symbol): string {
   handleCancel(value);
-  return value;
+  return value as string;
 }
 
 function resolveBoolean(value: boolean | symbol): boolean {
   handleCancel(value);
-  return value;
+  return value as boolean;
 }
 
 function resolveString(value: string | symbol): string {
   handleCancel(value);
-  return value;
+  return value as string;
 }
 
 function toScope(value: string): SetupScope {
@@ -71,200 +79,368 @@ function toMemoryProvider(value: string): MemoryProvider {
   throw new Error(`Invalid memory provider selection: ${value}`);
 }
 
+function formatScope(scope: SetupScope): string {
+  if (scope === "global") {
+    return "Global";
+  }
+  if (scope === "project") {
+    return "Project";
+  }
+  return "Both";
+}
+
+function formatMcpPreset(preset: McpPreset): string {
+  if (preset === "core") {
+    return "Core";
+  }
+  if (preset === "recommended") {
+    return "Recommended";
+  }
+  return "None";
+}
+
+function formatMemoryProvider(provider: MemoryProvider): string {
+  if (provider === "openai") {
+    return "OpenAI";
+  }
+  if (provider === "ollama") {
+    return "Ollama";
+  }
+  return "Local";
+}
+
 export async function runInit(): Promise<void> {
   const projectDir = process.cwd();
-
-  showBanner();
-  console.log();
-  intro(pc.bold("GoopSpec Setup Wizard"));
-
-  const env = await detectEnvironment(projectDir);
-
-  if (env.hasGoopspecDir && env.hasStateFile) {
-    const overwrite = resolveBoolean(await confirm({
-      message: "GoopSpec is already initialized. Reconfigure?",
-      initialValue: false,
-    }));
-    if (!overwrite) {
-      outro("Setup cancelled. Existing configuration preserved.");
-      return;
-    }
-  }
-
-  sectionHeader("Project", "📦");
-  const projectName = resolveText(await text({
-    message: "Project name:",
-    placeholder: "my-awesome-project",
-    defaultValue: env.hasStateFile ? undefined : "goopspec-project",
-    validate: (value) => {
-      if (!value.trim()) return "Project name is required";
-      return undefined;
-    },
-  }));
-
-  sectionHeader("Configuration Scope", "📁");
-  const scope = toScope(resolveString(await select({
-    message: "Where should GoopSpec store configuration?",
-    options: [
-      { value: "project", label: "Project only", hint: ".goopspec/ in this directory" },
-      { value: "global", label: "Global only", hint: "~/.config/goopspec/" },
-      { value: "both", label: "Both", hint: "Global defaults + project overrides" },
-    ],
-    initialValue: "project",
-  })));
-
-  sectionHeader("MCP Servers", "🔌");
-  const mcpPreset = toMcpPreset(resolveString(await select({
-    message: "Which MCP servers should be installed?",
-    options: [
-      { value: "recommended", label: "Recommended", hint: "context7, exa, playwright" },
-      { value: "core", label: "Core only", hint: "context7, exa" },
-      { value: "none", label: "None", hint: "Skip MCP installation" },
-    ],
-    initialValue: "recommended",
-  })));
-
-  sectionHeader("Agent Models", "🤖");
-  console.log(pc.dim(`  ${ALL_AGENTS.length} agent roles available`));
-  const configureModels = resolveBoolean(await confirm({
-    message: "Configure custom models for agents? (or use defaults)",
-    initialValue: false,
-  }));
-
-  const agentModels: Record<string, string> = {};
-  if (configureModels) {
-    const keyAgents = ["goop-orchestrator", "goop-executor", "goop-planner"];
-    for (const agentName of keyAgents) {
-      const config = AGENT_MODEL_SUGGESTIONS[agentName];
-      if (!config) {
-        continue;
-      }
-
-      const options = config.suggestions.map((model) => ({
-        value: model,
-        label: model,
-      }));
-      options.push({ value: "__custom__", label: "Custom model ID..." });
-
-      const selected = resolveString(await select({
-        message: `Model for ${agentName}:`,
-        options,
-        initialValue: config.suggestions[0],
-      }));
-
-      if (selected === "__custom__") {
-        const custom = resolveText(await text({
-          message: `Enter custom model ID for ${agentName}:`,
-          placeholder: "provider/model-name",
-          validate: (value) => {
-            if (!value.trim()) return "Model ID is required";
-            return undefined;
-          },
-        }));
-        agentModels[agentName] = custom;
-      } else {
-        agentModels[agentName] = selected;
-      }
-    }
-  }
-
-  sectionHeader("Memory System", "🧠");
-  const enableMemory = resolveBoolean(await confirm({
-    message: "Enable persistent memory system?",
-    initialValue: true,
-  }));
-
-  let memoryConfig: MemorySetupInput | undefined;
-  if (enableMemory) {
-    const memoryProvider = toMemoryProvider(resolveString(await select({
-      message: "Embedding provider:",
-      options: [
-        { value: "local", label: "Local", hint: "Free, uses ONNX runtime" },
-        { value: "openai", label: "OpenAI", hint: "Requires API key" },
-        { value: "ollama", label: "Ollama", hint: "Local Ollama server" },
-      ],
-      initialValue: "local",
-    })));
-
-    memoryConfig = {
-      enabled: true,
-      embeddings: { provider: memoryProvider },
-    };
-  }
-
-  sectionHeader("Orchestrator", "🎭");
-  const enableOrchestrator = resolveBoolean(await confirm({
-    message: "Enable GoopSpec orchestrator as default agent?",
-    initialValue: false,
-  }));
-
-  const input: SetupInput = {
-    scope,
-    projectName,
-    models: {},
-    mcpPreset,
-    enableOrchestrator,
-    agentModels: Object.keys(agentModels).length > 0 ? agentModels : undefined,
-    memory: memoryConfig,
-  };
-
-  console.log();
-  sectionHeader("Summary", "📋");
-  console.log(pc.dim(`  Project: ${input.projectName}`));
-  console.log(pc.dim(`  Scope: ${input.scope}`));
-  console.log(pc.dim(`  MCP preset: ${input.mcpPreset}`));
-  console.log(pc.dim(`  MCPs selected: ${MCP_PRESETS[input.mcpPreset].join(", ") || "none"}`));
-  console.log(pc.dim(`  Models configured: ${Object.keys(agentModels).length}`));
-  console.log(pc.dim(`  Memory: ${memoryConfig ? "enabled" : "disabled"}`));
-  console.log(pc.dim(`  Orchestrator: ${input.enableOrchestrator ? "enabled" : "disabled"}`));
-  console.log();
-
-  const proceed = resolveBoolean(await confirm({
-    message: "Proceed with setup?",
-    initialValue: true,
-  }));
-
-  if (!proceed) {
-    outro("Setup cancelled.");
-    return;
-  }
-
-  const s = spinner();
-  s.start("Initializing GoopSpec...");
+  const defaultProjectName = basename(projectDir) || "goopspec-project";
 
   try {
-    const plan = await planInit(projectDir, input, env);
-    const result = await applyInit(projectDir, plan);
+    showBanner();
+    console.log();
+    intro(pc.bold("GoopSpec Setup Wizard"));
 
-    s.stop("Setup complete!");
+    const env = await detectEnvironment(projectDir);
+
+    if (env.hasGoopspecDir && env.hasStateFile) {
+      const overwrite = resolveBoolean(
+        await confirm({
+          message: "GoopSpec is already initialized here. Reconfigure this project?",
+          initialValue: false,
+        }),
+      );
+      if (!overwrite) {
+        outro("Setup cancelled. Existing configuration preserved.");
+        return;
+      }
+    }
+
+    sectionHeader("Step 1/6: Project", "📦");
+    const projectName = resolveText(
+      await text({
+        message: "Project name:",
+        defaultValue: defaultProjectName,
+        placeholder: defaultProjectName,
+        validate: (value) => {
+          if (!value.trim()) {
+            return "Project name is required";
+          }
+          return undefined;
+        },
+      }),
+    ).trim();
+
+    sectionHeader("Step 2/6: Scope", "📁");
+    const scope = toScope(
+      resolveString(
+        await select({
+          message: "Where should GoopSpec configuration be written?",
+          options: [
+            { value: "project", label: "Project", hint: ".goopspec/config.json" },
+            { value: "global", label: "Global", hint: "~/.config/goopspec/config.json" },
+            { value: "both", label: "Both", hint: "Global defaults + project overrides" },
+          ],
+          initialValue: "project",
+        }),
+      ),
+    );
+
+    sectionHeader("Step 3/6: MCP Preset", "🔌");
+    const mcpPreset = toMcpPreset(
+      resolveString(
+        await select({
+          message: "Which MCP preset should be installed?",
+          options: [
+            { value: "core", label: "Core", hint: MCP_PRESETS.core.join(", ") },
+            { value: "recommended", label: "Recommended", hint: MCP_PRESETS.recommended.join(", ") },
+            { value: "none", label: "None", hint: "Skip MCP installation" },
+          ],
+          initialValue: "recommended",
+        }),
+      ),
+    );
+
+    sectionHeader("Step 4/6: Agent Models", "🤖");
+    showInfo(`${ALL_AGENTS.length} agent roles available`);
+
+    const modelMode = resolveString(
+      await select({
+        message: "How should agent models be configured?",
+        options: [
+          {
+            value: "recommended",
+            label: "Use recommended defaults",
+            hint: "Fast setup with curated defaults",
+          },
+          {
+            value: "custom",
+            label: "Configure each agent",
+            hint: "Pick models per role, including custom IDs",
+          },
+        ],
+        initialValue: "recommended",
+      }),
+    );
+
+    const agentModels: Record<string, string> = {};
+    if (modelMode === "custom") {
+      for (const agentName of ALL_AGENTS) {
+        const config = AGENT_MODEL_SUGGESTIONS[agentName];
+        if (!config) {
+          continue;
+        }
+
+        const selectedModel = resolveString(
+          await select({
+            message: `${agentName}: ${config.description}`,
+            options: [
+              ...config.suggestions.map((model) => ({
+                value: model,
+                label: model,
+              })),
+              {
+                value: "__custom__",
+                label: "Custom (enter model ID)",
+                hint: "provider/model-name",
+              },
+            ],
+            initialValue: config.suggestions[0],
+          }),
+        );
+
+        if (selectedModel === "__custom__") {
+          agentModels[agentName] = resolveText(
+            await text({
+              message: `Custom model for ${agentName}:`,
+              placeholder: "provider/model-name",
+              validate: (value) => {
+                if (!value.trim()) {
+                  return "Model ID is required";
+                }
+                return undefined;
+              },
+            }),
+          ).trim();
+          continue;
+        }
+
+        agentModels[agentName] = selectedModel;
+      }
+    }
+
+    sectionHeader("Step 5/6: Memory", "🧠");
+    const enableMemory = resolveBoolean(
+      await confirm({
+        message: "Enable memory system?",
+        initialValue: true,
+      }),
+    );
+
+    let memoryConfig: MemorySetupInput | undefined;
+    let memoryProvider: MemoryProvider | null = null;
+    let memoryPreview: Awaited<ReturnType<typeof setupMemoryDependencies>> | undefined;
+
+    if (enableMemory) {
+      memoryProvider = toMemoryProvider(
+        resolveString(
+          await select({
+            message: "Embedding provider:",
+            options: [
+              { value: "local", label: "Local", hint: "Best default, no API key required" },
+              { value: "openai", label: "OpenAI", hint: "Requires OPENAI_API_KEY" },
+              { value: "ollama", label: "Ollama", hint: "Requires local Ollama server" },
+            ],
+            initialValue: "local",
+          }),
+        ),
+      );
+
+      memoryConfig = {
+        enabled: true,
+        workerPort: 37777,
+        embeddings: {
+          provider: memoryProvider,
+        },
+        privacy: {
+          enabled: true,
+          retentionDays: 90,
+        },
+      };
+
+      const previewSpinner = spinner();
+      previewSpinner.start("Checking memory capabilities...");
+      memoryPreview = await setupMemoryDependencies(
+        memoryConfig,
+        false,
+        agentModels,
+        AGENT_MODEL_SUGGESTIONS["goop-orchestrator"]?.suggestions[0] ?? "anthropic/claude-sonnet-4-5",
+        false,
+      );
+      previewSpinner.stop("Memory capability check complete");
+    }
+
+    sectionHeader("Step 6/6: Orchestrator", "🎭");
+    const enableOrchestrator = resolveBoolean(
+      await confirm({
+        message: "Enable GoopSpec orchestrator by default?",
+        initialValue: false,
+      }),
+    );
+
+    let orchestratorModel: string | undefined;
+    if (enableOrchestrator) {
+      const orchestratorConfig = AGENT_MODEL_SUGGESTIONS["goop-orchestrator"];
+      const selectedModel = resolveString(
+        await select({
+          message: "Orchestrator model:",
+          options: [
+            ...orchestratorConfig.suggestions.map((model) => ({
+              value: model,
+              label: model,
+            })),
+            {
+              value: "__custom__",
+              label: "Custom (enter model ID)",
+              hint: "provider/model-name",
+            },
+          ],
+          initialValue: orchestratorConfig.suggestions[0],
+        }),
+      );
+
+      if (selectedModel === "__custom__") {
+        orchestratorModel = resolveText(
+          await text({
+            message: "Custom orchestrator model:",
+            placeholder: "provider/model-name",
+            validate: (value) => {
+              if (!value.trim()) {
+                return "Model ID is required";
+              }
+              return undefined;
+            },
+          }),
+        ).trim();
+      } else {
+        orchestratorModel = selectedModel;
+      }
+    }
+
+    const input: SetupInput = {
+      scope,
+      projectName,
+      models: {
+        orchestrator: orchestratorModel,
+      },
+      mcpPreset,
+      enableOrchestrator,
+      agentModels: Object.keys(agentModels).length > 0 ? agentModels : undefined,
+      memory: memoryConfig,
+    };
+
+    console.log();
+    sectionHeader("Configuration Summary", "📋");
+    console.log(pc.dim(`  Project: ${projectName}`));
+    console.log(pc.dim(`  Scope: ${formatScope(scope)}`));
+    console.log(pc.dim(`  MCP preset: ${formatMcpPreset(mcpPreset)} (${MCP_PRESETS[mcpPreset].join(", ") || "none"})`));
+    console.log(pc.dim(`  Agent models: ${Object.keys(agentModels).length > 0 ? "Custom per-agent" : "Recommended defaults"}`));
+    console.log(pc.dim(`  Memory: ${enableMemory ? "Enabled" : "Disabled"}`));
+    if (memoryProvider) {
+      console.log(pc.dim(`  Memory provider: ${formatMemoryProvider(memoryProvider)}`));
+    }
+    console.log(pc.dim(`  Orchestrator: ${enableOrchestrator ? "Enabled" : "Disabled"}`));
+    if (orchestratorModel) {
+      console.log(pc.dim(`  Orchestrator model: ${orchestratorModel}`));
+    }
+    if (memoryPreview?.distillation.enabled) {
+      console.log(pc.dim(`  Distillation model: ${memoryPreview.distillation.model ?? "default"}`));
+    }
+    console.log();
+
+    const proceed = resolveBoolean(
+      await confirm({
+        message: "Apply this setup now?",
+        initialValue: true,
+      }),
+    );
+
+    if (!proceed) {
+      outro("Setup cancelled");
+      return;
+    }
+
+    const setupSpinner = spinner();
+    setupSpinner.start("Planning setup actions...");
+    const plan = await planInit(projectDir, input, env);
+    setupSpinner.message("Applying configuration, installing MCPs, and preparing memory...");
+    const result = await applyInit(projectDir, plan);
+    setupSpinner.stop(result.success ? "Setup complete" : "Setup finished with issues");
 
     if (result.success) {
       console.log();
-      showSuccess(`Project "${result.projectName}" initialized!`);
+      showSuccess(`Project "${result.projectName}" initialized`);
 
-      if (result.created.length > 0) {
-        console.log(pc.dim(`  Created: ${result.created.length} files/directories`));
+      console.log();
+      sectionHeader("Created", "🛠️");
+      if (result.created.length === 0 && result.configsWritten.length === 0) {
+        console.log(pc.dim("  No new files were created"));
+      } else {
+        for (const createdPath of result.created) {
+          console.log(pc.dim(`  + ${createdPath}`));
+        }
+        for (const configPath of result.configsWritten) {
+          console.log(pc.dim(`  + ${configPath}`));
+        }
       }
+
+      console.log();
+      sectionHeader("MCP Installation", "🔌");
       if (result.mcpsInstalled.length > 0) {
-        console.log(pc.dim(`  MCPs installed: ${result.mcpsInstalled.join(", ")}`));
+        console.log(pc.dim(`  Installed: ${result.mcpsInstalled.join(", ")}`));
+      } else {
+        console.log(pc.dim("  Installed: none"));
       }
-      if (result.memorySetup) {
-        const mem = result.memorySetup;
-        if (mem.vectorSearch.enabled) {
-          console.log(pc.dim("  Vector search: enabled"));
-        }
-        if (mem.localEmbeddings.enabled) {
-          console.log(pc.dim("  Local embeddings: enabled"));
-        }
-        if (mem.degradedFeatures.length > 0) {
-          for (const feature of mem.degradedFeatures) {
-            showWarning(feature);
-          }
-        }
+      const selectedMcps = MCP_PRESETS[mcpPreset];
+      const missingMcps = selectedMcps.filter((mcp) => !result.mcpsInstalled.includes(mcp));
+      if (missingMcps.length > 0) {
+        console.log(pc.dim(`  Missing: ${missingMcps.join(", ")}`));
+      }
+
+      const memoryStatus = result.memorySetup ?? memoryPreview;
+      if (memoryStatus) {
+        console.log();
+        sectionHeader("Memory Setup", "🧠");
+        console.log(pc.dim(`  Enabled: ${memoryStatus.enabled ? "yes" : "no"}`));
+        console.log(pc.dim(`  Vector search: ${memoryStatus.vectorSearch.enabled ? "available" : "degraded"}`));
+        console.log(pc.dim(`  Local embeddings: ${memoryStatus.localEmbeddings.enabled ? "available" : "degraded"}`));
+        console.log(
+          pc.dim(
+            `  Distillation: ${memoryStatus.distillation.enabled ? `enabled (${memoryStatus.distillation.model ?? "default"})` : "disabled"}`,
+          ),
+        );
       }
 
       if (result.warnings.length > 0) {
         console.log();
+        sectionHeader("Warnings", "⚠️");
         for (const warning of result.warnings) {
           showWarning(warning);
         }
@@ -276,14 +452,23 @@ export async function runInit(): Promise<void> {
     }
 
     console.log();
+    sectionHeader("Errors", "❌");
     for (const error of result.errors) {
       showError(error);
     }
+
+    if (result.warnings.length > 0) {
+      console.log();
+      sectionHeader("Warnings", "⚠️");
+      for (const warning of result.warnings) {
+        showWarning(warning);
+      }
+    }
+
     outro(pc.red("Setup completed with errors. Run 'goopspec verify' for details."));
   } catch (error) {
-    s.stop("Setup failed!");
     const message = error instanceof Error ? error.message : String(error);
-    showError(message, "Check permissions and try again");
+    showError(message, "Check file permissions and try again");
     process.exit(1);
   }
 }
