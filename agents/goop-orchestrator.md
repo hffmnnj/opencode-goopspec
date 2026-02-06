@@ -296,6 +296,69 @@ Delegation is a **two-step process**:
 | Need team awareness injection | `goop_delegate` → `task` |
 | Quick exploration or research | `task` directly |
 
+### Depth-Aware Delegation
+
+Before delegating research or planning support work, check depth from state:
+
+```typescript
+const state = goop_state({ action: "get" });
+const depth = state.workflow.depth ?? "standard";
+```
+
+Use depth to choose delegation breadth:
+
+| Depth Tier | Delegation Rule | Research/Planning Behavior |
+|------------|-----------------|----------------------------|
+| `shallow` | Single agent at a time, sequential only | Minimal research, quick clarification, no multi-agent fanout |
+| `standard` | 1-2 concurrent agents when tasks are independent | Balanced research, parallelize only clearly independent work |
+| `deep` | Parallel multi-agent dispatch (`goop-researcher` + `goop-explorer` + `goop-librarian` when useful) | Thorough research synthesis before planning decisions |
+
+Default to `standard` if depth is missing.
+
+### Parallel Delegation Patterns
+
+Prefer parallel-first delegation when tasks are independent, especially in `deep` mode.
+
+```typescript
+// Deep mode: parallel researcher + explorer
+// Launch both in the same orchestrator message:
+task({
+  subagent_type: "goop-researcher",
+  description: "Research implementation options",
+  prompt: "Investigate tradeoffs, risks, and recommendations for the target feature."
+});
+
+task({
+  subagent_type: "goop-explorer",
+  description: "Map relevant code paths",
+  prompt: "Locate existing patterns, integration points, and constraints in the codebase."
+});
+```
+
+```typescript
+// Standard mode: 1-2 concurrent agents only when independent
+task({
+  subagent_type: "goop-researcher",
+  description: "Research API options",
+  prompt: "Compare candidate APIs and note integration implications."
+});
+
+task({
+  subagent_type: "goop-librarian",
+  description: "Collect authoritative docs",
+  prompt: "Gather up-to-date docs/snippets for selected APIs."
+});
+```
+
+```typescript
+// Shallow mode: keep sequential single-agent flow
+task({
+  subagent_type: "goop-explorer",
+  description: "Quick codebase lookup",
+  prompt: "Find the most relevant files and summarize current behavior."
+});
+```
+
 ### Pattern 1: Full Delegation (Recommended for Complex Tasks)
 
 ```typescript
@@ -354,6 +417,24 @@ Acceptance: [criteria from BLUEPRINT.md]
 })
 ```
 
+Parallel alternative for independent simple tasks:
+
+```typescript
+// Instead of sequentially dispatching independent lookups,
+// launch both tasks in one message when depth is standard/deep.
+task({
+  subagent_type: "goop-explorer",
+  description: "Find implementation locations",
+  prompt: "Locate files and call paths for the requested feature."
+});
+
+task({
+  subagent_type: "goop-librarian",
+  description: "Find external references",
+  prompt: "Gather relevant docs/examples for the same feature."
+});
+```
+
 ### Available subagent_types
 
 | subagent_type | Use For |
@@ -379,8 +460,8 @@ Acceptance: [criteria from BLUEPRINT.md]
 |-----------------|-------------|-------|
 | User says "implement", "create", "build", "add feature" | Gather requirements → spawn planner → spawn executor | `goop-planner` → `goop-executor` |
 | User says "find", "where is", "show me", "search" | Spawn explorer immediately | `goop-explorer` |
-| User says "how does X work", "trace", "understand" | Spawn explorer or librarian | `goop-explorer` |
-| User says "research", "compare", "evaluate options" | Spawn researcher immediately | `goop-researcher` |
+| User says "how does X work", "trace", "understand" | Spawn explorer or librarian (parallel in standard/deep when independent) | `goop-explorer` / `goop-librarian` |
+| User says "research", "compare", "evaluate options" | Spawn researcher immediately (or researcher + explorer in parallel for deep mode) | `goop-researcher` (+ `goop-explorer`) |
 | User says "fix bug", "debug", "not working" | Spawn debugger immediately | `goop-debugger` |
 | User says "write tests", "add tests", "test coverage" | Spawn tester immediately | `goop-tester` |
 | User says "document", "write docs", "README" | Spawn writer immediately | `goop-writer` |
