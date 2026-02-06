@@ -17,6 +17,9 @@ export const TAGLINES = [
   "Your specs called. They want to be respected.",
   "Making AI agents do the paperwork since 2025.",
   "Ship with confidence, not crossed fingers.",
+  "Structure your chaos, ship your dreams.",
+  "Where specs become reality.",
+  "Taming the chaos, one wave at a time.",
 ];
 
 function randomTagline(): string {
@@ -24,9 +27,11 @@ function randomTagline(): string {
 }
 
 export function showBanner(): void {
-  console.log(pc.bold(pc.magenta("  🔮 GoopSpec CLI v0.1.6")));
-  console.log(pc.dim("  ─────────────────────────"));
-  console.log(pc.dim(`  ${randomTagline()}`));
+  console.log();
+  console.log(pc.bold(pc.magenta("  🔮 GoopSpec CLI")) + pc.dim(" v0.1.6"));
+  console.log(pc.dim("  ════════════════════════════"));
+  console.log(pc.italic(pc.dim(`  ${randomTagline()}`)));
+  console.log();
 }
 
 export function sectionHeader(title: string, emoji?: string): void {
@@ -50,6 +55,12 @@ export function showWarning(message: string): void {
 
 export function showInfo(message: string): void {
   console.log(pc.cyan(`  ℹ ${message}`));
+}
+
+export function showComplete(message: string): void {
+  console.log();
+  console.log(pc.bold(pc.green(`  ✨ ${message}`)));
+  console.log();
 }
 
 export function formatTable(headers: string[], rows: string[][]): string {

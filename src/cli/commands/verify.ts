@@ -33,7 +33,7 @@ export async function runVerify(): Promise<void> {
       console.log();
     }
 
-    sectionHeader("Summary", "📊");
+    sectionHeader("Summary", "📋");
     const { summary } = result;
     console.log(`  Total: ${summary.total}`);
     console.log(`  ${pc.green(`Passed: ${summary.passed}`)}`);
