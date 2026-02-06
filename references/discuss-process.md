@@ -136,6 +136,16 @@ Confirm selection to the user before moving on:
 Research depth selected: [Light|Standard|Deep] ([shallow|standard|deep], [~1x|~2x|~3-5x] baseline)
 ```
 
+### Depth Tier Behavior Reference
+
+Use this table as the authoritative behavior contract across discuss, plan, and research phases.
+
+| Tier | Discuss | Plan | Research | Agents | Token Impact |
+|------|---------|------|----------|--------|--------------|
+| **Shallow (Light)** | Minimal clarification; accept requirements largely as-given and only resolve blockers. | Lean blueprint with fewer waves and minimal research gates. | Quick lookup from a single source; no deep exploration. | 1 agent at a time (sequential only). | ~1x baseline |
+| **Standard** | Balanced clarification; probe ambiguities and confirm key assumptions. | Full blueprint with wave decomposition and 3-4 contextual questions per wave. | Targeted exploration across 2-3 sources to resolve known unknowns. | 1-2 agents concurrently when tasks are independent. | ~2x baseline |
+| **Deep** | Thorough discovery; challenge assumptions and explicitly explore edge cases and failure modes. | Detailed blueprint with comprehensive research and 5-6 contextual questions per wave. | Thorough multi-source investigation with parallel sub-research and deeper synthesis. | Multiple parallel agents (researcher + explorer + librarian). | ~3-5x baseline |
+
 ---
 
 ## Phase 2: Discovery Interview
