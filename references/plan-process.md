@@ -237,6 +237,85 @@ Before returning COMPLETE:
 
 ---
 
+## Phase 3.5: Per-Wave Questioning
+
+Run this protocol after each wave draft is available and before finalizing the blueprint.
+
+### Purpose
+
+Generate contextual questions for each drafted wave to validate assumptions, surface unknowns, and identify where research is required before the plan is locked.
+
+### When
+
+- After the planner drafts a wave (scope, files, tasks, dependencies)
+- Before accepting that wave as final
+- Repeat for every wave in the blueprint
+
+### How Many Questions (Depth-Scaled)
+
+| Workflow depth | Questions per wave |
+|----------------|--------------------|
+| shallow | 1-2 |
+| standard | 3-4 |
+| deep | 5-6 |
+
+Use `goop_state({ action: "get" })` and read `state.workflow.depth` to select the count.
+
+### Question Generation Rules
+
+Each question must be anchored to the current wave's actual implementation scope.
+
+- Reference specific files, modules, technologies, integrations, or patterns named in the wave
+- Target unknowns, assumption checks, risk boundaries, migration concerns, and edge cases
+- Require decision-making signal that changes implementation details, sequencing, or validation
+- Avoid generic template prompts (for example: "Do you want tests?")
+- Prefer option-based prompts with concrete tradeoffs the user can quickly choose
+
+### Question Format (Use `question` tool)
+
+Use structured prompts with contextual options tied to the current wave:
+
+```ts
+question({
+  questions: [{
+    header: "Wave 2: Auth Migration",
+    question: "Wave 2 updates src/auth/middleware.ts for token parsing. Should we preserve compatibility with existing JWT claims during rollout?",
+    options: [
+      { label: "Preserve", description: "Support old and new claims during migration" },
+      { label: "Cutover", description: "Switch to new claims immediately" },
+      { label: "Unsure", description: "Need impact analysis before choosing" }
+    ],
+    multiple: false
+  }]
+})
+```
+
+### Research Dispatch After Answers
+
+If answers expose unknowns, conflicts, or unresolved implementation risk, dispatch research before finalizing that wave.
+
+Dispatch rules:
+- If uncertainty is domain/technology focused, delegate `goop-researcher`
+- If uncertainty is codebase integration/location focused, delegate `goop-explorer`
+- If both are unknown and independent, dispatch both in parallel
+
+Required handoff context to research agents:
+- Wave number and objective
+- Exact files/modules/patterns in scope
+- User answer that introduced the unknown
+- Expected output needed to unblock planning decisions
+
+Only finalize the wave after research findings are incorporated or the user explicitly accepts the remaining risk.
+
+### Example Contextual Questions (Typical Wave)
+
+- "Wave 2 modifies `src/auth/middleware.ts`. Should we preserve backward compatibility with existing JWT tokens, or is a migration acceptable?"
+- "This wave adds a new database table in `src/features/setup/`. Do you have a preferred naming convention for indexes and unique constraints?"
+- "The blueprint introduces React Server Components for `src/ui/dashboard/`. Is your deployment target compatible with RSC streaming?"
+- "Wave 3 updates `src/hooks/orchestrator-enforcement.ts`. Should intent detection remain log-only, or should we emit structured telemetry events for auditing?"
+
+---
+
 ## Phase 4: Handle Response
 
 **Parse XML response from planner.**
