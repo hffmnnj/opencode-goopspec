@@ -280,16 +280,6 @@ function isAllowedPath(filePath: string, config: EnforcementConfig): boolean {
 }
 
 /**
- * Extract text content from message parts
- */
-function extractTextFromParts(parts: Part[]): string {
-  return parts
-    .filter((part): part is Part & { type: "text" } => part.type === "text")
-    .map((part) => (part as { type: "text"; text: string }).text)
-    .join("\n");
-}
-
-/**
  * Check if a file is a code file based on extension
  */
 function isCodeFile(filePath: string, config: EnforcementConfig): boolean {
@@ -817,40 +807,13 @@ export function createOrchestratorEnforcementHooks(ctx: PluginContext) {
     },
 
     /**
-     * chat.message - Detect intent and inject delegation suggestions
+     * chat.message - intentionally no-op to avoid output mutation
      */
     "chat.message": async (
-      input: ChatMessageInput,
-      output: ChatMessageOutput
+      _input: ChatMessageInput,
+      _output: ChatMessageOutput
     ): Promise<void> => {
-      if (!isOrchestrator(input.agent)) {
-        return;
-      }
-
-      const messageContent = extractTextFromParts(output.parts).trim();
-      if (!messageContent) {
-        return;
-      }
-
-      const intent = detectIntent(messageContent);
-      if (!intent.type) {
-        return;
-      }
-
-      const suggestion = generateIntentSuggestion(intent);
-      if (!suggestion) {
-        return;
-      }
-
-      output.parts.push({ type: "text", text: suggestion } as Part);
-
-      log("Injected intent delegation suggestion", {
-        intent: intent.type,
-        pattern: intent.pattern,
-        confidence: intent.confidence,
-        sessionID: input.sessionID,
-        agent: input.agent,
-      });
+      return;
     },
   };
 }
