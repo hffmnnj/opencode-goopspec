@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import type { Part } from "@opencode-ai/sdk";
 import {
   createOrchestratorEnforcementHooks,
   isOrchestrator,
@@ -125,6 +126,58 @@ describe("orchestrator-enforcement hooks", () => {
       const hooks = createOrchestratorEnforcementHooks(ctx);
       expect(hooks["tool.execute.after"]).toBeDefined();
       expect(typeof hooks["tool.execute.after"]).toBe("function");
+    });
+
+    it("creates chat.message hook", () => {
+      const hooks = createOrchestratorEnforcementHooks(ctx);
+      expect(hooks["chat.message"]).toBeDefined();
+      expect(typeof hooks["chat.message"]).toBe("function");
+    });
+  });
+
+  describe("chat.message hook", () => {
+    it("does not inject parts for orchestrator intent-like messages", async () => {
+      const hooks = createOrchestratorEnforcementHooks(ctx);
+      const initialParts = [
+        { type: "text", text: "research compare find trace" },
+      ] as unknown as Part[];
+      const output = {
+        parts: initialParts,
+      };
+
+      await hooks["chat.message"](
+        {
+          sessionID: "chat-session",
+          agent: "goopspec",
+          messageID: "m1",
+        },
+        output
+      );
+
+      expect(output.parts).toBe(initialParts);
+      expect(output.parts).toHaveLength(1);
+    });
+
+    it("does not modify parts for non-orchestrator messages", async () => {
+      const hooks = createOrchestratorEnforcementHooks(ctx);
+      const initialParts = [
+        { type: "text", text: "where is the router defined" },
+      ] as unknown as Part[];
+      const output = {
+        parts: initialParts,
+      };
+
+      await hooks["chat.message"](
+        {
+          sessionID: "chat-session-non-orch",
+          agent: "goop-executor",
+          messageID: "m2",
+        },
+        output
+      );
+
+      expect(output.parts).toBe(initialParts);
+      expect(output.parts).toHaveLength(1);
     });
   });
 
