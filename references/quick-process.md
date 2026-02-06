@@ -340,4 +340,4 @@ Orchestrator:
 
 ---
 
-*Quick Mode Process v0.2.0*
+*Quick Mode Process v0.2.1*
