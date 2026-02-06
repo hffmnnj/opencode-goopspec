@@ -137,6 +137,11 @@ export async function main(): Promise<void> {
 
     if (parsed.command) {
       switch (parsed.command) {
+        case "init": {
+          const { runInit } = await import("./commands/init.js");
+          await runInit();
+          break;
+        }
         case "status": {
           const { runStatus } = await import("./commands/status.js");
           await runStatus();
