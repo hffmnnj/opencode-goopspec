@@ -954,3 +954,5 @@ export {
   ALL_AGENTS,
   type AgentModelSuggestion,
 } from "./model-suggestions.js";
+
+export { detectAllDependencies };

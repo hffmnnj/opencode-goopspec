@@ -147,6 +147,11 @@ export async function main(): Promise<void> {
           await runModels();
           break;
         }
+        case "memory": {
+          const { runMemory } = await import("./commands/memory.js");
+          await runMemory();
+          break;
+        }
         case "status": {
           const { runStatus } = await import("./commands/status.js");
           await runStatus();
