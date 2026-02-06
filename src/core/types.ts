@@ -175,6 +175,10 @@ export interface AgentConfig {
 export interface McpConfig {
   context7?: boolean;
   exa?: boolean;
+  playwright?: boolean;
+  memory?: boolean;
+  github?: boolean;
+  sqlite?: boolean;
 }
 
 // ============================================================================
