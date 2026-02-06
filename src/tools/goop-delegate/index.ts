@@ -487,13 +487,17 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       // Check config for model override
       const config = loadPluginConfig(ctx.input.directory);
       const configModel = config.agents?.[agentResource.name]?.model;
+      const defaultModel = config.defaultModel;
       
       // Build agent definition
       const agentDef: AgentDefinition = {
         name: agentResource.frontmatter.name as string || agentResource.name,
         description: agentResource.frontmatter.description as string || "",
-        // Use config model if available, then frontmatter, then default
-        model: configModel || (agentResource.frontmatter.model as string) || "anthropic/claude-sonnet-4-5",
+        // Use config model if available, then frontmatter, then configured default, then hardcoded default
+        model: configModel
+          ?? (agentResource.frontmatter.model as string | undefined)
+          ?? defaultModel
+          ?? "anthropic/claude-sonnet-4-5",
         temperature: agentResource.frontmatter.temperature as number || 0.2,
         thinkingBudget: agentResource.frontmatter.thinking_budget as number | undefined,
         mode: agentResource.frontmatter.mode as string | undefined,
@@ -568,7 +572,13 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
         parentId,
         subagentType,
         availableSubagents,
-        modelSource: configModel ? "config" : "frontmatter",
+        modelSource: configModel
+          ? "config"
+          : agentResource.frontmatter.model
+            ? "frontmatter"
+            : defaultModel
+              ? "defaultModel"
+              : "hardcoded",
       });
 
       return formatTaskDelegation(
