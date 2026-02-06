@@ -56,6 +56,7 @@ export async function runVerify(): Promise<void> {
     showWarning("Some checks failed. See suggested fixes above.");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    showError("Verification failed", message);
+    showError(message, "Check file permissions and try again");
+    process.exit(1);
   }
 }

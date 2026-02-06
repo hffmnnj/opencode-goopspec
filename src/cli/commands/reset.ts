@@ -126,7 +126,7 @@ export async function runReset(): Promise<void> {
     outro(pc.red("Reset completed with errors."));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    showError(message, "Check permissions and try again");
+    showError(message, "Check file permissions and try again");
     process.exit(1);
   }
 }
