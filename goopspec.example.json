@@ -35,7 +35,7 @@
       "temperature": 0.1
     },
     "goop-planner": {
-      "model": "anthropic/claude-opus-4-6",
+      "model": "openai/gpt-5.3-codex",
       "temperature": 0.2
     },
     "goop-researcher": {
@@ -113,11 +113,15 @@
   "_legacy_models_comment": "Legacy example format (models) retained for documentation/backward-reference only; use the core agents section above.",
   "models": {
     "_comment": "Legacy model assignments format.",
-    "planner": "anthropic/claude-opus-4-6",
-    "executor": "anthropic/claude-sonnet-4-5",
+    "debugger": "openai/gpt-5.3-codex",
+    "designer": "anthropic/claude-opus-4-6",
+    "executor": "openai/gpt-5.3-codex",
     "verifier": "openai/gpt-5.3-codex",
     "explorer": "google/antigravity-gemini-3-flash",
-    "designer": "kimi-for-coding/k2p5",
+    "librarian": "openai/gpt-5.2",
+    "orchestrator": "anthropic/claude-opus-4-6",
+    "planner": "openai/gpt-5.3-codex",
+    "researcher": "openai/gpt-5.2",
     "writer": "google/antigravity-gemini-3-pro-high",
     "tester": "anthropic/claude-sonnet-4-5",
     "overrides": {
