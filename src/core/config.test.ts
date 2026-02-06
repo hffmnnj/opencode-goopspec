@@ -16,7 +16,7 @@ describe("config", () => {
   describe("DEFAULT_CONFIG", () => {
     it("should have required defaults", () => {
       expect(DEFAULT_CONFIG.enforcement).toBe("assist");
-      expect(DEFAULT_CONFIG.constitution).toBe(true);
+      expect(DEFAULT_CONFIG.constitution).toBeUndefined();
       expect(DEFAULT_CONFIG.adlEnabled).toBe(true);
       expect(DEFAULT_CONFIG.defaultModel).toBeTruthy();
     });
@@ -94,7 +94,6 @@ describe("config", () => {
       
       // Should have defaults
       expect(config.enforcement).toBe("assist");
-      expect(config.constitution).toBe(true);
     });
 
     it("should work with actual project directory", () => {

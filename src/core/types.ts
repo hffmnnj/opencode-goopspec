@@ -247,6 +247,7 @@ export interface OrchestratorConfig {
 export interface GoopSpecConfig {
   projectName?: string;
   enforcement?: EnforcementLevel;
+  /** @deprecated Reserved for future use. Not currently consumed at runtime. */
   constitution?: boolean;
   adlEnabled?: boolean;
   defaultModel?: string;

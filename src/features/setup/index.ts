@@ -124,7 +124,8 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
   // Plan global config write
   if (input.scope === "global" || input.scope === "both") {
     const globalConfig: Record<string, unknown> = {
-      ...DEFAULT_CONFIG,
+      enforcement: DEFAULT_CONFIG.enforcement,
+      adlEnabled: DEFAULT_CONFIG.adlEnabled,
       defaultModel: input.models.default ?? DEFAULT_CONFIG.defaultModel,
       orchestrator: {
         model: input.models.orchestrator ?? "anthropic/claude-opus-4-6",
