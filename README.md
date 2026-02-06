@@ -85,6 +85,14 @@ Add to your OpenCode config (`opencode.json`):
 { "plugins": ["goopspec"] }
 ```
 
+Or install globally via npm:
+
+```bash
+npx goopspec init
+# or
+bunx goopspec init
+```
+
 Or build from source:
 
 ```bash
@@ -93,6 +101,14 @@ cd goopspec && bun install && bun run build
 ```
 
 ### 2. Setup
+
+Run the interactive setup wizard:
+
+```bash
+goopspec init
+```
+
+Or from within OpenCode:
 
 ```
 /goop-setup
@@ -105,6 +121,50 @@ cd goopspec && bun install && bun run build
 ```
 
 GoopSpec interviews you, creates a locked spec, executes in waves, and asks you to verify. Done.
+
+---
+
+## CLI
+
+GoopSpec includes a standalone CLI for setup and configuration outside of OpenCode. Run it with `npx goopspec`, `bunx goopspec`, or `goopspec` if installed globally.
+
+```
+Usage: goopspec <command> [options]
+
+Options:
+  --help      Show help
+  --version   Show version
+```
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `goopspec init` | Interactive setup wizard — configure project name, agent models, MCP servers, memory, and enforcement level |
+| `goopspec models` | Configure agent models — assign specific LLMs to each specialist agent |
+| `goopspec memory` | Configure the memory system — provider selection, vector search, dependency installation |
+| `goopspec status` | Show current configuration — project info, memory, MCP servers, agent models |
+| `goopspec verify` | Run health checks — validate config files, MCP servers, memory system, and dependencies |
+| `goopspec reset` | Reset configuration — remove global, project, or both config scopes with confirmation |
+
+### Examples
+
+```bash
+# First-time setup with interactive prompts
+goopspec init
+
+# Check what's configured
+goopspec status
+
+# Reconfigure agent models
+goopspec models
+
+# Verify everything is working
+goopspec verify
+
+# Reset project config and start fresh
+goopspec reset
+```
 
 ---
 
@@ -512,6 +572,8 @@ goopspec/
 ├── templates/        # File templates
 └── src/
     ├── agents/       # Agent factory
+    ├── cli/          # Standalone CLI (goopspec command)
+    │   └── commands/ # CLI subcommands (init, models, memory, etc.)
     ├── core/         # Core types and config
     ├── features/     # Feature modules
     │   ├── archive/
