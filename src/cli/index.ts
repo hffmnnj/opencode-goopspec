@@ -3,6 +3,7 @@
 import pc from "picocolors";
 
 import { CLI_COMMANDS, type CliArgs, type CliCommand } from "./types.js";
+import { showBanner, showError } from "./ui.js";
 
 const VERSION = "0.1.6";
 
@@ -125,13 +126,13 @@ export async function main(): Promise<void> {
     const parsed = parseArgs(argv);
     const commandInput = argv.find((arg) => !isFlag(arg));
 
-    if (parsed.flags.help || !commandInput) {
-      showHelp();
+    if (parsed.flags.version) {
+      showVersion();
       return;
     }
 
-    if (parsed.flags.version) {
-      showVersion();
+    if (parsed.flags.help || !commandInput) {
+      showHelp();
       return;
     }
 
@@ -175,20 +176,21 @@ export async function main(): Promise<void> {
     }
 
     const suggestion = suggestCommand(commandInput);
-    console.error(pc.red(`Unknown command: ${commandInput}`));
-    if (suggestion) {
-      console.error(pc.gray(`Did you mean '${suggestion}'?`));
-    }
+    showBanner();
+    showError(
+      `Unknown command: ${commandInput}`,
+      suggestion ? `Did you mean 'goopspec ${suggestion}'?` : "Run 'goopspec --help' for available commands",
+    );
     process.exit(1);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(pc.red(`Error: ${message}`));
+    showError(message, "Run 'goopspec verify' to check your setup");
     process.exit(1);
   }
 }
 
 void main().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(pc.red(`Unexpected error: ${message}`));
+  showError(message, "Run 'goopspec verify' to check your setup");
   process.exit(1);
 });
