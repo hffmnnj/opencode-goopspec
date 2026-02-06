@@ -181,6 +181,16 @@ Create specification and blueprint from discovery interview.
 - Stack: [technologies]
 - Conventions: [naming, patterns]
 
+## DEPTH SETTING
+- Read `state.workflow.depth` from `goop_state({ action: "get" })`
+- Include `depth` in planner context (default: `standard` when missing)
+- depth: [state.workflow.depth]
+
+## DEPTH-AWARE PLANNING BEHAVIOR
+- **shallow:** Generate a lean blueprint with fewer waves and minimal wave decomposition. Skip per-wave questioning. Use single-agent research only when unknowns block planning.
+- **standard:** Generate a full blueprint with clear wave decomposition. Generate per-wave questioning (3-4 questions per wave). Use balanced research dispatch (1-2 agents) for unresolved unknowns.
+- **deep:** Generate a thorough blueprint with comprehensive wave decomposition. Generate per-wave questioning (5-6 questions per wave). Dispatch parallel research agents (`goop-researcher` + `goop-explorer`) for each wave's domain and include a per-wave risk assessment.
+
 ## DISCOVERY INTERVIEW OUTPUT
 [Full content of REQUIREMENTS.md]
 
@@ -194,31 +204,39 @@ Create specification and blueprint from discovery interview.
    
    If missing critical info, return BLOCKED.
 
-2. **Create .goopspec/SPEC.md:**
+2. **Apply depth-aware planning strategy:**
+   - Use the provided `depth` to calibrate blueprint detail, research thoroughness, and questioning behavior.
+   - Keep `depth` visible in planning context so downstream tasks and summaries can explain why detail level changed.
+   - If `depth` is missing, default to `standard`.
+
+3. **Create .goopspec/SPEC.md:**
    - Transform must-haves into formal requirements (MH1, MH2, etc.)
    - Include acceptance criteria for each
    - Add traceability section (will be filled after blueprint)
    - Mark status as "Draft"
 
-3. **Create .goopspec/BLUEPRINT.md:**
+4. **Create .goopspec/BLUEPRINT.md:**
    - Design wave architecture
    - Create tasks that cover ALL must-haves
    - Add spec coverage to each task
    - Build traceability matrix
+   - Encode depth-aligned decomposition level per wave
+   - Include depth-aligned questioning expectations per wave
+   - In deep mode, include explicit parallel research dispatch instructions (`goop-researcher` + `goop-explorer`) per wave domain
 
-4. **Update .goopspec/SPEC.md:**
+5. **Update .goopspec/SPEC.md:**
    - Fill traceability matrix (must-have → tasks)
    - Verify 100% coverage
 
-5. **Initialize .goopspec/CHRONICLE.md:**
+6. **Initialize .goopspec/CHRONICLE.md:**
    - Phase: plan → ready for specify
    - Documents created with timestamps
 
-6. **Save to memory:**
+7. **Save to memory:**
    - Key architectural decisions
    - Technology choices with rationale
 
-7. **Return XML response envelope** with:
+8. **Return XML response envelope** with:
    - BLUEPRINT COMPLETE status
    - Wave summary
    - Traceability summary
@@ -234,6 +252,174 @@ Before returning COMPLETE:
   `
 })
 ```
+
+---
+
+## Phase 3.5: Per-Wave Questioning
+
+Run this protocol after each wave draft is available and before finalizing the blueprint.
+
+### Purpose
+
+Generate contextual questions for each drafted wave to validate assumptions, surface unknowns, and identify where research is required before the plan is locked.
+
+### When
+
+- After the planner drafts a wave (scope, files, tasks, dependencies)
+- Before accepting that wave as final
+- Repeat for every wave in the blueprint
+
+### How Many Questions (Depth-Scaled)
+
+| Workflow depth | Questions per wave |
+|----------------|--------------------|
+| shallow | 1-2 |
+| standard | 3-4 |
+| deep | 5-6 |
+
+Use `goop_state({ action: "get" })` and read `state.workflow.depth` to select the count.
+
+### Question Generation Rules
+
+Each question must be anchored to the current wave's actual implementation scope.
+
+- Reference specific files, modules, technologies, integrations, or patterns named in the wave
+- Target unknowns, assumption checks, risk boundaries, migration concerns, and edge cases
+- Require decision-making signal that changes implementation details, sequencing, or validation
+- Avoid generic template prompts (for example: "Do you want tests?")
+- Prefer option-based prompts with concrete tradeoffs the user can quickly choose
+
+### Question Format (Use `question` tool)
+
+Use structured prompts with contextual options tied to the current wave:
+
+```ts
+question({
+  questions: [{
+    header: "Wave 2: Auth Migration",
+    question: "Wave 2 updates src/auth/middleware.ts for token parsing. Should we preserve compatibility with existing JWT claims during rollout?",
+    options: [
+      { label: "Preserve", description: "Support old and new claims during migration" },
+      { label: "Cutover", description: "Switch to new claims immediately" },
+      { label: "Unsure", description: "Need impact analysis before choosing" }
+    ],
+    multiple: false
+  }]
+})
+```
+
+### Research Dispatch After Answers
+
+If answers expose unknowns, conflicts, or unresolved implementation risk, dispatch research before finalizing that wave.
+
+Dispatch rules:
+- If uncertainty is domain/technology focused, delegate `goop-researcher`
+- If uncertainty is codebase integration/location focused, delegate `goop-explorer`
+- If both are unknown and independent, dispatch both in parallel
+
+Required handoff context to research agents:
+- Wave number and objective
+- Exact files/modules/patterns in scope
+- User answer that introduced the unknown
+- Expected output needed to unblock planning decisions
+
+Only finalize the wave after research findings are incorporated or the user explicitly accepts the remaining risk.
+
+### Example Contextual Questions (Typical Wave)
+
+- "Wave 2 modifies `src/auth/middleware.ts`. Should we preserve backward compatibility with existing JWT tokens, or is a migration acceptable?"
+- "This wave adds a new database table in `src/features/setup/`. Do you have a preferred naming convention for indexes and unique constraints?"
+- "The blueprint introduces React Server Components for `src/ui/dashboard/`. Is your deployment target compatible with RSC streaming?"
+- "Wave 3 updates `src/hooks/orchestrator-enforcement.ts`. Should intent detection remain log-only, or should we emit structured telemetry events for auditing?"
+
+---
+
+## Phase 3.7: Post-Wave Review Gate
+
+Run this gate after all waves are drafted and after per-wave questioning outputs have been incorporated.
+
+### Overview
+
+After the planner generates all waves, present each wave to the user for review before finalizing the blueprint.
+
+### Approve-All Shortcut (Before Per-Wave Iteration)
+
+Offer a top-level choice first:
+
+```ts
+question({
+  questions: [{
+    header: "Plan Review",
+    question: "The blueprint has [N] waves. Would you like to review each wave individually or approve the entire plan?",
+    options: [
+      { label: "Review Each Wave", description: "Examine and approve waves one by one" },
+      { label: "Approve All (Recommended)", description: "Skip per-wave review, approve the entire plan" }
+    ],
+    multiple: false
+  }]
+})
+```
+
+If user selects `Approve All (Recommended)`, skip per-wave review and continue to Phase 4.
+
+### Per-Wave Review Protocol
+
+If user selects `Review Each Wave`, iterate every wave in order:
+
+```text
+For each wave in the blueprint:
+
+Display wave summary:
+## Wave [N]: [Name]
+**Tasks:** [count]
+**Files:** [key files]
+**Must-Haves Covered:** [list]
+
+Then use question tool:
+- header: "Wave [N] Review"
+- question: "Review Wave [N]: [Name]. How would you like to proceed?"
+- options:
+  - "Approve Wave" — Wave looks good, proceed
+  - "Request More Research" — Need deeper investigation on this wave's scope
+  - "Clarify Scope" — Want to adjust or clarify what this wave covers
+```
+
+Recommended `question` payload:
+
+```ts
+question({
+  questions: [{
+    header: "Wave [N] Review",
+    question: "Review Wave [N]: [Name]. How would you like to proceed?",
+    options: [
+      { label: "Approve Wave", description: "Wave looks good, proceed" },
+      { label: "Request More Research", description: "Need deeper investigation on this wave's scope" },
+      { label: "Clarify Scope", description: "Want to adjust or clarify what this wave covers" }
+    ],
+    multiple: false
+  }]
+})
+```
+
+### Decision Handling
+
+- `Approve Wave`
+  - Mark wave approved
+  - Continue to next wave
+
+- `Request More Research`
+  - Ask user which specific areas of the wave need investigation
+  - Dispatch `goop-researcher` and/or `goop-explorer` for the identified areas
+  - Use parallel dispatch when research and codebase-mapping work are independent
+  - Incorporate findings back into the wave definition
+  - Re-present the updated wave using the same review question until approved
+
+- `Clarify Scope`
+  - Ask follow-up clarification using `question` tool (not plain text prompt)
+  - Update wave scope/tasks/files/must-have mapping based on user feedback
+  - Re-present the updated wave using the same review question until approved
+
+Only finalize the blueprint when every reviewed wave is approved or the user selected `Approve All (Recommended)`.
 
 ---
 
@@ -394,4 +580,4 @@ Orchestrator:
 
 ---
 
-*Planning Process v0.2.0*
+*Planning Process v0.2.1*
