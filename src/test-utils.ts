@@ -535,7 +535,7 @@ export const TEST_ORCHESTRATOR_RESOURCE: ResolvedResource = {
   frontmatter: {
     name: "goop-orchestrator",
     description: "Coordinates GoopSpec workflows",
-    model: "anthropic/claude-opus-4-5",
+    model: "anthropic/claude-opus-4-6",
     temperature: 0.7,
     tools: ["read", "write", "glob", "task"],
     skills: ["goop-core"],

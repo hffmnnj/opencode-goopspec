@@ -230,7 +230,7 @@ export type WaveExecutionMode = "sequential" | "parallel";
 export interface OrchestratorConfig {
   /** Enable the GoopSpec orchestrator as the default agent */
   enableAsDefault?: boolean;
-  /** Model to use for the orchestrator (default: anthropic/claude-opus-4-5) */
+  /** Model to use for the orchestrator (default: anthropic/claude-opus-4-6) */
   model?: string;
   /** Thinking budget for extended reasoning (default: 32000) */
   thinkingBudget?: number;

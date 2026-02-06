@@ -6,31 +6,31 @@ Model profiles control which model each GoopSpec agent uses. This enables optima
 
 | Agent | Model | Rationale |
 |-------|-------|-----------|
-| goop-debugger | openai/gpt-5.2-codex | Best for code-heavy debugging, hypothesis testing, evidence-based analysis |
-| goop-designer | anthropic/claude-opus-4-5 | Best for visual design, UI/UX reasoning, component architecture decisions |
-| goop-executor | openai/gpt-5.2-codex | Best for code implementation, atomic commits, clean patterns |
+| goop-debugger | openai/gpt-5.3-codex | Best for code-heavy debugging, hypothesis testing, evidence-based analysis |
+| goop-designer | anthropic/claude-opus-4-6 | Best for visual design, UI/UX reasoning, component architecture decisions |
+| goop-executor | openai/gpt-5.3-codex | Best for code implementation, atomic commits, clean patterns |
 | goop-explorer | google/antigravity-gemini-3-flash | Fast codebase mapping, pattern detection, lightweight exploration |
 | goop-librarian | openai/gpt-5.2 | Best for information retrieval, documentation search, code search |
-| goop-orchestrator | anthropic/claude-opus-4-5 | Complex orchestration, task delegation, context management |
-| goop-planner | anthropic/claude-opus-4-5 | Best for complex architecture decisions, goal decomposition, reasoning-heavy planning |
+| goop-orchestrator | anthropic/claude-opus-4-6 | Complex orchestration, task delegation, context management |
+| goop-planner | anthropic/claude-opus-4-6 | Best for complex architecture decisions, goal decomposition, reasoning-heavy planning |
 | goop-researcher | openai/gpt-5.2 | Best for research, technology evaluation, knowledge synthesis |
 | goop-tester | kimi-for-coding/k2p5 | Cost-effective for test writing, quality assurance, coverage thinking |
-| goop-verifier | openai/gpt-5.2-codex | Best for code verification, security analysis, catching subtle bugs |
+| goop-verifier | openai/gpt-5.3-codex | Best for code verification, security analysis, catching subtle bugs |
 | goop-writer | google/antigravity-gemini-3-pro-high | Documentation, structured writing, comprehensive coverage |
 | memory-distiller | anthropic/claude-haiku-3-5 | Fast, lightweight distillation of events into structured memories |
 
 ## Model Selection Philosophy
 
-### Why GPT-5.2-Codex for Code Tasks?
-Code-heavy tasks (debugging, execution, verification) benefit from Codex's specialized training. GPT-5.2-Codex excels at:
+### Why GPT-5.3-Codex for Code Tasks?
+Code-heavy tasks (debugging, execution, verification) benefit from Codex's specialized training. GPT-5.3-Codex excels at:
 - Deep code understanding and generation
 - Bug detection and hypothesis testing
 - Security vulnerability analysis
 - Clean, production-quality implementation
 - Following coding patterns and conventions
 
-### Why Claude Opus 4.5 for Planning & Orchestration?
-Planning and orchestration require complex reasoning and decision-making. Opus 4.5 excels at:
+### Why Claude Opus 4.6 for Planning & Orchestration?
+Planning and orchestration require complex reasoning and decision-making. Opus 4.6 excels at:
 - Complex reasoning about system design
 - Identifying genuine dependencies vs false ones
 - Creating comprehensive, executable plans
@@ -76,13 +76,13 @@ Users can override models for specific scenarios in goopspec.json:
 ```json
 {
   "models": {
-    "planner": "anthropic/claude-opus-4-5",
-    "executor": "openai/gpt-5.2-codex",
+    "planner": "anthropic/claude-opus-4-6",
+    "executor": "openai/gpt-5.3-codex",
     "overrides": {
-      "security_review": "openai/gpt-5.2-codex",
-      "performance_audit": "openai/gpt-5.2-codex",
-      "refactor": "openai/gpt-5.2-codex",
-      "quick_fix": "openai/gpt-5.2-codex",
+      "security_review": "openai/gpt-5.3-codex",
+      "performance_audit": "openai/gpt-5.3-codex",
+      "refactor": "openai/gpt-5.3-codex",
+      "quick_fix": "openai/gpt-5.3-codex",
       "research": "openai/gpt-5.2",
       "documentation": "google/antigravity-gemini-3-pro-high"
     }
