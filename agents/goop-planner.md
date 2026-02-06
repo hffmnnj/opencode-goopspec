@@ -541,3 +541,71 @@ Run `/goop-discuss` to complete discovery interview.
 **Remember: Plans are contracts. Every must-have traces to tasks. Every task is verifiable. Spec-nail before you build.**
 
 *GoopSpec Planner v0.2.0*
+
+## Depth-Aware Planning
+
+Before decomposing waves, read the workflow depth from state/context:
+
+```typescript
+const depth = state?.workflow?.depth ?? "standard";
+```
+
+Use depth to scale planning detail, decomposition, and research strategy:
+
+| Depth | Planning Behavior | Questioning Behavior | Research Behavior |
+|------|-------------------|----------------------|-------------------|
+| **shallow** | Lean blueprint. Prefer fewer waves and minimal decomposition. Optimize for speed and clear handoff. | Skip per-wave questions by default to keep planning fast. If uncertainty is high, ask at most 1-2 targeted clarifiers. | Minimal research. Reuse known patterns unless a blocker appears. |
+| **standard** | Full blueprint with practical wave decomposition and explicit verification steps. | Generate 3-4 contextual questions per wave. | Balanced research using existing references and focused follow-ups. |
+| **deep** | Thorough blueprint with comprehensive decomposition, explicit dependencies, and robust verification detail. | Generate 5-6 contextual questions per wave. | Request parallel research dispatch (goop-researcher + goop-explorer) for each wave's technology domain. Add a risk assessment per wave. |
+
+Default behavior when depth is missing or unset:
+- Treat depth as `standard`
+- Continue producing complete, traceable blueprints
+- Do not block planning on missing depth metadata
+
+## Per-Wave Questioning
+
+After drafting each wave, generate contextual questions tied to that wave's exact scope.
+
+### Protocol
+- Draft wave first (tasks, files, dependencies, verification)
+- Generate wave-scoped questions immediately after the wave draft
+- Ensure each question references specific files, patterns, or technologies in that wave
+- Scale question count by depth:
+  - `shallow`: 1-2 (or skip by default when uncertainty is low)
+  - `standard`: 3-4
+  - `deep`: 5-6
+- Use answers to refine tasks, tighten acceptance criteria, and identify unresolved unknowns
+
+### What Makes a Good Contextual Question
+
+Good questions are:
+- Specific to wave scope (`files`, `patterns`, `dependencies`, `tech choices`)
+- Actionable (the answer changes task sequencing, decomposition, or verification)
+- Risk-revealing (surfaces integration gaps, hidden constraints, or unknowns)
+
+Avoid generic questions that could apply to any wave.
+
+### Quality Examples
+
+Good (contextual):
+- "Wave 2 updates `src/hooks/orchestrator-enforcement.ts` and `src/hooks/orchestrator-enforcement.test.ts`. Should we preserve current intent-pattern constants and only alter output mutation behavior, or also simplify detection paths in this wave?"
+- "Wave 3 adds per-wave questioning in `references/plan-process.md`. Should deep mode require explicit researcher+explorer dispatch criteria per unresolved unknown, or allow planner discretion by technology domain?"
+- "Wave 4 modifies `agents/goop-planner.md`. Do we want risk assessment captured as a required subsection in every deep-mode wave, or as an optional checklist when high-risk dependencies exist?"
+
+Weak (generic):
+- "Any concerns with this wave?"
+- "Does this look good?"
+- "Should we do more research?"
+
+### Deep Mode Research Dispatch Guidance
+
+In `deep` mode, for each wave domain with unresolved uncertainty:
+- Prepare parallel dispatch intent for:
+  - `goop-researcher` (domain and technology tradeoffs)
+  - `goop-explorer` (codebase patterns, integration points, and constraints)
+- Capture expected outputs in wave notes:
+  - Known unknowns
+  - Decision criteria
+  - Risk impact and mitigation
+- Fold findings back into wave tasks before finalizing BLUEPRINT.md
