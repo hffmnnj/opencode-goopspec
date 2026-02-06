@@ -6,7 +6,6 @@
   "adlEnabled": true,
   "defaultModel": "anthropic/claude-sonnet-4-5",
   "agents": {
-    "_comment": "All 11 agent roles from GoopSpecConfig.agents; each uses { model, temperature }.",
     "goop-explorer": {
       "model": "google/antigravity-gemini-3-flash",
       "temperature": 0.3
@@ -53,7 +52,6 @@
     }
   },
   "mcp": {
-    "_comment": "MCP tool toggles from McpConfig.",
     "context7": true,
     "exa": true,
     "playwright": true,
@@ -62,7 +60,6 @@
     "sqlite": true
   },
   "orchestrator": {
-    "_comment": "All OrchestratorConfig fields.",
     "enableAsDefault": false,
     "model": "anthropic/claude-opus-4-6",
     "thinkingBudget": 32000,
@@ -70,7 +67,6 @@
     "waveExecution": "sequential"
   },
   "memory": {
-    "_comment": "All MemorySystemConfig fields and all nested sub-config fields.",
     "enabled": true,
     "workerPort": 37777,
     "capture": {
