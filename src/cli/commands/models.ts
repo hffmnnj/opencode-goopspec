@@ -1,26 +1,27 @@
-/**
- * GoopSpec CLI - Models Command
- * Interactive agent model configuration
- */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { basename } from "node:path";
 
 import pc from "picocolors";
 
 import {
   cancel,
-  confirm,
   intro,
   isCancel,
+  multiselect,
   outro,
   sectionHeader,
   select,
   showBanner,
+  showError,
   showSuccess,
+  showWarning,
   text,
 } from "../ui.js";
-import { getSetupStatus } from "../../features/setup/index.js";
+import { detectEnvironment } from "../../features/setup/index.js";
 import { AGENT_MODEL_SUGGESTIONS, ALL_AGENTS } from "../../features/setup/model-suggestions.js";
+
+type ConfigJson = Record<string, unknown>;
+type AgentModelMap = Record<string, string>;
 
 function handleCancel<T>(value: T | symbol): asserts value is T {
   if (isCancel(value)) {
@@ -29,189 +30,187 @@ function handleCancel<T>(value: T | symbol): asserts value is T {
   }
 }
 
-async function loadCurrentConfig(projectDir: string): Promise<Record<string, unknown>> {
-  const configPath = join(projectDir, ".goopspec", "config.json");
-  if (existsSync(configPath)) {
-    try {
-      return JSON.parse(readFileSync(configPath, "utf-8")) as Record<string, unknown>;
-    } catch {
-      return {};
-    }
+function extractAgentModels(config: ConfigJson): AgentModelMap {
+  const models: AgentModelMap = {};
+  if (typeof config.agents !== "object" || config.agents === null) {
+    return models;
   }
-  return {};
-}
 
-async function saveConfig(projectDir: string, config: Record<string, unknown>): Promise<void> {
-  const configPath = join(projectDir, ".goopspec", "config.json");
-  const dir = dirname(configPath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-  writeFileSync(configPath, JSON.stringify(config, null, 2));
-}
-
-async function selectAgents(): Promise<string[]> {
-  const selected: string[] = [];
-
-  for (const agent of ALL_AGENTS) {
-    const config = AGENT_MODEL_SUGGESTIONS[agent];
-    const include = await confirm({
-      message: `Configure ${agent}?`,
-      initialValue: false,
-    });
-    handleCancel(include);
-    if (include) {
-      selected.push(agent);
-      if (config) {
-        console.log(pc.dim(`  ${config.description}`));
+  for (const [agentName, value] of Object.entries(config.agents as Record<string, unknown>)) {
+    if (typeof value === "object" && value !== null && "model" in value) {
+      const model = (value as { model?: unknown }).model;
+      if (typeof model === "string" && model.trim()) {
+        models[agentName] = model;
       }
     }
   }
 
-  return selected;
+  return models;
+}
+
+function readConfig(configPath: string): ConfigJson {
+  try {
+    if (!existsSync(configPath)) {
+      return {};
+    }
+    return JSON.parse(readFileSync(configPath, "utf-8")) as ConfigJson;
+  } catch {
+    return {};
+  }
+}
+
+function writeConfig(configPath: string, config: ConfigJson): void {
+  writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
+
+function resolveConfigPath(env: Awaited<ReturnType<typeof detectEnvironment>>): string | null {
+  if (env.hasProjectGoopSpecConfig) {
+    return env.projectConfigPath;
+  }
+  if (env.hasGlobalGoopSpecConfig) {
+    return env.globalConfigPath;
+  }
+  return null;
+}
+
+function buildCurrentModelRows(models: AgentModelMap): string[] {
+  return ALL_AGENTS.map((agentName) => {
+    const current = models[agentName] ?? "(default)";
+    const suggestion = AGENT_MODEL_SUGGESTIONS[agentName];
+    const description = suggestion?.description ?? "No description available";
+    const modelText = models[agentName] ? pc.green(current) : pc.dim(current);
+    return `  ${pc.bold(agentName)}: ${modelText}${pc.dim(` - ${description}`)}`;
+  });
 }
 
 export async function runModels(): Promise<void> {
   const projectDir = process.cwd();
 
-  showBanner();
-  console.log();
-  intro(pc.bold("Agent Model Configuration"));
-
-  const status = await getSetupStatus(projectDir);
-  const currentModels = status.agentModels;
-
-  sectionHeader("Current Models", "🤖");
-  if (Object.keys(currentModels).length === 0) {
-    console.log(pc.dim("  No custom models configured (using defaults)"));
-  } else {
-    for (const [agent, model] of Object.entries(currentModels)) {
-      console.log(`  ${pc.dim(agent)}: ${model}`);
-    }
-  }
-  console.log();
-
-  const action = await select({
-    message: "What would you like to do?",
-    options: [
-      { value: "configure", label: "Configure specific agents" },
-      { value: "configure_all", label: "Configure all agents" },
-      { value: "reset", label: "Reset to defaults" },
-      { value: "view", label: "View suggestions only" },
-    ],
-    initialValue: "configure",
-  });
-  handleCancel(action);
-
-  if (action === "view") {
+  try {
+    showBanner();
     console.log();
-    sectionHeader("Model Suggestions", "📋");
-    for (const agentName of ALL_AGENTS) {
-      const config = AGENT_MODEL_SUGGESTIONS[agentName];
-      if (!config) {
+    intro(pc.bold("Agent Model Configuration"));
+
+    const env = await detectEnvironment(projectDir);
+    const configPath = resolveConfigPath(env);
+
+    if (!configPath) {
+      showWarning("No GoopSpec config found for this directory.");
+      showWarning("Run 'goopspec init' first to create a config file.");
+      outro("Models not saved.");
+      return;
+    }
+
+    const existingConfig = readConfig(configPath);
+    const currentModels = extractAgentModels(existingConfig);
+
+    sectionHeader("Current Model Assignments", "🤖");
+    for (const line of buildCurrentModelRows(currentModels)) {
+      console.log(line);
+    }
+    console.log();
+
+    const mode = await select({
+      message: "What would you like to configure?",
+      options: [
+        { value: "all", label: "Configure all agents", hint: "Walk through all 11 roles" },
+        { value: "pick", label: "Pick specific agents", hint: "Only update selected roles" },
+      ],
+      initialValue: "pick",
+    });
+    handleCancel(mode);
+
+    let agentsToConfigure: string[] = [];
+    if (mode === "all") {
+      agentsToConfigure = [...ALL_AGENTS];
+    } else {
+      const selected = await multiselect({
+        message: "Select agent roles to configure:",
+        options: ALL_AGENTS.map((agentName) => {
+          const current = currentModels[agentName];
+          const suffix = current ? `current: ${current}` : "current: default";
+          return {
+            value: agentName,
+            label: agentName,
+            hint: `${AGENT_MODEL_SUGGESTIONS[agentName]?.description ?? ""} (${suffix})`,
+          };
+        }),
+      });
+      handleCancel(selected);
+      agentsToConfigure = selected;
+    }
+
+    if (agentsToConfigure.length === 0) {
+      showWarning("No agents selected. No changes made.");
+      outro("Model configuration cancelled.");
+      return;
+    }
+
+    const updates: AgentModelMap = {};
+
+    for (const agentName of agentsToConfigure) {
+      const suggestion = AGENT_MODEL_SUGGESTIONS[agentName];
+      if (!suggestion) {
         continue;
       }
-      console.log();
-      console.log(pc.bold(`  ${agentName}`));
-      console.log(pc.dim(`  ${config.description}`));
-      console.log(pc.dim(`  Suggestions: ${config.suggestions.join(", ")}`));
-    }
-    console.log();
-    outro("Run 'goopspec models' again to configure.");
-    return;
-  }
 
-  if (action === "reset") {
-    const confirmReset = await confirm({
-      message: "Reset all agent models to defaults?",
-      initialValue: false,
-    });
-    handleCancel(confirmReset);
-
-    if (confirmReset) {
-      const config = await loadCurrentConfig(projectDir);
-      delete config.agents;
-      await saveConfig(projectDir, config);
-      showSuccess("Agent models reset to defaults.");
-    }
-    outro("Done.");
-    return;
-  }
-
-  const agentsToConfig = action === "configure_all" ? ALL_AGENTS : await selectAgents();
-  const newModels: Record<string, string> = {};
-
-  for (const agentName of agentsToConfig) {
-    const config = AGENT_MODEL_SUGGESTIONS[agentName];
-    if (!config) {
-      continue;
-    }
-
-    console.log();
-    sectionHeader(agentName, "🤖");
-    console.log(pc.dim(`  ${config.description}`));
-
-    const currentModel = currentModels[agentName];
-    if (currentModel) {
-      console.log(pc.dim(`  Current: ${currentModel}`));
-    }
-
-    const options = config.suggestions.map((model) => ({
-      value: model,
-      label: model,
-    }));
-    options.push({ value: "__custom__", label: "Custom model ID..." });
-    options.push({ value: "__skip__", label: "Skip (keep current)" });
-
-    const selected = await select({
-      message: `Model for ${agentName}:`,
-      options,
-      initialValue: currentModel ?? config.suggestions[0],
-    });
-    handleCancel(selected);
-
-    if (selected === "__skip__") {
-      if (currentModel) {
-        newModels[agentName] = currentModel;
-      }
-      continue;
-    }
-
-    if (selected === "__custom__") {
-      const custom = await text({
-        message: "Enter custom model ID:",
-        placeholder: "provider/model-name",
-        validate: (value) => {
-          if (!value.trim()) {
-            return "Model ID required";
-          }
-          return undefined;
-        },
+      const currentModel = currentModels[agentName] ?? suggestion.suggestions[0];
+      const modelChoice = await select({
+        message: `${agentName} - ${suggestion.description}`,
+        options: [
+          ...suggestion.suggestions.map((modelId) => ({
+            value: modelId,
+            label: modelId,
+            hint: modelId === currentModels[agentName] ? "current" : undefined,
+          })),
+          {
+            value: "__custom__",
+            label: "Custom model ID",
+            hint: "Enter provider/model-name",
+          },
+        ],
+        initialValue: currentModel,
       });
-      handleCancel(custom);
-      newModels[agentName] = custom.trim();
-    } else {
-      newModels[agentName] = selected;
-    }
-  }
+      handleCancel(modelChoice);
 
-  if (Object.keys(newModels).length > 0) {
-    const config = await loadCurrentConfig(projectDir);
-    const existingAgents =
-      typeof config.agents === "object" && config.agents !== null
-        ? (config.agents as Record<string, { model: string }>)
+      if (modelChoice === "__custom__") {
+        const customModel = await text({
+          message: `Custom model for ${agentName}:`,
+          placeholder: "provider/model-name",
+          validate: (value) => {
+            if (!value.trim()) {
+              return "Model ID is required";
+            }
+            return undefined;
+          },
+        });
+        handleCancel(customModel);
+        updates[agentName] = customModel.trim();
+      } else {
+        updates[agentName] = modelChoice;
+      }
+    }
+
+    const mergedConfig = readConfig(configPath);
+    const agentsObject: Record<string, { model: string }> =
+      typeof mergedConfig.agents === "object" && mergedConfig.agents !== null
+        ? (mergedConfig.agents as Record<string, { model: string }>)
         : {};
-    config.agents = existingAgents;
 
-    for (const [agent, model] of Object.entries(newModels)) {
-      existingAgents[agent] = { model };
+    for (const [agentName, modelId] of Object.entries(updates)) {
+      agentsObject[agentName] = { model: modelId };
     }
 
-    await saveConfig(projectDir, config);
+    mergedConfig.agents = agentsObject;
+    writeConfig(configPath, mergedConfig);
 
     console.log();
-    showSuccess(`Configured ${Object.keys(newModels).length} agent(s).`);
+    showSuccess(`Updated ${Object.keys(updates).length} agent model(s).`);
+    console.log(pc.dim(`  Saved to ${basename(configPath)} (${configPath})`));
+    outro("Agent models configured.");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    showError(message, "Check config file permissions and try again");
+    process.exit(1);
   }
-
-  outro("Model configuration complete.");
 }
