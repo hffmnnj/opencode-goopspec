@@ -198,11 +198,16 @@ Track progress through the six questions:
 
 ### 2.5 Completion check
 
-When all six questions are answered, confirm:
+When all six questions are answered:
+
+1. **Output the summary as a regular message first:**
+   Present the vision, must-haves, constraints, out-of-scope, assumptions, and risks as formatted text.
+
+2. **Then ask a short question:**
 
 Use `question` tool:
 - header: "Discovery Check"
-- question: "I think I have what I need. Let me summarize..."
+- question: "Does this capture your requirements?"
 - options:
   - "Looks good, proceed" — Generate REQUIREMENTS.md
   - "I want to add more" — Continue discussion
