@@ -5,6 +5,9 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "goopspec": "dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -21,8 +24,9 @@
     "README.md"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun && bun build ./src/features/memory/worker/index.ts --outdir ./dist/worker --target bun",
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun && bun build ./src/features/memory/worker/index.ts --outdir ./dist/worker --target bun && bun build ./src/cli/index.ts --outfile ./dist/cli.js --target node --format esm",
     "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
+    "build:cli": "bun build ./src/cli/index.ts --outfile ./dist/cli.js --target node --format esm",
     "build:worker": "bun build ./src/features/memory/worker/index.ts --outdir ./dist/worker --target bun",
     "typecheck": "bunx tsc --noEmit",
     "clean": "rm -rf dist",
