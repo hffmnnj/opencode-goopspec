@@ -6,6 +6,7 @@
  */
 
 // Note: MemorySystemConfig is in core/types.ts but we define our own setup-specific input type
+import type { PhaseGateMode, WaveExecutionMode } from "../../core/types.js";
 
 // ============================================================================
 // Action Types
@@ -86,6 +87,12 @@ export interface SetupInput {
   };
   /** Whether to enable orchestrator as default agent */
   enableOrchestrator?: boolean;
+  /** Orchestrator thinking budget (default: 32000) */
+  thinkingBudget?: number;
+  /** Confirmation gate behavior during execution (default: ask) */
+  phaseGates?: PhaseGateMode;
+  /** Wave execution strategy (default: sequential) */
+  waveExecution?: WaveExecutionMode;
   /** Per-agent model configuration */
   agentModels?: Record<string, string>;
   /** Memory system configuration */

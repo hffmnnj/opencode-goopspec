@@ -6,7 +6,7 @@
 
 **Stop the AI chaos. Ship what you actually want.**
 
-[![Version](https://img.shields.io/badge/version-0.1.6-blue?style=for-the-badge)](https://github.com/hffmnnj/opencode-goopspec)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue?style=for-the-badge)](https://github.com/hffmnnj/opencode-goopspec)
 [![Bun](https://img.shields.io/badge/Bun-1.0+-f97316?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tests](https://img.shields.io/badge/tests-1056%20passing-22c55e?style=for-the-badge)](./TEST-SUMMARY.md)
@@ -82,17 +82,33 @@ You verify the results and accept the work. The AI can't declare itself done —
 Add to your OpenCode config (`opencode.json`):
 
 ```json
-{ "plugins": ["opencode-goopspec"] }
+{ "plugins": ["goopspec"] }
+```
+
+Or install globally via npm:
+
+```bash
+npx goopspec init
+# or
+bunx goopspec init
 ```
 
 Or build from source:
 
 ```bash
 git clone https://github.com/hffmnnj/opencode-goopspec.git
-cd opencode-goopspec && bun install && bun run build
+cd goopspec && bun install && bun run build
 ```
 
 ### 2. Setup
+
+Run the interactive setup wizard:
+
+```bash
+goopspec init
+```
+
+Or from within OpenCode:
 
 ```
 /goop-setup
@@ -105,6 +121,50 @@ cd opencode-goopspec && bun install && bun run build
 ```
 
 GoopSpec interviews you, creates a locked spec, executes in waves, and asks you to verify. Done.
+
+---
+
+## CLI
+
+GoopSpec includes a standalone CLI for setup and configuration outside of OpenCode. Run it with `npx goopspec`, `bunx goopspec`, or `goopspec` if installed globally.
+
+```
+Usage: goopspec <command> [options]
+
+Options:
+  --help      Show help
+  --version   Show version
+```
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `goopspec init` | Interactive setup wizard — configure project name, agent models, MCP servers, memory, and enforcement level |
+| `goopspec models` | Configure agent models — assign specific LLMs to each specialist agent |
+| `goopspec memory` | Configure the memory system — provider selection, vector search, dependency installation |
+| `goopspec status` | Show current configuration — project info, memory, MCP servers, agent models |
+| `goopspec verify` | Run health checks — validate config files, MCP servers, memory system, and dependencies |
+| `goopspec reset` | Reset configuration — remove global, project, or both config scopes with confirmation |
+
+### Examples
+
+```bash
+# First-time setup with interactive prompts
+goopspec init
+
+# Check what's configured
+goopspec status
+
+# Reconfigure agent models
+goopspec models
+
+# Verify everything is working
+goopspec verify
+
+# Reset project config and start fresh
+goopspec reset
+```
 
 ---
 
@@ -504,7 +564,7 @@ bun run build
 ### Project Structure
 
 ```
-opencode-goopspec/
+goopspec/
 ├── agents/           # Agent markdown definitions
 ├── commands/         # Command markdown definitions
 ├── references/       # Reference documentation
@@ -512,6 +572,8 @@ opencode-goopspec/
 ├── templates/        # File templates
 └── src/
     ├── agents/       # Agent factory
+    ├── cli/          # Standalone CLI (goopspec command)
+    │   └── commands/ # CLI subcommands (init, models, memory, etc.)
     ├── core/         # Core types and config
     ├── features/     # Feature modules
     │   ├── archive/

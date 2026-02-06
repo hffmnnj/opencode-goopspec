@@ -33,7 +33,7 @@ Options:
   --help       Show this help message
 
 Examples:
-  bun scripts/version-bump.ts 0.1.6 --dry-run
+  bun scripts/version-bump.ts 0.2.0 --dry-run
 `;
 
 const FILE_PATTERNS = [

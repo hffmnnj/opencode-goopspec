@@ -154,6 +154,20 @@ const DEFAULT_CONFIG: EnforcementConfig = {
   ],
 };
 
+function resolveEnforcementConfig(level: PluginContext["config"]["enforcement"]): EnforcementConfig {
+  if (level === "warn") {
+    return {
+      ...DEFAULT_CONFIG,
+      codeBlockingEnabled: false,
+      researchBlockingEnabled: false,
+    };
+  }
+
+  return {
+    ...DEFAULT_CONFIG,
+  };
+}
+
 // Tools that require file permission
 const FILE_TOOLS = ["edit", "mcp_edit", "write", "mcp_write"];
 
@@ -614,10 +628,7 @@ Two-Step Delegation Flow:
  * - tool.execute.after: Inject delegation instructions
  */
 export function createOrchestratorEnforcementHooks(ctx: PluginContext) {
-  const config: EnforcementConfig = {
-    ...DEFAULT_CONFIG,
-    // Could override from ctx.config if we add enforcement config
-  };
+  const config = resolveEnforcementConfig(ctx.config.enforcement);
 
   return {
     /**

@@ -1,10 +1,13 @@
 {
-  "name": "opencode-goopspec",
-  "version": "0.1.6",
+  "name": "goopspec",
+  "version": "0.2.0",
   "description": "A spec-driven development plugin for OpenCode with user-guided planning, wave execution, and verification",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "goopspec": "dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -21,8 +24,9 @@
     "README.md"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun && bun build ./src/features/memory/worker/index.ts --outdir ./dist/worker --target bun",
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun && bun build ./src/features/memory/worker/index.ts --outdir ./dist/worker --target bun && bun build ./src/cli/index.ts --outfile ./dist/cli.js --target node --format esm",
     "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
+    "build:cli": "bun build ./src/cli/index.ts --outfile ./dist/cli.js --target node --format esm",
     "build:worker": "bun build ./src/features/memory/worker/index.ts --outdir ./dist/worker --target bun",
     "typecheck": "bunx tsc --noEmit",
     "clean": "rm -rf dist",
@@ -39,9 +43,11 @@
     "gsd",
     "productivity",
     "task-continuation",
-    "enforced-continuation"
+    "enforced-continuation",
+    "goopspec",
+    "cli"
   ],
-  "author": "James (opencode-goopspec)",
+  "author": "James",
   "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^0.8.2",

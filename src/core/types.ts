@@ -175,6 +175,10 @@ export interface AgentConfig {
 export interface McpConfig {
   context7?: boolean;
   exa?: boolean;
+  playwright?: boolean;
+  memory?: boolean;
+  github?: boolean;
+  sqlite?: boolean;
 }
 
 // ============================================================================
@@ -243,6 +247,7 @@ export interface OrchestratorConfig {
 export interface GoopSpecConfig {
   projectName?: string;
   enforcement?: EnforcementLevel;
+  /** @deprecated Reserved for future use. Not currently consumed at runtime. */
   constitution?: boolean;
   adlEnabled?: boolean;
   defaultModel?: string;

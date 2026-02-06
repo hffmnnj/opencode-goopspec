@@ -45,7 +45,7 @@ const MemoryCaptureConfigSchema = z.object({
   captureMessages: z.boolean().optional(),
   capturePhaseChanges: z.boolean().optional(),
   skipTools: z.array(z.string()).optional(),
-  minImportanceThreshold: z.number().min(1).max(10).optional(),
+  minImportanceThreshold: z.number().min(0).max(1).optional(),
 });
 
 const MemoryInjectionConfigSchema = z.object({
@@ -96,7 +96,6 @@ export const GoopSpecConfigSchema = z.object({
 
 export const DEFAULT_CONFIG: GoopSpecConfig = {
   enforcement: "assist" as EnforcementLevel,
-  constitution: true,
   adlEnabled: true,
   defaultModel: "anthropic/claude-sonnet-4-5",
   mcp: {

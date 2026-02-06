@@ -168,6 +168,20 @@ describe("state-manager", () => {
       expect(adl).toContain("[DECISION]");
       expect(adl).toContain("[DEVIATION]");
     });
+
+    it("should skip ADL append when adlEnabled is false", () => {
+      const manager = createStateManager(TEST_DIR, undefined, { adlEnabled: false });
+
+      manager.appendADL({
+        timestamp: new Date().toISOString(),
+        type: "decision",
+        description: "Should be skipped",
+        action: "No write",
+      });
+
+      const adl = manager.getADL();
+      expect(adl).not.toContain("Should be skipped");
+    });
   });
 
   describe("checkpoint operations", () => {

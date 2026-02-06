@@ -15,7 +15,8 @@ import type {
   HistoryEntry,
   WorkflowPhase,
   TaskMode,
-  TaskInfo
+  TaskInfo,
+  GoopSpecConfig
 } from "../../core/types.js";
 import { getProjectGoopspecDir } from "../../shared/paths.js";
 import { log, logError } from "../../shared/logger.js";
@@ -244,7 +245,8 @@ function getTodayDateString(): string {
  */
 export function createStateManager(
   projectDir: string, 
-  projectName?: string
+  projectName?: string,
+  config?: GoopSpecConfig
 ): StateManager {
   const goopspecDir = getProjectGoopspecDir(projectDir);
   const statePath = join(goopspecDir, STATE_FILENAME);
@@ -367,6 +369,10 @@ This file tracks architectural decisions, deviations, and observations made duri
   }
 
   function appendADL(entry: ADLEntry): void {
+    if (config?.adlEnabled === false) {
+      return;
+    }
+
     ensureGoopspecDir();
     
     // Ensure ADL exists

@@ -65,7 +65,12 @@ export function createAgentFromMarkdown(
   options?: AgentFactoryOptions
 ): AgentConfig {
   const fm = resource.frontmatter;
-  const agentName = (fm.name as string) || resource.name;
+  const resourceName = resource.name;
+  const agentName = (fm.name as string) || resourceName;
+  const model = options?.pluginConfig?.agents?.[resourceName]?.model
+    ?? (fm.model as string | undefined)
+    ?? options?.pluginConfig?.defaultModel
+    ?? "anthropic/claude-sonnet-4-5";
   const enableMemory = options?.enableMemoryTools ?? (options?.pluginConfig?.memory?.enabled !== false);
   
   log(`Creating agent config for: ${agentName}`, { enableMemory });
@@ -111,7 +116,7 @@ export function createAgentFromMarkdown(
     mode: (fm.mode as "primary" | "subagent" | "all") ?? "subagent",
     prompt: composedPrompt,
     description: (fm.description as string) ?? `GoopSpec ${agentName} agent`,
-    model: fm.model as string | undefined,
+    model,
     color: fm.color as string | undefined,
     temperature: fm.temperature as number | undefined,
   };

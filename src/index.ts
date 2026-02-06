@@ -85,7 +85,8 @@ const GoopSpecPlugin: Plugin = async (input) => {
     // Create state manager
     const stateManager = createStateManager(
       input.directory,
-      config.projectName || projectName
+      config.projectName || projectName,
+      config
     );
     log("State manager created");
 

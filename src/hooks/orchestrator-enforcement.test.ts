@@ -146,6 +146,48 @@ describe("orchestrator-enforcement hooks", () => {
       expect(output.status).toBe("deny");
     });
 
+    it("uses warn enforcement level from config", async () => {
+      const warnCtx = createMockPluginContext({
+        testDir: ctx.input.directory,
+        config: { enforcement: "warn" },
+      });
+      const hooks = createOrchestratorEnforcementHooks(warnCtx);
+      const output = { status: "ask" as const };
+
+      await hooks["permission.ask"](
+        {
+          tool: "edit",
+          sessionID: "warn-session",
+          path: "src/index.ts",
+          agent: "goopspec",
+        },
+        output
+      );
+
+      expect(output.status).toBe("ask");
+    });
+
+    it("uses strict enforcement level from config", async () => {
+      const strictCtx = createMockPluginContext({
+        testDir: ctx.input.directory,
+        config: { enforcement: "strict" },
+      });
+      const hooks = createOrchestratorEnforcementHooks(strictCtx);
+      const output = { status: "ask" as const };
+
+      await hooks["permission.ask"](
+        {
+          tool: "edit",
+          sessionID: "strict-session",
+          path: "src/index.ts",
+          agent: "goopspec",
+        },
+        output
+      );
+
+      expect(output.status).toBe("deny");
+    });
+
     it("allows edit on code file for non-orchestrator", async () => {
       const hooks = createOrchestratorEnforcementHooks(ctx);
       const output = { status: "ask" as const };

@@ -171,6 +171,33 @@ describe("agent-factory", () => {
     });
 
     describe("model configuration", () => {
+      it("prefers config agent model over frontmatter model", () => {
+        const resource = createMockResource({
+          name: "goop-executor",
+          type: "agent",
+          frontmatter: {
+            name: "Goop Executor",
+            mode: "subagent",
+            model: "anthropic/claude-opus-4-6",
+            description: "Model precedence test",
+          },
+          body: "Prompt",
+        });
+
+        const resolver = createMockResourceResolver();
+        const config = createAgentFromMarkdown(resource, resolver, {
+          pluginConfig: {
+            agents: {
+              "goop-executor": {
+                model: "openai/gpt-5.3-codex",
+              },
+            },
+          },
+        });
+
+        expect(config.model).toBe("openai/gpt-5.3-codex");
+      });
+
       it("uses model from frontmatter", () => {
         const resource = createMockResource({
           name: "model-agent",
@@ -189,7 +216,28 @@ describe("agent-factory", () => {
         expect(config.model).toBe("anthropic/claude-opus-4-6");
       });
 
-      it("leaves model undefined when not specified", () => {
+      it("uses config defaultModel when frontmatter model is not set", () => {
+        const resource = createMockResource({
+          name: "no-model-agent",
+          type: "agent",
+          frontmatter: {
+            mode: "subagent",
+            description: "No model",
+          },
+          body: "Prompt",
+        });
+
+        const resolver = createMockResourceResolver();
+        const config = createAgentFromMarkdown(resource, resolver, {
+          pluginConfig: {
+            defaultModel: "openai/gpt-5-mini",
+          },
+        });
+
+        expect(config.model).toBe("openai/gpt-5-mini");
+      });
+
+      it("falls back to hardcoded model when no config or frontmatter model is set", () => {
         const resource = createMockResource({
           name: "no-model-agent",
           type: "agent",
@@ -203,7 +251,7 @@ describe("agent-factory", () => {
         const resolver = createMockResourceResolver();
         const config = createAgentFromMarkdown(resource, resolver);
 
-        expect(config.model).toBeUndefined();
+        expect(config.model).toBe("anthropic/claude-sonnet-4-5");
       });
     });
 

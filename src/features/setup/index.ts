@@ -124,11 +124,14 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
   // Plan global config write
   if (input.scope === "global" || input.scope === "both") {
     const globalConfig: Record<string, unknown> = {
-      ...DEFAULT_CONFIG,
+      enforcement: DEFAULT_CONFIG.enforcement,
+      adlEnabled: DEFAULT_CONFIG.adlEnabled,
       defaultModel: input.models.default ?? DEFAULT_CONFIG.defaultModel,
       orchestrator: {
         model: input.models.orchestrator ?? "anthropic/claude-opus-4-6",
-        thinkingBudget: 32000,
+        thinkingBudget: input.thinkingBudget ?? 32000,
+        phaseGates: input.phaseGates ?? "ask",
+        waveExecution: input.waveExecution ?? "sequential",
       },
       mcp: {
         ...DEFAULT_CONFIG.mcp,
@@ -180,9 +183,11 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
     const projectConfig: Record<string, unknown> = {
       projectName: input.projectName,
       orchestrator: {
+        model: input.models.orchestrator ?? "anthropic/claude-opus-4-6",
+        thinkingBudget: input.thinkingBudget ?? 32000,
         enableAsDefault: input.enableOrchestrator ?? false,
-        phaseGates: "ask",
-        waveExecution: "sequential",
+        phaseGates: input.phaseGates ?? "ask",
+        waveExecution: input.waveExecution ?? "sequential",
       },
     };
     
@@ -948,3 +953,11 @@ export async function getSetupStatus(projectDir: string): Promise<SetupStatus> {
     agentModels,
   };
 }
+
+export {
+  AGENT_MODEL_SUGGESTIONS,
+  ALL_AGENTS,
+  type AgentModelSuggestion,
+} from "./model-suggestions.js";
+
+export { detectAllDependencies };

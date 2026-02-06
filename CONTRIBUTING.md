@@ -19,7 +19,7 @@ Clone and install dependencies:
 
 ```bash
 git clone https://github.com/hffmnnj/opencode-goopspec.git
-cd opencode-goopspec
+cd goopspec
 bun install
 ```
 
