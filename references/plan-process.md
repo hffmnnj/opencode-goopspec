@@ -334,6 +334,95 @@ Only finalize the wave after research findings are incorporated or the user expl
 
 ---
 
+## Phase 3.7: Post-Wave Review Gate
+
+Run this gate after all waves are drafted and after per-wave questioning outputs have been incorporated.
+
+### Overview
+
+After the planner generates all waves, present each wave to the user for review before finalizing the blueprint.
+
+### Approve-All Shortcut (Before Per-Wave Iteration)
+
+Offer a top-level choice first:
+
+```ts
+question({
+  questions: [{
+    header: "Plan Review",
+    question: "The blueprint has [N] waves. Would you like to review each wave individually or approve the entire plan?",
+    options: [
+      { label: "Review Each Wave", description: "Examine and approve waves one by one" },
+      { label: "Approve All (Recommended)", description: "Skip per-wave review, approve the entire plan" }
+    ],
+    multiple: false
+  }]
+})
+```
+
+If user selects `Approve All (Recommended)`, skip per-wave review and continue to Phase 4.
+
+### Per-Wave Review Protocol
+
+If user selects `Review Each Wave`, iterate every wave in order:
+
+```text
+For each wave in the blueprint:
+
+Display wave summary:
+## Wave [N]: [Name]
+**Tasks:** [count]
+**Files:** [key files]
+**Must-Haves Covered:** [list]
+
+Then use question tool:
+- header: "Wave [N] Review"
+- question: "Review Wave [N]: [Name]. How would you like to proceed?"
+- options:
+  - "Approve Wave" — Wave looks good, proceed
+  - "Request More Research" — Need deeper investigation on this wave's scope
+  - "Clarify Scope" — Want to adjust or clarify what this wave covers
+```
+
+Recommended `question` payload:
+
+```ts
+question({
+  questions: [{
+    header: "Wave [N] Review",
+    question: "Review Wave [N]: [Name]. How would you like to proceed?",
+    options: [
+      { label: "Approve Wave", description: "Wave looks good, proceed" },
+      { label: "Request More Research", description: "Need deeper investigation on this wave's scope" },
+      { label: "Clarify Scope", description: "Want to adjust or clarify what this wave covers" }
+    ],
+    multiple: false
+  }]
+})
+```
+
+### Decision Handling
+
+- `Approve Wave`
+  - Mark wave approved
+  - Continue to next wave
+
+- `Request More Research`
+  - Ask user which specific areas of the wave need investigation
+  - Dispatch `goop-researcher` and/or `goop-explorer` for the identified areas
+  - Use parallel dispatch when research and codebase-mapping work are independent
+  - Incorporate findings back into the wave definition
+  - Re-present the updated wave using the same review question until approved
+
+- `Clarify Scope`
+  - Ask follow-up clarification using `question` tool (not plain text prompt)
+  - Update wave scope/tasks/files/must-have mapping based on user feedback
+  - Re-present the updated wave using the same review question until approved
+
+Only finalize the blueprint when every reviewed wave is approved or the user selected `Approve All (Recommended)`.
+
+---
+
 ## Phase 4: Handle Response
 
 **Parse XML response from planner.**
