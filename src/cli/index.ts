@@ -142,6 +142,11 @@ export async function main(): Promise<void> {
           await runStatus();
           break;
         }
+        case "verify": {
+          const { runVerify } = await import("./commands/verify.js");
+          await runVerify();
+          break;
+        }
         default:
           console.log(pc.yellow(`Command '${parsed.command}' not yet implemented`));
           break;
