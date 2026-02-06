@@ -1,12 +1,118 @@
 {
   "$schema": "./goopspec.schema.json",
-  "_comment": "GoopSpec Configuration - Copy to .goopspec/config.json and customize",
+  "_comment": "GoopSpec Configuration - Core settings first, followed by documentation-only examples.",
 
+  "projectName": "my-awesome-app",
+  "enforcement": "warn",
+  "constitution": true,
+  "adlEnabled": true,
+  "defaultModel": "anthropic/claude-sonnet-4-5",
+
+  "agents": {
+    "_comment": "Core GoopSpecConfig agents map: each agent key maps to { model?, temperature? }.",
+    "goop-debugger": {
+      "model": "openai/gpt-5.3-codex",
+      "temperature": 0.2
+    },
+    "goop-designer": {
+      "model": "anthropic/claude-opus-4-6",
+      "temperature": 0.4
+    },
+    "goop-executor": {
+      "model": "openai/gpt-5.3-codex",
+      "temperature": 0.2
+    },
+    "goop-explorer": {
+      "model": "google/antigravity-gemini-3-flash",
+      "temperature": 0.3
+    },
+    "goop-librarian": {
+      "model": "openai/gpt-5.2",
+      "temperature": 0.2
+    },
+    "goop-orchestrator": {
+      "model": "anthropic/claude-opus-4-6",
+      "temperature": 0.1
+    },
+    "goop-planner": {
+      "model": "anthropic/claude-opus-4-6",
+      "temperature": 0.2
+    },
+    "goop-researcher": {
+      "model": "openai/gpt-5.2",
+      "temperature": 0.3
+    },
+    "goop-tester": {
+      "model": "anthropic/claude-sonnet-4-5",
+      "temperature": 0.2
+    },
+    "goop-verifier": {
+      "model": "openai/gpt-5.3-codex",
+      "temperature": 0.1
+    },
+    "goop-writer": {
+      "model": "google/antigravity-gemini-3-pro-high",
+      "temperature": 0.3
+    }
+  },
+
+  "mcp": {
+    "_comment": "Core MCP integrations from McpConfig.",
+    "context7": true,
+    "exa": true
+  },
+
+  "orchestrator": {
+    "_comment": "Core orchestrator behavior from OrchestratorConfig.",
+    "enableAsDefault": false,
+    "model": "anthropic/claude-opus-4-6",
+    "thinkingBudget": 32000,
+    "phaseGates": "ask",
+    "waveExecution": "sequential"
+  },
+
+  "memory": {
+    "_comment": "Core memory settings from MemorySystemConfig and sub-configs.",
+    "enabled": true,
+    "workerPort": 37777,
+    "capture": {
+      "enabled": true,
+      "captureToolUse": true,
+      "captureMessages": true,
+      "capturePhaseChanges": true,
+      "skipTools": ["bash"],
+      "minImportanceThreshold": 0.4
+    },
+    "injection": {
+      "enabled": true,
+      "budgetTokens": 1400,
+      "format": "structured",
+      "priorityTypes": ["decision", "observation", "note"]
+    },
+    "privacy": {
+      "enabled": true,
+      "stripPatterns": [
+        "(?:api[_-]?key|token|secret|password)\\s*[:=]\\s*[\\\"'][^\\\"'\\n]+[\\\"']",
+        "sk-[a-zA-Z0-9]{20,}"
+      ],
+      "privateTagEnabled": true,
+      "retentionDays": 90,
+      "maxMemories": 5000
+    },
+    "embeddings": {
+      "provider": "local",
+      "model": "all-MiniLM-L6-v2",
+      "dimensions": 384
+    }
+  },
+
+  "_non_core_comment": "The sections below are examples/documentation only and are not part of the core GoopSpecConfig type.",
   "version": "0.1.6",
   "project_name": "my-awesome-app",
 
+  "_legacy_models_comment": "Legacy example format (models) retained for documentation/backward-reference only; use the core agents section above.",
   "models": {
-    "_comment": "Model assignments for different agent roles. Uses provider/model format.",
+    "_comment": "Legacy model assignments format.",
     "planner": "anthropic/claude-opus-4-6",
     "executor": "anthropic/claude-sonnet-4-5",
     "verifier": "openai/gpt-5.3-codex",
@@ -15,7 +121,7 @@
     "writer": "google/antigravity-gemini-3-pro-high",
     "tester": "anthropic/claude-sonnet-4-5",
     "overrides": {
-      "_comment": "Override models for specific scenarios",
+      "_comment": "Override models for specific scenarios.",
       "security_review": "openai/gpt-5.3-codex",
       "performance_audit": "anthropic/claude-opus-4-6",
       "refactor": "anthropic/claude-sonnet-4-5",
@@ -24,11 +130,12 @@
     }
   },
 
+  "_profiles_comment": "Example workflow profiles - not part of core GoopSpecConfig.",
   "profiles": {
-    "_comment": "Pre-configured workflow profiles for common scenarios",
+    "_comment": "Pre-configured workflow profiles for common scenarios.",
 
     "quick_fix": {
-      "_comment": "Minimal overhead for small fixes",
+      "_comment": "Minimal overhead for small fixes.",
       "max_plans": 1,
       "parallel_execution": false,
       "enforced_task_continuation": false,
@@ -38,7 +145,7 @@
     },
 
     "large_project": {
-      "_comment": "Full workflow for complex multi-phase projects",
+      "_comment": "Full workflow for complex multi-phase projects.",
       "max_plans": 10,
       "parallel_execution": true,
       "parallel_max_agents": 4,
@@ -52,7 +159,7 @@
     },
 
     "refactor": {
-      "_comment": "Careful refactoring with test preservation",
+      "_comment": "Careful refactoring with test preservation.",
       "max_plans": 5,
       "parallel_execution": false,
       "enforced_task_continuation": true,
@@ -64,7 +171,7 @@
     },
 
     "security": {
-      "_comment": "Security-focused mode with audit logging",
+      "_comment": "Security-focused mode with audit logging.",
       "max_plans": 3,
       "parallel_execution": false,
       "enforced_task_continuation": true,
@@ -76,7 +183,7 @@
     },
 
     "yolo": {
-      "_comment": "Fully autonomous mode - use with caution",
+      "_comment": "Fully autonomous mode - use with caution.",
       "auto_approve": true,
       "skip_gates": true,
       "max_prompts": 0,
@@ -85,12 +192,13 @@
     }
   },
 
+  "_workflow_comment": "Example workflow settings - not part of core GoopSpecConfig.",
   "workflow": {
-    "_comment": "Core workflow settings",
+    "_comment": "Core workflow settings (documentation example).",
     "mode": "interactive",
 
     "gates": {
-      "_comment": "Confirmation gates for important actions",
+      "_comment": "Confirmation gates for important actions.",
       "confirm_destructive": true,
       "confirm_external_services": true,
       "confirm_architectural_changes": true,
@@ -98,7 +206,7 @@
     },
 
     "parallelization": {
-      "_comment": "Parallel execution settings for wave-based execution",
+      "_comment": "Parallel execution settings for wave-based execution.",
       "enabled": true,
       "plan_level": true,
       "task_level": false,
@@ -107,7 +215,7 @@
     },
 
     "research": {
-      "_comment": "Research tool integration settings",
+      "_comment": "Research tool integration settings.",
       "enabled": true,
       "auto_discovery": true,
       "context7_first": true,
@@ -116,7 +224,7 @@
     },
 
     "git": {
-      "_comment": "Git workflow settings",
+      "_comment": "Git workflow settings.",
       "commit_docs": true,
       "atomic_commits": true,
       "commit_message_style": "conventional",
@@ -124,8 +232,9 @@
     }
   },
 
+  "_enforced_task_continuation_comment": "Documentation example only - not part of core GoopSpecConfig.",
   "enforced_task_continuation": {
-    "_comment": "Relentless execution - keeps agent working until complete",
+    "_comment": "Relentless execution - keeps agent working until complete.",
     "enabled": true,
     "max_prompts": 3,
     "prompt_interval": 5,
@@ -133,16 +242,18 @@
     "final_message": "Maximum prompts reached. Manual intervention required."
   },
 
+  "_spec_enforcement_comment": "Documentation example only - use top-level enforcement for core config.",
   "spec_enforcement": {
-    "_comment": "Controls how strictly the agent follows the spec",
+    "_comment": "Controls how strictly the agent follows the spec.",
     "enabled": true,
     "strict_mode": false,
     "warn_on_deviation": true,
     "block_outside_scope": false
   },
 
+  "_checkpoints_comment": "Documentation example only - not part of core GoopSpecConfig.",
   "checkpoints": {
-    "_comment": "Checkpoint system for session recovery and state tracking",
+    "_comment": "Checkpoint system for session recovery and state tracking.",
     "enabled": true,
     "auto_save": true,
     "auto_save_interval": 10,
@@ -150,11 +261,12 @@
     "compress_old": true
   },
 
+  "_tools_comment": "Documentation example only - not part of core GoopSpecConfig.",
   "tools": {
-    "_comment": "External tool configurations",
+    "_comment": "External tool configurations.",
 
     "playwright": {
-      "_comment": "Web testing with Playwright",
+      "_comment": "Web testing with Playwright.",
       "enabled": true,
       "headless": false,
       "viewport": { "width": 1280, "height": 720 },
@@ -162,14 +274,14 @@
     },
 
     "context7": {
-      "_comment": "Documentation lookup via Context7",
+      "_comment": "Documentation lookup via Context7.",
       "enabled": true,
       "prefer_official_docs": true,
       "max_queries_per_session": 10
     },
 
     "exa": {
-      "_comment": "Web search via Exa",
+      "_comment": "Web search via Exa.",
       "enabled": true,
       "num_results": 8,
       "type": "auto",
@@ -177,8 +289,9 @@
     }
   },
 
+  "_output_comment": "Documentation example only - not part of core GoopSpecConfig.",
   "output": {
-    "_comment": "Output and display settings",
+    "_comment": "Output and display settings.",
     "ascii_art": true,
     "verbose_logging": true,
     "show_token_usage": true,
@@ -186,8 +299,9 @@
     "core_value": "Build reliable software through structured planning"
   },
 
+  "_boundaries_comment": "Documentation example only - not part of core GoopSpecConfig.",
   "boundaries": {
-    "_comment": "Three-tier boundary system: Always/Ask/Never",
+    "_comment": "Three-tier boundary system: Always/Ask/Never.",
 
     "always": [
       "Run tests before commits",
@@ -214,8 +328,9 @@
     ]
   },
 
+  "_advanced_comment": "Documentation example only - not part of core GoopSpecConfig.",
   "advanced": {
-    "_comment": "Advanced features and experimental settings",
+    "_comment": "Advanced features and experimental settings.",
 
     "self_healing": true,
     "agent_resurrection": true,
@@ -223,14 +338,14 @@
     "deviation_threshold": "normal",
 
     "context_management": {
-      "_comment": "Context window management for long sessions",
+      "_comment": "Context window management for long sessions.",
       "max_context_usage_percent": 70,
       "auto_summarize": true,
       "fresh_context_threshold": 50
     },
 
     "deviation_rules": {
-      "_comment": "Four-rule deviation system for handling unexpected issues",
+      "_comment": "Four-rule deviation system for handling unexpected issues.",
       "enabled": true,
       "strictness": "normal",
       "autoFix": ["bug", "critical", "blocker"],
