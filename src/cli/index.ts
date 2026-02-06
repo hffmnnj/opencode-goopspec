@@ -157,6 +157,11 @@ export async function main(): Promise<void> {
           await runVerify();
           break;
         }
+        case "reset": {
+          const { runReset } = await import("./commands/reset.js");
+          await runReset();
+          break;
+        }
         default:
           console.log(pc.yellow(`Command '${parsed.command}' not yet implemented`));
           break;
