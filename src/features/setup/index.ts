@@ -180,6 +180,7 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
     const projectConfig: Record<string, unknown> = {
       projectName: input.projectName,
       orchestrator: {
+        model: input.models.orchestrator ?? "anthropic/claude-opus-4-6",
         enableAsDefault: input.enableOrchestrator ?? false,
         phaseGates: "ask",
         waveExecution: "sequential",

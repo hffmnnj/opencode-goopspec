@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { readFileSync } from "fs";
+import { join } from "path";
 import {
   createGoopSetupTool,
   AGENT_MODEL_SUGGESTIONS,
@@ -269,6 +271,23 @@ describe("goop_setup tool", () => {
 
       expect(result).toContain("## Next Steps");
       expect(result).toContain("goop-status");
+    });
+
+    it("persists orchestrator model for project scope", async () => {
+      const tool = createGoopSetupTool(ctx);
+      await tool.execute({
+        action: "apply",
+        scope: "project",
+        mcpPreset: "none",
+        orchestratorModel: "openai/gpt-5.3-codex",
+      }, toolContext);
+
+      const configPath = join(toolContext.directory, ".goopspec", "config.json");
+      const savedConfig = JSON.parse(readFileSync(configPath, "utf-8")) as {
+        orchestrator?: { model?: string };
+      };
+
+      expect(savedConfig.orchestrator?.model).toBe("openai/gpt-5.3-codex");
     });
   });
 
