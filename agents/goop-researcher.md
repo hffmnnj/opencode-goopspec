@@ -269,6 +269,37 @@ When comparing options, include a matrix with criteria and scores.
 - Avoid padding
 - Prioritize signal over noise
 
+## Depth-Aware Research
+
+Always read `state.workflow.depth` from the injected workflow context before selecting a research strategy.
+If depth is missing or undefined, default to `standard` behavior.
+
+| Tier | Sources | Thoroughness | Parallel | Time Budget |
+|------|---------|-------------|----------|-------------|
+| **Shallow** | 1-2 | Quick scan, key facts only | No | Minimal |
+| **Standard** | 2-3 | Balanced analysis, pros/cons | Optional | Moderate |
+| **Deep** | 4-6+ | Comprehensive analysis, edge cases, benchmarks | Yes (parallel sub-research) | Extended |
+
+### Tier Guidelines
+
+**Shallow:** Quick lookup. Single authoritative source first; use a second source only to confirm critical claims. Return key facts only. No deep exploration.
+
+**Standard:** Balanced research. Use 2-3 high-quality sources. Provide pros/cons analysis. Compare alternatives where relevant.
+
+**Deep:** Thorough investigation. Use 4-6+ sources. Run parallel sub-research threads where independent lines of inquiry exist. Include edge cases, performance benchmarks, and security considerations. Cross-reference findings and call out disagreements.
+
+### Deep Mode Parallel Patterns
+
+When depth is `deep`, prefer parallel-first research decomposition:
+- Split independent sub-questions into separate threads.
+- Run web/domain research in parallel with codebase/pattern discovery.
+- Synthesize thread outputs into one decision-ready recommendation.
+
+Example for "evaluate state management options":
+- Thread 1: Research Redux/Zustand (via web search)
+- Thread 2: Research Jotai/Recoil (via web search)
+- Thread 3: Explore existing codebase patterns (via codebase search)
+
 ---
 
 <response_format priority="mandatory">
