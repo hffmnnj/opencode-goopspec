@@ -229,14 +229,14 @@ describe("goop_setup tool", () => {
         action: "plan",
         scope: "project",
         agentModels: {
-          "goop-orchestrator": "anthropic/claude-opus-4-5",
+          "goop-orchestrator": "anthropic/claude-opus-4-6",
           "goop-executor": "anthropic/claude-sonnet-4-5",
         },
       }, toolContext);
 
       expect(result).toContain("Agent Models");
       expect(result).toContain("goop-orchestrator");
-      expect(result).toContain("anthropic/claude-opus-4-5");
+      expect(result).toContain("anthropic/claude-opus-4-6");
     });
   });
 
@@ -328,7 +328,7 @@ describe("goop_setup tool", () => {
       const result = await tool.execute({
         action: "plan",
         scope: "project",
-        orchestratorModel: "anthropic/claude-opus-4-5",
+        orchestratorModel: "anthropic/claude-opus-4-6",
       }, toolContext);
 
       expect(result).toContain("# GoopSpec Setup Plan");

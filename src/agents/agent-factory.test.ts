@@ -177,7 +177,7 @@ describe("agent-factory", () => {
           type: "agent",
           frontmatter: {
             mode: "subagent",
-            model: "anthropic/claude-opus-4-5",
+            model: "anthropic/claude-opus-4-6",
             description: "Model test",
           },
           body: "Prompt",
@@ -186,7 +186,7 @@ describe("agent-factory", () => {
         const resolver = createMockResourceResolver();
         const config = createAgentFromMarkdown(resource, resolver);
 
-        expect(config.model).toBe("anthropic/claude-opus-4-5");
+        expect(config.model).toBe("anthropic/claude-opus-4-6");
       });
 
       it("leaves model undefined when not specified", () => {

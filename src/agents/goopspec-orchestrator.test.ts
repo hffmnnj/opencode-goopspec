@@ -49,7 +49,7 @@ describe("createGoopSpecOrchestrator", () => {
     const orchestrator = createGoopSpecOrchestrator({ resolver });
 
     expect(orchestrator.mode).toBe("primary");
-    expect(orchestrator.model).toBe("anthropic/claude-opus-4-5");
+    expect(orchestrator.model).toBe("anthropic/claude-opus-4-6");
     expect(orchestrator.thinking.type).toBe("enabled");
     expect(orchestrator.thinking.budgetTokens).toBe(32000);
     expect(orchestrator.color).toBe("#65f463");
