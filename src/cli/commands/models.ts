@@ -201,6 +201,15 @@ export async function runModels(): Promise<void> {
       agentsObject[agentName] = { model: modelId };
     }
 
+    if (updates["goop-orchestrator"]) {
+      mergedConfig.orchestrator = {
+        ...(typeof mergedConfig.orchestrator === "object" && mergedConfig.orchestrator !== null
+          ? (mergedConfig.orchestrator as Record<string, unknown>)
+          : {}),
+        model: updates["goop-orchestrator"],
+      };
+    }
+
     mergedConfig.agents = agentsObject;
     writeConfig(configPath, mergedConfig);
 
