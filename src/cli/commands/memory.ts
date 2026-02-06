@@ -179,7 +179,14 @@ export async function runMemory(): Promise<void> {
 
     if (!enableMemory) {
       const config = await loadCurrentConfig(projectDir);
-      config.memory = { enabled: false };
+      const existingMemory =
+        config.memory && typeof config.memory === "object"
+          ? (config.memory as Record<string, unknown>)
+          : {};
+      config.memory = {
+        ...existingMemory,
+        enabled: false,
+      };
       await saveConfig(projectDir, config);
       showSuccess("Memory system disabled.");
       outro("Done.");
@@ -204,10 +211,28 @@ export async function runMemory(): Promise<void> {
     handleCancel(enableDistillation);
 
     const config = await loadCurrentConfig(projectDir);
+    const existingMemory =
+      config.memory && typeof config.memory === "object"
+        ? (config.memory as Record<string, unknown>)
+        : {};
+    const existingEmbeddings =
+      existingMemory.embeddings && typeof existingMemory.embeddings === "object"
+        ? (existingMemory.embeddings as Record<string, unknown>)
+        : {};
+    const existingCapture =
+      existingMemory.capture && typeof existingMemory.capture === "object"
+        ? (existingMemory.capture as Record<string, unknown>)
+        : {};
+
     config.memory = {
+      ...existingMemory,
       enabled: true,
-      embeddings: { provider },
+      embeddings: {
+        ...existingEmbeddings,
+        provider,
+      },
       capture: {
+        ...existingCapture,
         enabled: enableDistillation,
       },
     };
