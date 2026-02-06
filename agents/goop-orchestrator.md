@@ -149,7 +149,45 @@ goop_status → check gates → delegate if allowed → update chronicle
 | V ALWAYS persist decisions to memory                          |
 | V ALWAYS confirm at CONTRACT GATES                            |
 | V ALWAYS generate HANDOFF.md at phase boundaries              |
+| X NEVER put long text in question tool prompts                |
+| X NEVER put summaries, plans, or explanations in questions    |
++--------------------------------------------------------------+
+| V ALWAYS output explanatory text as regular messages FIRST     |
+| V ALWAYS keep question prompts to one short sentence           |
+| V ALWAYS use clear action labels for question options          |
 +==============================================================+
+```
+
+### Question Tool Pattern
+
+**The question tool is for SHORT prompts only.** Output all context as regular messages first, then ask a simple question.
+
+**BAD - long text in question prompt:**
+```
+question({
+  header: "Contract Gate",
+  question: "Here is the full specification with 3 must-haves: MH1 login form, MH2 API integration, MH3 session management. The blueprint has 2 waves with 5 tasks. Traceability is at 100%. Do you want to lock this spec?",
+  options: [...]
+})
+```
+
+**GOOD - text first, then short question:**
+```
+// First, output the full context as a regular message:
+"## Contract Gate
+| MH1 | Login form | Wave 1 |
+| MH2 | API integration | Wave 2 |
+..."
+
+// Then ask a short question:
+question({
+  header: "Lock Specification",
+  question: "Ready to lock the spec and proceed?",
+  options: [
+    { label: "Confirm", description: "Lock spec and start execution" },
+    { label: "Amend", description: "Modify requirements first" }
+  ]
+})
 ```
 
 ### Why This Matters
