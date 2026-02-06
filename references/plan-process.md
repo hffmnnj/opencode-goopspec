@@ -181,6 +181,16 @@ Create specification and blueprint from discovery interview.
 - Stack: [technologies]
 - Conventions: [naming, patterns]
 
+## DEPTH SETTING
+- Read `state.workflow.depth` from `goop_state({ action: "get" })`
+- Include `depth` in planner context (default: `standard` when missing)
+- depth: [state.workflow.depth]
+
+## DEPTH-AWARE PLANNING BEHAVIOR
+- **shallow:** Generate a lean blueprint with fewer waves and minimal wave decomposition. Skip per-wave questioning. Use single-agent research only when unknowns block planning.
+- **standard:** Generate a full blueprint with clear wave decomposition. Generate per-wave questioning (3-4 questions per wave). Use balanced research dispatch (1-2 agents) for unresolved unknowns.
+- **deep:** Generate a thorough blueprint with comprehensive wave decomposition. Generate per-wave questioning (5-6 questions per wave). Dispatch parallel research agents (`goop-researcher` + `goop-explorer`) for each wave's domain and include a per-wave risk assessment.
+
 ## DISCOVERY INTERVIEW OUTPUT
 [Full content of REQUIREMENTS.md]
 
@@ -194,31 +204,39 @@ Create specification and blueprint from discovery interview.
    
    If missing critical info, return BLOCKED.
 
-2. **Create .goopspec/SPEC.md:**
+2. **Apply depth-aware planning strategy:**
+   - Use the provided `depth` to calibrate blueprint detail, research thoroughness, and questioning behavior.
+   - Keep `depth` visible in planning context so downstream tasks and summaries can explain why detail level changed.
+   - If `depth` is missing, default to `standard`.
+
+3. **Create .goopspec/SPEC.md:**
    - Transform must-haves into formal requirements (MH1, MH2, etc.)
    - Include acceptance criteria for each
    - Add traceability section (will be filled after blueprint)
    - Mark status as "Draft"
 
-3. **Create .goopspec/BLUEPRINT.md:**
+4. **Create .goopspec/BLUEPRINT.md:**
    - Design wave architecture
    - Create tasks that cover ALL must-haves
    - Add spec coverage to each task
    - Build traceability matrix
+   - Encode depth-aligned decomposition level per wave
+   - Include depth-aligned questioning expectations per wave
+   - In deep mode, include explicit parallel research dispatch instructions (`goop-researcher` + `goop-explorer`) per wave domain
 
-4. **Update .goopspec/SPEC.md:**
+5. **Update .goopspec/SPEC.md:**
    - Fill traceability matrix (must-have → tasks)
    - Verify 100% coverage
 
-5. **Initialize .goopspec/CHRONICLE.md:**
+6. **Initialize .goopspec/CHRONICLE.md:**
    - Phase: plan → ready for specify
    - Documents created with timestamps
 
-6. **Save to memory:**
+7. **Save to memory:**
    - Key architectural decisions
    - Technology choices with rationale
 
-7. **Return XML response envelope** with:
+8. **Return XML response envelope** with:
    - BLUEPRINT COMPLETE status
    - Wave summary
    - Traceability summary
