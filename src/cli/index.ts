@@ -142,6 +142,11 @@ export async function main(): Promise<void> {
           await runInit();
           break;
         }
+        case "models": {
+          const { runModels } = await import("./commands/models.js");
+          await runModels();
+          break;
+        }
         case "status": {
           const { runStatus } = await import("./commands/status.js");
           await runStatus();
