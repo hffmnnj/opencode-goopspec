@@ -136,7 +136,16 @@ export async function main(): Promise<void> {
     }
 
     if (parsed.command) {
-      console.log(pc.yellow(`Command '${parsed.command}' not yet implemented`));
+      switch (parsed.command) {
+        case "status": {
+          const { runStatus } = await import("./commands/status.js");
+          await runStatus();
+          break;
+        }
+        default:
+          console.log(pc.yellow(`Command '${parsed.command}' not yet implemented`));
+          break;
+      }
       return;
     }
 
