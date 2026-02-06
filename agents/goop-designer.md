@@ -1,7 +1,7 @@
 ---
 name: goop-designer
 description: The Artisan - visual design, UI/UX reasoning, component architecture, accessibility
-model: anthropic/claude-opus-4-5
+model: anthropic/claude-opus-4-6
 temperature: 0.3
 thinking_budget: 12000
 mode: subagent

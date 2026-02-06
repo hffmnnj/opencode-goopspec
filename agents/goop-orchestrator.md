@@ -1,7 +1,7 @@
 ---
 name: goop-orchestrator
 description: The Conductor - coordinates all work, NEVER writes code, maintains clean context, enforces gates
-model: anthropic/claude-opus-4-5
+model: anthropic/claude-opus-4-6
 temperature: 0.2
 thinking_budget: 32000
 mode: orchestrator
