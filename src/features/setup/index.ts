@@ -948,3 +948,9 @@ export async function getSetupStatus(projectDir: string): Promise<SetupStatus> {
     agentModels,
   };
 }
+
+export {
+  AGENT_MODEL_SUGGESTIONS,
+  ALL_AGENTS,
+  type AgentModelSuggestion,
+} from "./model-suggestions.js";
