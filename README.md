@@ -82,14 +82,14 @@ You verify the results and accept the work. The AI can't declare itself done —
 Add to your OpenCode config (`opencode.json`):
 
 ```json
-{ "plugins": ["opencode-goopspec"] }
+{ "plugins": ["goopspec"] }
 ```
 
 Or build from source:
 
 ```bash
 git clone https://github.com/hffmnnj/opencode-goopspec.git
-cd opencode-goopspec && bun install && bun run build
+cd goopspec && bun install && bun run build
 ```
 
 ### 2. Setup
@@ -504,7 +504,7 @@ bun run build
 ### Project Structure
 
 ```
-opencode-goopspec/
+goopspec/
 ├── agents/           # Agent markdown definitions
 ├── commands/         # Command markdown definitions
 ├── references/       # Reference documentation
