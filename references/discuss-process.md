@@ -109,6 +109,33 @@ memory_search({ query: "project preferences architecture [user's topic]", limit:
 
 Store relevant findings - use them to skip questions you already know answers to.
 
+### 1.8 Research Depth Selection
+
+Before starting the six-question interview, ask the user which research depth they want.
+
+Use `question` tool:
+- header: "Research Depth"
+- question: "How thorough should planning and research be for this work?"
+- options:
+  - "Light" — Fastest path with minimal agents and focused coverage (~1x baseline token/cost)
+  - "Standard" — Balanced depth with moderate exploration (~2x baseline token/cost)
+  - "Deep" — Most thorough with multiple parallel agents and expanded analysis (~3-5x baseline token/cost)
+
+Map the selected label to workflow depth:
+- Light -> `shallow`
+- Standard -> `standard`
+- Deep -> `deep`
+
+Persist selection in workflow state:
+```
+goop_state({ action: "set-depth", depth: "[shallow|standard|deep]" })
+```
+
+Confirm selection to the user before moving on:
+```
+Research depth selected: [Light|Standard|Deep] ([shallow|standard|deep], [~1x|~2x|~3-5x] baseline)
+```
+
 ---
 
 ## Phase 2: Discovery Interview

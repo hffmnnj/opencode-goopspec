@@ -43,6 +43,7 @@ goop_reference({ name: "discuss-process" })
 |------|---------|
 | `goop_status` | Check current phase |
 | `goop_state` | Update workflow state (NEVER edit state.json directly) |
+| `question` | Capture structured user choices (including depth selection) |
 | `memory_search` | Find prior context |
 | `memory_save` | Persist interview results |
 | `goop_reference` | Load detailed process |
@@ -55,6 +56,8 @@ goop_reference({ name: "discuss-process" })
 ## Success Criteria
 
 - [ ] Existing project documents archived (if present)
+- [ ] Research depth selected (Light/Standard/Deep) before interview begins
+- [ ] Depth persisted via `goop_state({ action: "set-depth", depth: "[shallow|standard|deep]" })`
 - [ ] All six questions answered with specifics
 - [ ] At least 1 must-have, 1 out-of-scope, 1 risk defined
 - [ ] REQUIREMENTS.md created
