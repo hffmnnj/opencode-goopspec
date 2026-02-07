@@ -183,7 +183,7 @@ export function getMcpState(config: ConfigJson): McpConfig {
 }
 
 export function getSearchProvider(config: ConfigJson): "brave" | "exa" {
-  const exaEnabled = config.mcp?.exa ?? false;
+  const exaEnabled = getMcpState(config).exa ?? false;
   return exaEnabled ? "exa" : "brave";
 }
 

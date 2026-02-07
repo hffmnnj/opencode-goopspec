@@ -94,14 +94,15 @@ describe("getSearchProvider", () => {
     expect(getSearchProvider({ mcp: { exa: false } })).toBe("brave");
   });
 
-  it("returns 'brave' when exa is undefined", () => {
+  it("returns 'exa' when exa is undefined (default from DEFAULT_CONFIG)", () => {
     const config: GoopSpecConfig = {
       mcp: {
         context7: true,
       },
     };
 
-    expect(getSearchProvider(config)).toBe("brave");
+    // DEFAULT_CONFIG.mcp.exa is true, so undefined exa resolves to exa
+    expect(getSearchProvider(config)).toBe("exa");
   });
 });
 
