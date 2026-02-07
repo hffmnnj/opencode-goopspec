@@ -54,8 +54,18 @@ export class VectorStorage {
 
       this.initialized = true;
     } catch (error) {
-      memError("[Memory] Failed to initialize vector storage:", error);
-      // Continue without vector support - FTS5 will still work
+      const platformInfo = `${process.platform} ${process.arch}`;
+      const windowsExpectation =
+        process.platform === "win32"
+          ? " This is expected when the sqlite-vec native binary is not available on Windows."
+          : "";
+
+      memError(
+        `[Memory] sqlite-vec extension failed to load on ${platformInfo}. Vector search disabled - using keyword search (FTS5) instead.${windowsExpectation}`,
+        error
+      );
+
+      // Continue without vector support - FTS5 keyword search fallback will still work
       this.initialized = false;
     }
   }
