@@ -3,6 +3,8 @@
  */
 
 import { describe, it, expect } from "bun:test";
+import { tmpdir } from "os";
+import { join } from "path";
 import { 
   loadPluginConfig, 
   validateConfig, 
@@ -90,7 +92,7 @@ describe("config", () => {
   describe("loadPluginConfig", () => {
     it("should return default config when no files exist", () => {
       // Use a non-existent directory
-      const config = loadPluginConfig("/tmp/non-existent-project-12345");
+      const config = loadPluginConfig(join(tmpdir(), "non-existent-project-12345"));
       
       // Should have defaults
       expect(config.enforcement).toBe("assist");

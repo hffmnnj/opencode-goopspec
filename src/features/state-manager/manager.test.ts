@@ -4,13 +4,14 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, rmSync, existsSync, readFileSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 import { createStateManager, initializeGoopspec } from "./manager";
 import { createSession } from "../session/manager.js";
 import type { ADLEntry, HistoryEntry } from "../../core/types";
 
 // Use a temp directory for tests
-const TEST_DIR = "/tmp/goopspec-test-" + Date.now();
+const TEST_DIR = join(tmpdir(), `goopspec-test-${Date.now()}`);
 
 describe("state-manager", () => {
   beforeEach(() => {
