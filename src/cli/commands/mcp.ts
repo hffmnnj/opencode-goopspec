@@ -134,7 +134,7 @@ type ConfigJson = GoopSpecConfig;
 type ToggleableServerKey = keyof McpConfig;
 type MemoryProvider = "local" | "openai" | "ollama";
 
-const TOGGLEABLE_SERVER_KEYS: readonly ToggleableServerKey[] = [
+export const TOGGLEABLE_SERVER_KEYS: readonly ToggleableServerKey[] = [
   "context7",
   "exa",
   "playwright",
@@ -175,23 +175,23 @@ function resolveConfigPath(env: Awaited<ReturnType<typeof detectEnvironment>>): 
   return null;
 }
 
-function getMcpState(config: ConfigJson): McpConfig {
+export function getMcpState(config: ConfigJson): McpConfig {
   return {
     ...DEFAULT_CONFIG.mcp,
     ...(config.mcp ?? {}),
   };
 }
 
-function getSearchProvider(config: ConfigJson): "brave" | "exa" {
-  const exaEnabled = getMcpState(config).exa ?? false;
+export function getSearchProvider(config: ConfigJson): "brave" | "exa" {
+  const exaEnabled = config.mcp?.exa ?? false;
   return exaEnabled ? "exa" : "brave";
 }
 
-function getMemoryProvider(config: ConfigJson): MemoryProvider {
+export function getMemoryProvider(config: ConfigJson): MemoryProvider {
   return config.memory?.embeddings?.provider ?? "local";
 }
 
-function isServerEnabled(config: ConfigJson, server: McpServerInfo): boolean {
+export function isServerEnabled(config: ConfigJson, server: McpServerInfo): boolean {
   if (server.exclusionGroup === "search-provider") {
     return server.name === "exa" ? getSearchProvider(config) === "exa" : getSearchProvider(config) === "brave";
   }
@@ -219,7 +219,7 @@ function getServerRows(config: ConfigJson): string[][] {
   });
 }
 
-function toggleServer(config: ConfigJson, key: ToggleableServerKey): void {
+export function toggleServer(config: ConfigJson, key: ToggleableServerKey): void {
   const nextMcp: McpConfig = {
     ...getMcpState(config),
     [key]: !(getMcpState(config)[key] ?? false),
@@ -227,14 +227,14 @@ function toggleServer(config: ConfigJson, key: ToggleableServerKey): void {
   config.mcp = nextMcp;
 }
 
-function setSearchProvider(config: ConfigJson, provider: "brave" | "exa"): void {
+export function setSearchProvider(config: ConfigJson, provider: "brave" | "exa"): void {
   config.mcp = {
     ...getMcpState(config),
     exa: provider === "exa",
   };
 }
 
-function setMemoryProvider(config: ConfigJson, provider: MemoryProvider): void {
+export function setMemoryProvider(config: ConfigJson, provider: MemoryProvider): void {
   const existingMemory = config.memory ?? {};
   config.memory = {
     ...existingMemory,
