@@ -8,24 +8,11 @@ import {
 } from "fs";
 import { join } from "path";
 import { logError } from "../../shared/logger.js";
+import type { SessionIndex, SessionInfo } from "./types.js";
+import { SESSION_ID_PATTERN } from "./types.js";
 
-const SESSION_ID_PATTERN = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const SESSION_ID_MIN_LENGTH = 2;
 const SESSION_ID_MAX_LENGTH = 50;
-
-export interface SessionInfo {
-  id: string;
-  description?: string;
-  phase: string;
-  mode: string;
-  lastActivity: string;
-  createdAt: string;
-}
-
-export interface SessionIndex {
-  sessions: SessionInfo[];
-  lastUpdated: string;
-}
 
 function getSessionsRoot(projectDir: string): string {
   return join(projectDir, ".goopspec", "sessions");

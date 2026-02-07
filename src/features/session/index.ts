@@ -5,6 +5,13 @@ export {
   deleteSession,
   getSessionIndex,
   updateSessionIndex,
-  type SessionInfo,
-  type SessionIndex,
 } from "./manager.js";
+
+export {
+  SESSION_ID_PATTERN,
+  SHARED_RESOURCES,
+  SESSION_SCOPED_FILES,
+  validateSessionId,
+} from "./types.js";
+
+export type { SessionInfo, SessionIndex } from "./types.js";

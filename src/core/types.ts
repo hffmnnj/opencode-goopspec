@@ -85,9 +85,9 @@ export type WorkflowDepth = "shallow" | "standard" | "deep";
 
 export interface SessionInfo {
   id: string;
-  description: string;
-  phase: WorkflowPhase;
-  mode: TaskMode;
+  description?: string;
+  phase: string;
+  mode: string;
   lastActivity: string;
   createdAt: string;
 }
