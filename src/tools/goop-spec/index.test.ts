@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, writeFileSync, rmSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 import { createGoopSpecTool } from "./index.js";
 import {
@@ -19,7 +20,7 @@ describe("createGoopSpecTool", () => {
   let goopspecDir: string;
 
   beforeEach(() => {
-    testDir = `/tmp/goop-spec-test-${Date.now()}`;
+    testDir = join(tmpdir(), `goop-spec-test-${Date.now()}`);
     goopspecDir = join(testDir, ".goopspec");
     mkdirSync(goopspecDir, { recursive: true });
     mkdirSync(join(goopspecDir, "phases"), { recursive: true });
