@@ -466,18 +466,21 @@ export const DEFAULT_TEST_CONFIG: GoopSpecConfig = {
   defaultModel: "anthropic/claude-sonnet-4-5",
 };
 
-/**
- * Create a mock PluginContext
- * @param overrides - Optional overrides for specific parts of the context
- */
-export function createMockPluginContext(overrides: {
+export interface MockPluginContextOptions {
   testDir?: string;
   config?: Partial<GoopSpecConfig>;
   state?: Partial<GoopState>;
   resources?: ResolvedResource[];
   memories?: Memory[];
   includeMemory?: boolean;
-} = {}): PluginContext {
+  sessionId?: string;
+}
+
+/**
+ * Create a mock PluginContext
+ * @param overrides - Optional overrides for specific parts of the context
+ */
+export function createMockPluginContext(overrides: MockPluginContextOptions = {}): PluginContext {
   const testDir = overrides.testDir || createTestDir();
   
   const input: MinimalPluginInput = {
@@ -498,6 +501,7 @@ export function createMockPluginContext(overrides: {
     config,
     resolver: createMockResourceResolver(overrides.resources || []),
     stateManager: createMockStateManager(overrides.state || {}),
+    sessionId: overrides.sessionId,
   };
   
   if (overrides.includeMemory) {
@@ -505,6 +509,14 @@ export function createMockPluginContext(overrides: {
   }
   
   return ctx;
+}
+
+export function createMockSessionContext(options: MockPluginContextOptions = {}): PluginContext {
+  const sessionId = options.sessionId || "test-session";
+  return createMockPluginContext({
+    ...options,
+    sessionId,
+  });
 }
 
 // ============================================================================
