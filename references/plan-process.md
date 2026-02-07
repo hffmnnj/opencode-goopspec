@@ -580,4 +580,4 @@ Orchestrator:
 
 ---
 
-*Planning Process v0.2.1*
+*Planning Process*
