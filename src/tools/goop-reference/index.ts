@@ -10,8 +10,14 @@
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, ResolvedResource, ToolContext } from "../../core/types.js";
+import { GOOPSPEC_VERSION } from "../../core/version.js";
 
 type ReferenceCategory = "reference" | "template";
+
+function appendVersionFooter(content: string): string {
+  const trimmedContent = content.trimEnd();
+  return `${trimmedContent}\n\n*GoopSpec v${GOOPSPEC_VERSION}*`;
+}
 
 /**
  * Format resource info for listing
@@ -131,7 +137,7 @@ Use \`section\` to extract a specific section from the document.`,
         lines.push("Use `goop_reference({ name: \"resource-name\" })` to load content.");
         lines.push("Use `goop_reference({ name: \"resource-name\", section: \"Section Name\" })` to extract a specific section.");
         
-        return lines.join("\n");
+        return appendVersionFooter(lines.join("\n"));
       }
       
       // Load specific resource
@@ -170,15 +176,15 @@ Use \`section\` to extract a specific section from the document.`,
       if (args.section) {
         const sectionContent = getSection(resource, args.section);
         if (sectionContent) {
-          return [
-            `# ${resource.name} - ${args.section}`,
-            "",
-            `*Extracted from ${foundType}: ${resource.name}*`,
-            "",
-            "---",
-            "",
-            sectionContent,
-          ].join("\n");
+            return appendVersionFooter([
+              `# ${resource.name} - ${args.section}`,
+              "",
+              `*Extracted from ${foundType}: ${resource.name}*`,
+              "",
+              "---",
+              "",
+              sectionContent,
+            ].join("\n"));
         } else {
           return [
             `Section "${args.section}" not found in ${resource.name}.`,
@@ -203,13 +209,11 @@ Use \`section\` to extract a specific section from the document.`,
         lines.push(`**Category:** ${resource.frontmatter.category}`, "");
       }
       
-      if (resource.frontmatter.version) {
-        lines.push(`**Version:** ${resource.frontmatter.version}`, "");
-      }
+      lines.push(`**Version:** ${GOOPSPEC_VERSION}`, "");
       
       lines.push("---", "", resource.body);
       
-      return lines.join("\n");
+      return appendVersionFooter(lines.join("\n"));
     },
   });
 }

@@ -141,6 +141,17 @@ function formatPlan(plan: SetupPlan): string {
     lines.push(`- Project name: ${plan.projectName ?? "unnamed"}`);
     lines.push("");
   }
+
+  if (plan.searchProvider) {
+    lines.push("## Search Provider");
+    lines.push(`- Provider: ${plan.searchProvider === "brave" ? "Brave Search" : "Exa"}`);
+    if (plan.searchProvider === "brave") {
+      lines.push("- API key guidance: Set BRAVE_API_KEY environment variable");
+    } else {
+      lines.push("- API key guidance: Set EXA_API_KEY environment variable or configure Exa MCP server");
+    }
+    lines.push("");
+  }
   
   if (plan.dirsToCreate && plan.dirsToCreate.length > 0) {
     lines.push("## Directories to Create");
@@ -189,7 +200,7 @@ function formatPlan(plan: SetupPlan): string {
 /**
  * Format result for display
  */
-function formatResult(result: SetupResult): string {
+function formatResult(result: SetupResult, searchProvider?: "exa" | "brave"): string {
   const lines = ["# GoopSpec Setup Result", ""];
   
   if (result.success) {
@@ -221,6 +232,17 @@ function formatResult(result: SetupResult): string {
   if (result.errors.length > 0) {
     lines.push("## Errors");
     lines.push(...result.errors.map(e => `- ❌ ${e}`));
+    lines.push("");
+  }
+
+  if (searchProvider) {
+    lines.push("## Search Provider");
+    lines.push(`- Provider: ${searchProvider === "brave" ? "Brave Search" : "Exa"}`);
+    if (searchProvider === "brave") {
+      lines.push("- API key guidance: Set BRAVE_API_KEY environment variable");
+    } else {
+      lines.push("- API key guidance: Set EXA_API_KEY environment variable or configure Exa MCP server");
+    }
     lines.push("");
   }
   
@@ -304,7 +326,7 @@ function formatMemoryStatus(memorySetup: MemorySetupResult): string {
 /**
  * Format init result for display
  */
-function formatInitResult(result: InitResult): string {
+function formatInitResult(result: InitResult, searchProvider?: "exa" | "brave"): string {
   const lines = ["# GoopSpec Initialization Result", ""];
   
   if (result.success) {
@@ -324,6 +346,17 @@ function formatInitResult(result: InitResult): string {
   if (result.configsWritten.length > 0) {
     lines.push("## Configurations Written");
     lines.push(...result.configsWritten.map(c => `- ${c}`));
+    lines.push("");
+  }
+
+  if (searchProvider) {
+    lines.push("## Search Provider");
+    lines.push(`- Provider: ${searchProvider === "brave" ? "Brave Search" : "Exa"}`);
+    if (searchProvider === "brave") {
+      lines.push("- API key guidance: Set BRAVE_API_KEY environment variable");
+    } else {
+      lines.push("- API key guidance: Set EXA_API_KEY environment variable or configure Exa MCP server");
+    }
     lines.push("");
   }
   
@@ -477,6 +510,8 @@ function formatStatus(status: SetupStatus): string {
   if (status.mcps.missing.length > 0) {
     lines.push(`- Recommended: ${status.mcps.missing.join(", ")}`);
   }
+
+  lines.push(`- Search provider: ${status.searchProvider === "brave" ? "Brave Search" : "Exa"}`);
   
   if (Object.keys(status.agentModels).length > 0) {
     lines.push("");
@@ -519,6 +554,7 @@ export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
       agentModels: tool.schema.record(tool.schema.string(), tool.schema.string()).optional(),
       // MCP options
       mcpPreset: tool.schema.enum(["core", "recommended", "none"]).optional(),
+      searchProvider: tool.schema.enum(["exa", "brave"]).optional(),
       // Orchestrator options
       enableOrchestrator: tool.schema.boolean().optional(),
       // Memory options
@@ -610,6 +646,7 @@ export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
             default: args.defaultModel,
           },
           mcpPreset: args.mcpPreset ?? "recommended",
+          searchProvider: args.searchProvider ?? "exa",
           enableOrchestrator: args.enableOrchestrator,
           agentModels: args.agentModels,
           memory: memoryConfig,
@@ -633,7 +670,7 @@ export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
           
           // Execute init
           const result = await applyInit(projectDir, plan);
-          return formatInitResult(result);
+          return formatInitResult(result, plan.searchProvider);
         }
         
         // ====================================================================
@@ -662,7 +699,7 @@ export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
           }
           
           const result = await applySetup(plan);
-          return formatResult(result);
+          return formatResult(result, plan.searchProvider);
         }
         
         return `Unknown action: ${args.action}`;

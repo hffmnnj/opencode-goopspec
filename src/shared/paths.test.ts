@@ -3,6 +3,8 @@
  */
 
 import { describe, it, expect } from "bun:test";
+import { mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
 import {
   getPackageRoot,
   isDevMode,
@@ -10,10 +12,14 @@ import {
   getGlobalConfigDir,
   getBundledResourceDir,
   getProjectResourceDir,
+  getSessionDir,
+  getSessionGoopspecPath,
+  getSharedResourcePath,
+  ensureSessionDir,
   pathExists,
   joinPath,
   resolvePath,
-} from "./paths";
+} from "./paths.js";
 
 describe("paths", () => {
   describe("getPackageRoot", () => {
@@ -93,6 +99,95 @@ describe("paths", () => {
     it("should resolve relative paths", () => {
       const result = resolvePath("/home/user", "..", "other");
       expect(result).toBe("/home/other");
+    });
+  });
+
+  describe("getSessionDir", () => {
+    it("should return session directory under .goopspec/sessions", () => {
+      const dir = getSessionDir("proj", "feat-auth");
+      expect(dir).toBe(joinPath("proj", ".goopspec", "sessions", "feat-auth"));
+    });
+
+    it("should return sessions root for empty session id", () => {
+      const dir = getSessionDir("proj", "");
+      expect(dir).toBe(joinPath("proj", ".goopspec", "sessions"));
+    });
+
+    it("should handle missing args", () => {
+      const dir = getSessionDir();
+      expect(dir).toBe(joinPath(".goopspec", "sessions"));
+    });
+  });
+
+  describe("getSessionGoopspecPath", () => {
+    it("should route to session path when session id provided", () => {
+      const path = getSessionGoopspecPath("proj", "state.json", "feat-auth");
+      expect(path).toBe(joinPath("proj", ".goopspec", "sessions", "feat-auth", "state.json"));
+    });
+
+    it("should route to root path when session id is omitted", () => {
+      const path = getSessionGoopspecPath("proj", "state.json");
+      expect(path).toBe(joinPath("proj", ".goopspec", "state.json"));
+    });
+
+    it("should keep shared resources at root even with session id", () => {
+      const memoryPath = getSessionGoopspecPath("proj", "memory.db", "feat-auth");
+      const archivePath = getSessionGoopspecPath("proj", "archive/snapshot.json", "feat-auth");
+
+      expect(memoryPath).toBe(joinPath("proj", ".goopspec", "memory.db"));
+      expect(archivePath).toBe(joinPath("proj", ".goopspec", "archive", "snapshot.json"));
+    });
+
+    it("should handle empty and missing args", () => {
+      const empty = getSessionGoopspecPath("", "", "");
+      const missing = getSessionGoopspecPath();
+
+      expect(empty).toBe(joinPath(".goopspec"));
+      expect(missing).toBe(joinPath(".goopspec"));
+    });
+  });
+
+  describe("getSharedResourcePath", () => {
+    it("should always route to root .goopspec path", () => {
+      const path = getSharedResourcePath("proj", "memory.db");
+      expect(path).toBe(joinPath("proj", ".goopspec", "memory.db"));
+    });
+
+    it("should handle empty and missing args", () => {
+      const empty = getSharedResourcePath("", "");
+      const missing = getSharedResourcePath();
+
+      expect(empty).toBe(joinPath(".goopspec"));
+      expect(missing).toBe(joinPath(".goopspec"));
+    });
+  });
+
+  describe("ensureSessionDir", () => {
+    it("should create session directory and subdirectories", async () => {
+      const projectDir = mkdtempSync(joinPath(tmpdir(), "goopspec-paths-"));
+
+      try {
+        await ensureSessionDir(projectDir, "feat-auth");
+
+        expect(pathExists(joinPath(projectDir, ".goopspec", "sessions", "feat-auth"))).toBe(true);
+        expect(pathExists(joinPath(projectDir, ".goopspec", "sessions", "feat-auth", "checkpoints"))).toBe(true);
+        expect(pathExists(joinPath(projectDir, ".goopspec", "sessions", "feat-auth", "history"))).toBe(true);
+      } finally {
+        rmSync(projectDir, { recursive: true, force: true });
+      }
+    });
+
+    it("should no-op for empty and missing session ids", async () => {
+      const projectDir = mkdtempSync(joinPath(tmpdir(), "goopspec-paths-"));
+
+      try {
+        await ensureSessionDir(projectDir, "");
+        await ensureSessionDir(projectDir);
+
+        expect(pathExists(joinPath(projectDir, ".goopspec", "sessions"))).toBe(false);
+      } finally {
+        rmSync(projectDir, { recursive: true, force: true });
+      }
     });
   });
 });

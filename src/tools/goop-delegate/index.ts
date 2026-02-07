@@ -6,7 +6,13 @@
  */
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
-import type { PluginContext, AgentDefinition, ToolContext, ResolvedResource } from "../../core/types.js";
+import type {
+  PluginContext,
+  AgentDefinition,
+  ToolContext,
+  ResolvedResource,
+  SearchProvider,
+} from "../../core/types.js";
 import {
   generateTeamAwarenessSection,
   type TeamAwarenessContext,
@@ -22,6 +28,7 @@ import {
   type ConflictInfo,
 } from "../../features/team/conflict.js";
 import type { AgentRegistration } from "../../features/team/types.js";
+import { getSessionGoopspecPath } from "../../shared/paths.js";
 
 function normalizeReferencePath(name: string): string {
   return name.trim().replace(/\\/g, "/").replace(/^\.\/?/, "");
@@ -92,6 +99,66 @@ function mergeTeamContexts(
 
   const mergedSiblings = Array.from(siblings.values());
   return mergedSiblings.length > 0 ? { siblings: mergedSiblings } : {};
+}
+
+interface SearchProviderSubstitution {
+  toolMap: Readonly<Record<string, string>>;
+  promptReplacements: ReadonlyArray<{ pattern: RegExp; replacement: string }>;
+}
+
+const SEARCH_PROVIDER_SUBSTITUTIONS: Record<SearchProvider, SearchProviderSubstitution> = {
+  exa: {
+    toolMap: {},
+    promptReplacements: [],
+  },
+  brave: {
+    toolMap: {
+      web_search_exa: "brave_web_search",
+      company_research_exa: "brave_web_search",
+      get_code_context_exa: "brave_web_search",
+    },
+    promptReplacements: [{ pattern: /\bExa\b/g, replacement: "Brave Search" }],
+  },
+};
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replaceMappedTokens(input: string, toolMap: Readonly<Record<string, string>>): string {
+  let output = input;
+
+  for (const [from, to] of Object.entries(toolMap)) {
+    const pattern = new RegExp(`\\b${escapeRegExp(from)}\\b`, "g");
+    output = output.replace(pattern, to);
+  }
+
+  return output;
+}
+
+function applySearchProviderSubstitution(
+  agentDef: AgentDefinition,
+  searchProvider: SearchProvider
+): AgentDefinition {
+  if (searchProvider === "exa") {
+    return agentDef;
+  }
+
+  const substitution = SEARCH_PROVIDER_SUBSTITUTIONS[searchProvider];
+  const substitutedTools = Array.from(
+    new Set(agentDef.tools.map(toolName => substitution.toolMap[toolName] ?? toolName))
+  );
+
+  let substitutedPrompt = replaceMappedTokens(agentDef.prompt, substitution.toolMap);
+  for (const { pattern, replacement } of substitution.promptReplacements) {
+    substitutedPrompt = substitutedPrompt.replace(pattern, replacement);
+  }
+
+  return {
+    ...agentDef,
+    tools: substitutedTools,
+    prompt: substitutedPrompt,
+  };
 }
 
 function normalizeFileReference(value: string): string | null {
@@ -196,9 +263,17 @@ function buildAgentPrompt(
   agentDef: AgentDefinition,
   userPrompt: string,
   additionalContext?: string,
-  teamContext?: TeamAwarenessContext
+   teamContext?: TeamAwarenessContext,
+   sessionId?: string,
 ): string {
   const sections: string[] = [];
+  const scopedSessionId = typeof sessionId === "string" && sessionId.trim().length > 0
+    ? sessionId.trim()
+    : undefined;
+  const specPath = getSessionGoopspecPath("", "SPEC.md", scopedSessionId).replace(/\\/g, "/");
+  const blueprintPath = getSessionGoopspecPath("", "BLUEPRINT.md", scopedSessionId).replace(/\\/g, "/");
+  const chroniclePath = getSessionGoopspecPath("", "CHRONICLE.md", scopedSessionId).replace(/\\/g, "/");
+  const researchPath = getSessionGoopspecPath("", "RESEARCH.md", scopedSessionId).replace(/\\/g, "/");
   
   // Agent identity
   sections.push(`# Agent: ${agentDef.name}`);
@@ -208,10 +283,16 @@ function buildAgentPrompt(
   
   // Planning file paths
   sections.push("## Planning Files (Read These First)\n");
-  sections.push("- SPEC.md: `.goopspec/SPEC.md` - Specification contract");
-  sections.push("- BLUEPRINT.md: `.goopspec/BLUEPRINT.md` - Execution plan");
-  sections.push("- CHRONICLE.md: `.goopspec/CHRONICLE.md` - Progress log");
-  sections.push("- RESEARCH.md: `.goopspec/RESEARCH.md` - Research findings");
+  sections.push(`- SPEC.md: \`${specPath}\` - Specification contract`);
+  sections.push(`- BLUEPRINT.md: \`${blueprintPath}\` - Execution plan`);
+  sections.push(`- CHRONICLE.md: \`${chroniclePath}\` - Progress log`);
+  sections.push(`- RESEARCH.md: \`${researchPath}\` - Research findings`);
+  if (scopedSessionId) {
+    sections.push("");
+    sections.push("## Session Context\n");
+    sections.push(`- sessionId: \`${scopedSessionId}\``);
+    sections.push(`- Session root: \`${getSessionGoopspecPath("", "", scopedSessionId).replace(/\\/g, "/")}\``);
+  }
   sections.push("");
   
   // Load and inject skills
@@ -273,6 +354,7 @@ function inferCategory(agentName: string): string {
     "goop-explorer": "explore",
     "goop-librarian": "search",
     "goop-verifier": "verify",
+    "goop-creative": "creative",
     "goop-debugger": "debug",
     "goop-designer": "visual",
     "goop-tester": "test",
@@ -292,6 +374,7 @@ function resolveSubagentType(agentDef: AgentDefinition, available: string[]): st
     "goop-planner": "general",
     "goop-executor": "general",
     "goop-verifier": "general",
+    "goop-creative": "general",
     "goop-debugger": "general",
     "goop-designer": "general",
     "goop-tester": "general",
@@ -338,6 +421,7 @@ function formatTaskDelegation(
   subagentType: string,
   availableSubagents: string[],
   teamContext: TeamAwarenessContext,
+  sessionId: string | undefined,
   conflicts: ConflictInfo[] = [],
   conflictWarnings: string[] = []
 ): string {
@@ -377,6 +461,7 @@ function formatTaskDelegation(
     userPrompt: userPrompt,
     composedPrompt: enrichedPrompt,
     team_context: teamContext,
+    ...(sessionId ? { session_id: sessionId } : {}),
     conflicts: conflicts,
     conflict_warnings: conflictWarnings,
   };
@@ -490,7 +575,7 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       const defaultModel = config.defaultModel;
       
       // Build agent definition
-      const agentDef: AgentDefinition = {
+      const rawAgentDef: AgentDefinition = {
         name: agentResource.frontmatter.name as string || agentResource.name,
         description: agentResource.frontmatter.description as string || "",
         // Use config model if available, then frontmatter, then configured default, then hardcoded default
@@ -506,6 +591,9 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
         references: (agentResource.frontmatter.references as string[]) || [],
         prompt: agentResource.body,
       };
+
+      const searchProvider: SearchProvider = ctx.config.mcp?.searchProvider ?? "exa";
+      const agentDef = applySearchProviderSubstitution(rawAgentDef, searchProvider);
       
       const teamContext = parseTeamContext(args.team_context);
       const agentId = generateAgentId();
@@ -553,13 +641,23 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       }
 
       const mergedTeamContext = mergeTeamContexts(teamContext, autoTeamContext);
+      const activeSessionId = typeof ctx.sessionId === "string" && ctx.sessionId.trim().length > 0
+        ? ctx.sessionId.trim()
+        : undefined;
       const conflictContext = conflictWarnings.length > 0
         ? ["## File Conflict Warnings", "", ...conflictWarnings].join("\n")
         : "";
       const combinedContext = [args.context, conflictContext].filter(Boolean).join("\n\n");
 
       // Build composed prompt (used as system content)
-      const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, combinedContext, mergedTeamContext);
+      const composedPrompt = buildAgentPrompt(
+        ctx,
+        agentDef,
+        args.prompt,
+        combinedContext,
+        mergedTeamContext,
+        activeSessionId,
+      );
       
       const client = ctx.input.client as OpenCodeClient;
       const availableSubagents = await fetchAvailableAgents(client);
@@ -590,6 +688,7 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
         subagentType,
         availableSubagents,
         mergedTeamContext,
+        activeSessionId,
         conflicts,
         conflictWarnings
       );

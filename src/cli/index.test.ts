@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
 
+import { GOOPSPEC_VERSION } from "../core/version.js";
 import { parseArgs, showHelp, showVersion, suggestCommand } from "./index.js";
 
 describe("CLI argument parsing", () => {
@@ -81,6 +82,6 @@ describe("output helpers", () => {
 
     showVersion();
 
-    expect(logSpy).toHaveBeenCalledWith("goopspec v0.2.0");
+    expect(logSpy).toHaveBeenCalledWith(`goopspec v${GOOPSPEC_VERSION}`);
   });
 });

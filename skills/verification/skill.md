@@ -7,7 +7,6 @@ triggers:
   - check
   - validate
   - audit
-version: 0.2.1
 requires:
   - goop-core
 ---

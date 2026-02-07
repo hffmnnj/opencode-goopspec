@@ -6,7 +6,7 @@
  */
 
 // Note: MemorySystemConfig is in core/types.ts but we define our own setup-specific input type
-import type { PhaseGateMode, WaveExecutionMode } from "../../core/types.js";
+import type { PhaseGateMode, SearchProvider, WaveExecutionMode } from "../../core/types.js";
 
 // ============================================================================
 // Action Types
@@ -76,6 +76,8 @@ export interface SetupInput {
   };
   /** MCP preset selection */
   mcpPreset: "core" | "recommended" | "none";
+  /** Search MCP provider */
+  searchProvider?: SearchProvider;
   /** Custom MCP selection (if preset is "custom") */
   mcpSelection?: {
     context7?: boolean;
@@ -153,6 +155,8 @@ export interface SetupPlan {
   projectName?: string;
   /** Quick mode - skip prompts */
   quick?: boolean;
+  /** Search MCP provider */
+  searchProvider?: SearchProvider;
 }
 
 /**
@@ -357,6 +361,8 @@ export interface SetupStatus {
     installed: string[];
     missing: string[];
   };
+  /** Search MCP provider */
+  searchProvider?: SearchProvider;
   /** Agent models configured */
   agentModels: Record<string, string>;
 }

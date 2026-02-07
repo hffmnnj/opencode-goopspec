@@ -11,6 +11,16 @@
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, CommandDefinition, ToolContext } from "../../core/types.js";
 import { log } from "../../shared/logger.js";
+import { createSession, resolveSession, setSession } from "../../features/session/index.js";
+
+function parseCommandInput(input: string): { name: string; args: string } {
+  const normalized = input.trim().replace(/^\//, "");
+  const [name = "", ...rest] = normalized.split(/\s+/);
+  return {
+    name: name.toLowerCase(),
+    args: rest.join(" ").trim(),
+  };
+}
 
 /**
  * Build description with available commands
@@ -52,9 +62,11 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
     },
     async execute(args, _context: ToolContext): Promise<string> {
       const commands = ctx.resolver.resolveAll("command");
-      
-      // Normalize command name
-      const cmdName = args.command.replace(/^\//, "").toLowerCase();
+      const parsedInput = parseCommandInput(args.command);
+      const cmdName = parsedInput.name;
+      const cmdArgs = parsedInput.args;
+      const requestedSessionName = cmdName === "goop-discuss" && cmdArgs ? cmdArgs.split(/\s+/)[0] : undefined;
+      const sessionOperationNotes: string[] = [];
       
       // Find matching command
       const command = commands.find(
@@ -74,6 +86,51 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
         
         const available = commands.map(c => `/${c.name}`).join(", ");
         return `Command "/${cmdName}" not found.\n\nAvailable commands: ${available}`;
+      }
+
+      if (cmdName === "goop-discuss" && requestedSessionName) {
+        try {
+          createSession(ctx.input.directory, requestedSessionName);
+          setSession(ctx, requestedSessionName);
+          sessionOperationNotes.push(`- Created and bound session: ${requestedSessionName}`);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          if (message.includes("already exists") || message.includes("already exists for")) {
+            try {
+              setSession(ctx, requestedSessionName);
+              sessionOperationNotes.push(`- Bound existing session: ${requestedSessionName}`);
+            } catch (bindError) {
+              const bindMessage = bindError instanceof Error ? bindError.message : String(bindError);
+              return `Failed to bind session "${requestedSessionName}": ${bindMessage}`;
+            }
+          } else if (message.includes("Invalid session ID")) {
+            return `Invalid session name "${requestedSessionName}". Use kebab-case (2-50 chars, lowercase letters, numbers, and hyphens).`;
+          } else {
+            return `Failed to create session "${requestedSessionName}": ${message}`;
+          }
+        }
+      } else if (cmdName === "goop-resume") {
+        const resolvedSessionId = await resolveSession(ctx);
+        if (resolvedSessionId) {
+          try {
+            setSession(ctx, resolvedSessionId);
+            sessionOperationNotes.push(`- Resolved and bound session: ${resolvedSessionId}`);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return `Failed to bind resolved session "${resolvedSessionId}": ${message}`;
+          }
+        }
+      } else if (command.frontmatter.phase && !ctx.sessionId) {
+        const resolvedSessionId = await resolveSession(ctx, { silent: true });
+        if (resolvedSessionId) {
+          try {
+            setSession(ctx, resolvedSessionId);
+            sessionOperationNotes.push(`- Resolved session for workflow command: ${resolvedSessionId}`);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return `Failed to bind resolved session "${resolvedSessionId}": ${message}`;
+          }
+        }
       }
       
       // Build command output
@@ -130,6 +187,23 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
       if (cmdDef.agent) {
         lines.push(`**Agent:** ${cmdDef.agent}`, "");
       }
+
+      if (ctx.sessionId || requestedSessionName) {
+        lines.push("## Session Context", "");
+        for (const note of sessionOperationNotes) {
+          lines.push(note);
+        }
+        if (sessionOperationNotes.length > 0) {
+          lines.push("");
+        }
+        if (ctx.sessionId) {
+          lines.push(`- **Active Session:** ${ctx.sessionId}`);
+        }
+        if (requestedSessionName) {
+          lines.push(`- **Requested Session:** ${requestedSessionName}`);
+        }
+        lines.push("");
+      }
       
       lines.push("---", "", "## Full Instructions", "", cmdDef.content);
       
@@ -168,9 +242,6 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
           agent: spawnAgent,
         });
         
-        // Extract any arguments after the command name
-        const cmdArgs = args.command.replace(/^\/?\S+\s*/, "").trim();
-        
         lines.push("");
         lines.push("---");
         lines.push("");
@@ -191,6 +262,12 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
         lines.push("    - Read .goopspec/SPEC.md if it exists");
         lines.push("    - Read .goopspec/BLUEPRINT.md if it exists");
         lines.push("    - Search memory for relevant context");
+        if (ctx.sessionId) {
+          lines.push(`    - Active session is ${ctx.sessionId}; use session-scoped .goopspec paths`);
+        }
+        if (requestedSessionName) {
+          lines.push(`    - /goop-discuss requested session name: ${requestedSessionName}`);
+        }
         lines.push("");
         lines.push("    Follow the instructions above and return a structured response.");
         lines.push("  `");

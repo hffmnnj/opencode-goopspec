@@ -6,10 +6,10 @@
 
 **Stop the AI chaos. Ship what you actually want.**
 
-[![Version](https://img.shields.io/badge/version-0.2.1-blue?style=for-the-badge)](https://github.com/hffmnnj/opencode-goopspec)
+[![Version](https://img.shields.io/badge/version-0.2.2-blue?style=for-the-badge)](https://github.com/hffmnnj/opencode-goopspec)
 [![Bun](https://img.shields.io/badge/Bun-1.0+-f97316?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-1056%20passing-22c55e?style=for-the-badge)](./TEST-SUMMARY.md)
+[![Tests](https://img.shields.io/badge/tests-1217%20passing-22c55e?style=for-the-badge)](./TEST-SUMMARY.md)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](./LICENSE)
 
 ---
@@ -221,7 +221,7 @@ All 20 commands, organized by what you're doing.
 
 ## The Agents
 
-GoopSpec uses an orchestrator + specialist model. The Orchestrator (**The Conductor**) never writes code — it coordinates work by delegating to 11 specialized agents.
+GoopSpec uses an orchestrator + specialist model. The Orchestrator (**The Conductor**) never writes code — it coordinates work by delegating to 12 specialized agents.
 
 Each agent has a default model optimized for its task. **All models are configurable via `/goop-setup`.**
 
@@ -247,6 +247,7 @@ The Conductor never writes implementation code. It directs specialists.
 | `goop-explorer` | The Scout | `google/gemini-3-flash` | Fast codebase mapping |
 | `goop-verifier` | The Auditor | `openai/gpt-5.3-codex` | Verifies against spec |
 | `goop-debugger` | The Detective | `openai/gpt-5.3-codex` | Scientific debugging |
+| `goop-creative` | The Visionary | `anthropic/claude-opus-4-6` | Creative ideation and architecture brainstorming |
 | `goop-designer` | The Artisan | `anthropic/claude-opus-4-6` | UI/UX design |
 | `goop-tester` | The Guardian | `kimi-for-coding/k2p5` | Test writing |
 | `goop-writer` | The Scribe | `google/gemini-3-pro-high` | Documentation |
