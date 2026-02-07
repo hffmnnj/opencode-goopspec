@@ -57,8 +57,14 @@
     "hono": "^4.11.7",
     "picocolors": "^1.1.1",
     "sqlite-vec": "^0.1.7-alpha.2",
-    "sqlite-vec-linux-x64": "^0.1.7-alpha.2",
     "zod": "^4.1.8"
+  },
+  "optionalDependencies": {
+    "sqlite-vec-darwin-arm64": "0.1.7-alpha.2",
+    "sqlite-vec-darwin-x64": "0.1.7-alpha.2",
+    "sqlite-vec-linux-x64": "0.1.7-alpha.2",
+    "sqlite-vec-linux-arm64": "0.1.7-alpha.2",
+    "sqlite-vec-windows-x64": "0.1.7-alpha.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.9",
