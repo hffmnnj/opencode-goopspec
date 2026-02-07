@@ -107,3 +107,89 @@ describe("goop_delegate search provider substitution", () => {
     expect(agentPromptSection).not.toContain(" Exa ");
   });
 });
+
+describe("goop_delegate session context injection", () => {
+  let cleanup: () => void;
+  let toolContext: ReturnType<typeof createMockToolContext>;
+  let testDir: string;
+
+  beforeEach(() => {
+    const env = setupTestEnvironment("goop-delegate-session-test");
+    testDir = env.testDir;
+    cleanup = env.cleanup;
+    toolContext = createMockToolContext({ directory: testDir, worktree: testDir });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  function createContext(): PluginContext {
+    return createMockPluginContext({
+      testDir,
+      resources: [
+        createMockResource({
+          name: "goop-executor",
+          type: "agent",
+          frontmatter: {
+            name: "goop-executor",
+            description: "Executor agent",
+            model: "anthropic/claude-sonnet-4-5",
+            tools: ["read"],
+            skills: [],
+            references: [],
+          },
+          body: "You are the executor.",
+        }),
+      ],
+    });
+  }
+
+  it("includes session_id and session-scoped planning paths when session is active", async () => {
+    const ctx = createContext();
+    ctx.sessionId = "feature-auth";
+    const tool = createGoopDelegateTool(ctx);
+
+    const result = await tool.execute(
+      {
+        agent: "goop-executor",
+        prompt: "Implement auth endpoint",
+      },
+      toolContext,
+    );
+
+    const payload = extractDelegationPayload(result);
+    const composedPrompt = String(payload.composedPrompt ?? "");
+
+    expect(payload.session_id).toBe("feature-auth");
+    expect(composedPrompt).toContain(".goopspec/sessions/feature-auth/SPEC.md");
+    expect(composedPrompt).toContain(".goopspec/sessions/feature-auth/BLUEPRINT.md");
+    expect(composedPrompt).toContain(".goopspec/sessions/feature-auth/CHRONICLE.md");
+    expect(composedPrompt).toContain(".goopspec/sessions/feature-auth/RESEARCH.md");
+    expect(composedPrompt).toContain("## Session Context");
+    expect(composedPrompt).toContain("sessionId: `feature-auth`");
+  });
+
+  it("keeps legacy delegation payload and root planning paths when no session is active", async () => {
+    const ctx = createContext();
+    const tool = createGoopDelegateTool(ctx);
+
+    const result = await tool.execute(
+      {
+        agent: "goop-executor",
+        prompt: "Implement auth endpoint",
+      },
+      toolContext,
+    );
+
+    const payload = extractDelegationPayload(result);
+    const composedPrompt = String(payload.composedPrompt ?? "");
+
+    expect(payload.session_id).toBeUndefined();
+    expect(composedPrompt).toContain(".goopspec/SPEC.md");
+    expect(composedPrompt).toContain(".goopspec/BLUEPRINT.md");
+    expect(composedPrompt).toContain(".goopspec/CHRONICLE.md");
+    expect(composedPrompt).toContain(".goopspec/RESEARCH.md");
+    expect(composedPrompt).not.toContain(".goopspec/sessions/");
+  });
+});
