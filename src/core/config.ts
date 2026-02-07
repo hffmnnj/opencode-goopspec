@@ -8,7 +8,7 @@
 import { existsSync, readFileSync } from "fs";
 import { z } from "zod";
 import type { GoopSpecConfig, EnforcementLevel } from "./types.js";
-import { MEMORY_TYPES } from "./types.js";
+import { MEMORY_TYPES, SEARCH_PROVIDERS } from "./types.js";
 import { getGlobalConfigPath, getProjectGoopspecDir, joinPath } from "../shared/paths.js";
 import { log, logError } from "../shared/logger.js";
 
@@ -24,6 +24,7 @@ const AgentConfigSchema = z.object({
 const McpConfigSchema = z.object({
   context7: z.boolean().optional(),
   exa: z.boolean().optional(),
+  searchProvider: z.enum(SEARCH_PROVIDERS).optional().default("exa"),
   playwright: z.boolean().optional(),
   memory: z.boolean().optional(),
   github: z.boolean().optional(),
@@ -101,6 +102,7 @@ export const DEFAULT_CONFIG: GoopSpecConfig = {
   mcp: {
     context7: true,
     exa: true,
+    searchProvider: "exa",
   },
 };
 
