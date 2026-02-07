@@ -128,14 +128,14 @@ memory_search (prior research) → research → memory_save (findings with confi
 Priority order:
 1. Official documentation (Context7)
 2. Authoritative docs and standards
-3. Expert guides and engineering blogs (Exa)
+3. Expert guides and engineering blogs (`web_search_exa`)
 4. GitHub issues and maintainer notes
 5. Community discussions and Q&A
 ```
 
 ### 3. Use Tools Intentionally
 - Context7: resolve library ID, then query docs for version-specific guidance.
-- Exa: broad web scan with multiple sources for consensus.
+- `web_search_exa`: broad web scan with multiple sources for consensus.
 - Webfetch: fetch specific URLs for close reading.
 - If Google results are needed for freshness or coverage, request orchestrator to run google search and provide links for follow-up webfetch.
 
