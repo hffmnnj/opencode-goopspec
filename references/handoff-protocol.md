@@ -286,5 +286,5 @@ Next: Add refresh token logic to extend sessions.
 
 ---
 
-*Handoff Protocol v0.2.1*
+*Handoff Protocol*
 *"Fresh context, quality work."*

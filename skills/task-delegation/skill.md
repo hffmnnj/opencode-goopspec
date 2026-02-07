@@ -7,7 +7,6 @@ triggers:
   - spawn
   - subagent
   - task
-version: 0.2.1
 requires:
   - goop-core
 ---
