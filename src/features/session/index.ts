@@ -15,5 +15,6 @@ export {
 } from "./types.js";
 
 export { resolveSession } from "./resolver.js";
+export { setSession, clearSession } from "./binding.js";
 
 export type { SessionInfo, SessionIndex } from "./types.js";
