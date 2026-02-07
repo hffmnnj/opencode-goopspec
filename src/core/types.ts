@@ -167,6 +167,10 @@ export interface ADLEntry {
 
 export type EnforcementLevel = "assist" | "warn" | "strict";
 
+export const SEARCH_PROVIDERS = ["exa", "brave"] as const;
+
+export type SearchProvider = (typeof SEARCH_PROVIDERS)[number];
+
 export interface AgentConfig {
   model?: string;
   temperature?: number;
@@ -175,6 +179,7 @@ export interface AgentConfig {
 export interface McpConfig {
   context7?: boolean;
   exa?: boolean;
+  searchProvider?: SearchProvider;
   playwright?: boolean;
   memory?: boolean;
   github?: boolean;

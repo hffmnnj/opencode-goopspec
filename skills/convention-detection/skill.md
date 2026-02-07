@@ -7,7 +7,6 @@ triggers:
   - style
   - patterns
   - guidelines
-version: 0.2.1
 ---
 
 # Convention Detection Skill

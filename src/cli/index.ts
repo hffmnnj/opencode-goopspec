@@ -2,10 +2,9 @@
 
 import pc from "picocolors";
 
+import { GOOPSPEC_VERSION } from "../core/version.js";
 import { CLI_COMMANDS, type CliArgs, type CliCommand } from "./types.js";
 import { showBanner, showError } from "./ui.js";
-
-const VERSION = "0.2.1";
 
 function isCliCommand(value: string): value is CliCommand {
   return CLI_COMMANDS.includes(value as CliCommand);
@@ -70,7 +69,7 @@ export function showHelp(): void {
 }
 
 export function showVersion(): void {
-  console.log(`goopspec v${VERSION}`);
+  console.log(`goopspec v${GOOPSPEC_VERSION}`);
 }
 
 function levenshteinDistance(a: string, b: string): number {
@@ -146,6 +145,11 @@ export async function main(): Promise<void> {
         case "models": {
           const { runModels } = await import("./commands/models.js");
           await runModels();
+          break;
+        }
+        case "mcp": {
+          const { runMcp } = await import("./commands/mcp.js");
+          await runMcp();
           break;
         }
         case "memory": {

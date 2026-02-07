@@ -54,6 +54,7 @@
   "mcp": {
     "context7": true,
     "exa": true,
+    "searchProvider": "exa",
     "playwright": true,
     "memory": true,
     "github": true,

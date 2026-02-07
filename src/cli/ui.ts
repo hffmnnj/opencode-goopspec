@@ -11,6 +11,8 @@ import {
 } from "@clack/prompts";
 import pc from "picocolors";
 
+import { GOOPSPEC_VERSION } from "../core/version.js";
+
 export const TAGLINES = [
   "Spec-driven development, one command at a time.",
   "Because yolo-driven development has consequences.",
@@ -28,7 +30,7 @@ function randomTagline(): string {
 
 export function showBanner(): void {
   console.log();
-  console.log(pc.bold(pc.magenta("  🔮 GoopSpec CLI")) + pc.dim(" v0.2.1"));
+  console.log(pc.bold(pc.magenta("  🔮 GoopSpec CLI")) + pc.dim(` v${GOOPSPEC_VERSION}`));
   console.log(pc.dim("  ════════════════════════════"));
   console.log(pc.italic(pc.dim(`  ${randomTagline()}`)));
   console.log();

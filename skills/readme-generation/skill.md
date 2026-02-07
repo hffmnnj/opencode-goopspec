@@ -7,7 +7,6 @@ triggers:
   - documentation
   - onboarding
   - usage
-version: 0.2.1
 ---
 
 # README Generation Skill

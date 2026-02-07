@@ -28,6 +28,8 @@ goop_reference({ name: "discuss-process" })
 
 **You conduct the interview directly.** Do NOT spawn agents for conversation.
 
+**Exception:** After the vision question, you offer opt-in creative brainstorming with The Visionary (`goop-creative`). This is the only agent delegation during the interview.
+
 ### The Six Questions
 
 1. **Vision** — What are you building? What problem? Who for?
@@ -44,6 +46,7 @@ goop_reference({ name: "discuss-process" })
 | `goop_status` | Check current phase |
 | `goop_state` | Update workflow state (NEVER edit state.json directly) |
 | `question` | Capture structured user choices (including depth selection) |
+| `goop_delegate` | Delegate to creative agent (opt-in) |
 | `memory_search` | Find prior context |
 | `memory_save` | Persist interview results |
 | `goop_reference` | Load detailed process |
@@ -58,6 +61,7 @@ goop_reference({ name: "discuss-process" })
 - [ ] Existing project documents archived (if present)
 - [ ] Research depth selected (Light/Standard/Deep) before interview begins
 - [ ] Depth persisted via `goop_state({ action: "set-depth", depth: "[shallow|standard|deep]" })`
+- [ ] Creative agent opt-in offered after vision question (accepted or declined)
 - [ ] All six questions answered with specifics
 - [ ] At least 1 must-have, 1 out-of-scope, 1 risk defined
 - [ ] REQUIREMENTS.md created
@@ -65,8 +69,8 @@ goop_reference({ name: "discuss-process" })
 
 ## Anti-Patterns
 
-**DON'T:** Accept vague answers, skip risks, rush, spawn agents for interview
-**DO:** Probe for specifics, challenge "no risks", conduct interview yourself
+**DON'T:** Accept vague answers, skip risks, rush, auto-trigger creative agent
+**DO:** Probe for specifics, challenge "no risks", conduct interview yourself, offer creative input as opt-in choice
 
 ---
 
