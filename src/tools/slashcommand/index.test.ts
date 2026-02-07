@@ -12,8 +12,9 @@ import {
   setupTestEnvironment,
   type PluginContext,
 } from "../../test-utils.js";
-import { writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
+import { createSession } from "../../features/session/index.js";
 
 // Project root directory (where commands/ exists)
 const PROJECT_DIR = process.cwd();
@@ -291,6 +292,129 @@ This command should NOT spawn an agent.
       expect(result).toContain("Session Context");
       expect(result).toContain("Requested Session");
       expect(result).toContain("feat-auth");
+    });
+  });
+
+  describe("session lifecycle side-effects", () => {
+    let ctx: PluginContext;
+    let testDir: string;
+    let cleanup: () => void;
+
+    beforeEach(() => {
+      const env = setupTestEnvironment("slashcommand-session-lifecycle");
+      cleanup = env.cleanup;
+      testDir = env.testDir;
+
+      const commandsDir = join(testDir, ".goopspec", "commands");
+      mkdirSync(commandsDir, { recursive: true });
+
+      writeFileSync(
+        join(commandsDir, "goop-discuss.md"),
+        `---
+name: goop-discuss
+description: Start discussion
+argument-hint: "[session-name]"
+phase: discuss
+---
+
+# /goop-discuss
+
+Discuss command.
+`,
+      );
+
+      writeFileSync(
+        join(commandsDir, "goop-resume.md"),
+        `---
+name: goop-resume
+description: Resume workflow
+---
+
+# /goop-resume
+
+Resume command.
+`,
+      );
+
+      writeFileSync(
+        join(commandsDir, "goop-plan.md"),
+        `---
+name: goop-plan
+description: Plan workflow
+phase: plan
+---
+
+# /goop-plan
+
+Plan command.
+`,
+      );
+
+      ctx = createCustomContext(testDir);
+    });
+
+    afterEach(() => cleanup());
+
+    it("creates and binds session for /goop-discuss <name>", async () => {
+      const tool = createSlashcommandTool(ctx);
+      const result = await tool.execute(
+        { command: "goop-discuss feat-auth" },
+        createMockToolContext(),
+      );
+
+      expect(ctx.sessionId).toBe("feat-auth");
+      expect(result).toContain("Created and bound session: feat-auth");
+      expect(existsSync(join(testDir, ".goopspec", "sessions", "feat-auth"))).toBe(true);
+    });
+
+    it("binds existing session for /goop-discuss <name> when already created", async () => {
+      createSession(testDir, "feat-auth");
+
+      const tool = createSlashcommandTool(ctx);
+      const result = await tool.execute(
+        { command: "goop-discuss feat-auth" },
+        createMockToolContext(),
+      );
+
+      expect(ctx.sessionId).toBe("feat-auth");
+      expect(result).toContain("Bound existing session: feat-auth");
+    });
+
+    it("does not create session for /goop-discuss without name", async () => {
+      const tool = createSlashcommandTool(ctx);
+      await tool.execute({ command: "goop-discuss" }, createMockToolContext());
+
+      expect(ctx.sessionId).toBeUndefined();
+      expect(existsSync(join(testDir, ".goopspec", "sessions", "_active.json"))).toBe(false);
+    });
+
+    it("resolves and binds session for /goop-resume when sessions exist", async () => {
+      createSession(testDir, "feat-auth");
+
+      const tool = createSlashcommandTool(ctx);
+      const result = await tool.execute({ command: "goop-resume" }, createMockToolContext());
+
+      expect(ctx.sessionId).toBe("feat-auth");
+      expect(result).toContain("Resolved and bound session: feat-auth");
+    });
+
+    it("falls back normally for /goop-resume when no sessions exist", async () => {
+      const tool = createSlashcommandTool(ctx);
+      const result = await tool.execute({ command: "goop-resume" }, createMockToolContext());
+
+      expect(ctx.sessionId).toBeUndefined();
+      expect(result).not.toContain("Resolved and bound session:");
+      expect(result).toContain("# /goop-resume Command");
+    });
+
+    it("silently resolves and binds session for workflow commands with phase", async () => {
+      createSession(testDir, "feat-auth");
+
+      const tool = createSlashcommandTool(ctx);
+      const result = await tool.execute({ command: "goop-plan" }, createMockToolContext());
+
+      expect(ctx.sessionId).toBe("feat-auth");
+      expect(result).toContain("Resolved session for workflow command: feat-auth");
     });
   });
 });
