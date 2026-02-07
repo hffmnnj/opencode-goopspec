@@ -6,7 +6,13 @@
  */
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
-import type { PluginContext, AgentDefinition, ToolContext, ResolvedResource } from "../../core/types.js";
+import type {
+  PluginContext,
+  AgentDefinition,
+  ToolContext,
+  ResolvedResource,
+  SearchProvider,
+} from "../../core/types.js";
 import {
   generateTeamAwarenessSection,
   type TeamAwarenessContext,
@@ -92,6 +98,66 @@ function mergeTeamContexts(
 
   const mergedSiblings = Array.from(siblings.values());
   return mergedSiblings.length > 0 ? { siblings: mergedSiblings } : {};
+}
+
+interface SearchProviderSubstitution {
+  toolMap: Readonly<Record<string, string>>;
+  promptReplacements: ReadonlyArray<{ pattern: RegExp; replacement: string }>;
+}
+
+const SEARCH_PROVIDER_SUBSTITUTIONS: Record<SearchProvider, SearchProviderSubstitution> = {
+  exa: {
+    toolMap: {},
+    promptReplacements: [],
+  },
+  brave: {
+    toolMap: {
+      web_search_exa: "brave_web_search",
+      company_research_exa: "brave_web_search",
+      get_code_context_exa: "brave_web_search",
+    },
+    promptReplacements: [{ pattern: /\bExa\b/g, replacement: "Brave Search" }],
+  },
+};
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replaceMappedTokens(input: string, toolMap: Readonly<Record<string, string>>): string {
+  let output = input;
+
+  for (const [from, to] of Object.entries(toolMap)) {
+    const pattern = new RegExp(`\\b${escapeRegExp(from)}\\b`, "g");
+    output = output.replace(pattern, to);
+  }
+
+  return output;
+}
+
+function applySearchProviderSubstitution(
+  agentDef: AgentDefinition,
+  searchProvider: SearchProvider
+): AgentDefinition {
+  if (searchProvider === "exa") {
+    return agentDef;
+  }
+
+  const substitution = SEARCH_PROVIDER_SUBSTITUTIONS[searchProvider];
+  const substitutedTools = Array.from(
+    new Set(agentDef.tools.map(toolName => substitution.toolMap[toolName] ?? toolName))
+  );
+
+  let substitutedPrompt = replaceMappedTokens(agentDef.prompt, substitution.toolMap);
+  for (const { pattern, replacement } of substitution.promptReplacements) {
+    substitutedPrompt = substitutedPrompt.replace(pattern, replacement);
+  }
+
+  return {
+    ...agentDef,
+    tools: substitutedTools,
+    prompt: substitutedPrompt,
+  };
 }
 
 function normalizeFileReference(value: string): string | null {
@@ -490,7 +556,7 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       const defaultModel = config.defaultModel;
       
       // Build agent definition
-      const agentDef: AgentDefinition = {
+      const rawAgentDef: AgentDefinition = {
         name: agentResource.frontmatter.name as string || agentResource.name,
         description: agentResource.frontmatter.description as string || "",
         // Use config model if available, then frontmatter, then configured default, then hardcoded default
@@ -506,6 +572,9 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
         references: (agentResource.frontmatter.references as string[]) || [],
         prompt: agentResource.body,
       };
+
+      const searchProvider: SearchProvider = ctx.config.mcp?.searchProvider ?? "exa";
+      const agentDef = applySearchProviderSubstitution(rawAgentDef, searchProvider);
       
       const teamContext = parseTeamContext(args.team_context);
       const agentId = generateAgentId();
