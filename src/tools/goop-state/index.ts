@@ -64,7 +64,7 @@ IMPORTANT: Always use this tool instead of Read/Edit on state.json to avoid conf
     async execute(args, _context: ToolContext): Promise<string> {
       const { action } = args;
       
-      log("goop_state action", { action, args });
+      log("goop_state action", { action, args, sessionId: ctx.sessionId });
 
       switch (action) {
         case "get": {
@@ -86,6 +86,7 @@ IMPORTANT: Always use this tool instead of Read/Edit on state.json to avoid conf
 ### Project
 - **Name:** ${state.project.name}
 - **Initialized:** ${state.project.initialized}
+- **Session:** ${ctx.sessionId || "root"}
 
 ### Workflow
 - **Phase:** ${phaseIcon} ${workflow.phase}

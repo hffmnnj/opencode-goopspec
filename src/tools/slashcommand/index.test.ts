@@ -259,4 +259,38 @@ This command should NOT spawn an agent.
       expect(result).not.toContain("AUTOMATIC AGENT SPAWN");
     });
   });
+
+  describe("session context", () => {
+    let ctx: PluginContext;
+
+    beforeEach(() => {
+      ctx = createProjectContext();
+    });
+
+    it("includes active session context when bound", async () => {
+      ctx.sessionId = "feature-auth";
+
+      const tool = createSlashcommandTool(ctx);
+      const result = await tool.execute(
+        { command: "goop-status" },
+        createMockToolContext()
+      );
+
+      expect(result).toContain("Session Context");
+      expect(result).toContain("Active Session");
+      expect(result).toContain("feature-auth");
+    });
+
+    it("extracts requested session name for goop-discuss", async () => {
+      const tool = createSlashcommandTool(ctx);
+      const result = await tool.execute(
+        { command: "goop-discuss feat-auth" },
+        createMockToolContext()
+      );
+
+      expect(result).toContain("Session Context");
+      expect(result).toContain("Requested Session");
+      expect(result).toContain("feat-auth");
+    });
+  });
 });

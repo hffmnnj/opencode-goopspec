@@ -5,6 +5,8 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { createGoopStatusTool } from "./index.js";
+import { setSession } from "../../features/session/binding.js";
+import { createSession } from "../../features/session/manager.js";
 import { registerAgent } from "../../features/team/registry.js";
 import {
   createMockPluginContext,
@@ -311,6 +313,35 @@ describe("goop_status tool", () => {
       expect(result).toContain("Last Activity");
       // Should contain an ISO timestamp
       expect(result).toMatch(/\d{4}-\d{2}-\d{2}/);
+    });
+  });
+
+  describe("session display", () => {
+    it("shows current session and active session list when session is bound", async () => {
+      createSession(ctx.input.directory, "feat-auth");
+      createSession(ctx.input.directory, "feat-billing");
+      setSession(ctx, "feat-auth");
+
+      const tool = createGoopStatusTool(ctx);
+      const result = await tool.execute({}, toolContext);
+
+      expect(result).toContain("Current Session");
+      expect(result).toContain("feat-auth");
+      expect(result).toContain("Active Sessions");
+      expect(result).toContain("feat-billing");
+      expect(result).toContain("Phase:");
+      expect(result).toContain("Wave:");
+      expect(result).toContain("Last Activity:");
+    });
+
+    it("keeps standard output when no session is bound", async () => {
+      createSession(ctx.input.directory, "feat-unbound");
+
+      const tool = createGoopStatusTool(ctx);
+      const result = await tool.execute({}, toolContext);
+
+      expect(result).not.toContain("Current Session");
+      expect(result).not.toContain("Active Sessions");
     });
   });
 });

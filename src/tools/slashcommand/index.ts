@@ -12,6 +12,15 @@ import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, CommandDefinition, ToolContext } from "../../core/types.js";
 import { log } from "../../shared/logger.js";
 
+function parseCommandInput(input: string): { name: string; args: string } {
+  const normalized = input.trim().replace(/^\//, "");
+  const [name = "", ...rest] = normalized.split(/\s+/);
+  return {
+    name: name.toLowerCase(),
+    args: rest.join(" ").trim(),
+  };
+}
+
 /**
  * Build description with available commands
  */
@@ -52,9 +61,10 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
     },
     async execute(args, _context: ToolContext): Promise<string> {
       const commands = ctx.resolver.resolveAll("command");
-      
-      // Normalize command name
-      const cmdName = args.command.replace(/^\//, "").toLowerCase();
+      const parsedInput = parseCommandInput(args.command);
+      const cmdName = parsedInput.name;
+      const cmdArgs = parsedInput.args;
+      const requestedSessionName = cmdName === "goop-discuss" && cmdArgs ? cmdArgs.split(/\s+/)[0] : undefined;
       
       // Find matching command
       const command = commands.find(
@@ -130,6 +140,17 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
       if (cmdDef.agent) {
         lines.push(`**Agent:** ${cmdDef.agent}`, "");
       }
+
+      if (ctx.sessionId || requestedSessionName) {
+        lines.push("## Session Context", "");
+        if (ctx.sessionId) {
+          lines.push(`- **Active Session:** ${ctx.sessionId}`);
+        }
+        if (requestedSessionName) {
+          lines.push(`- **Requested Session:** ${requestedSessionName}`);
+        }
+        lines.push("");
+      }
       
       lines.push("---", "", "## Full Instructions", "", cmdDef.content);
       
@@ -168,9 +189,6 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
           agent: spawnAgent,
         });
         
-        // Extract any arguments after the command name
-        const cmdArgs = args.command.replace(/^\/?\S+\s*/, "").trim();
-        
         lines.push("");
         lines.push("---");
         lines.push("");
@@ -191,6 +209,12 @@ export function createSlashcommandTool(ctx: PluginContext): ToolDefinition {
         lines.push("    - Read .goopspec/SPEC.md if it exists");
         lines.push("    - Read .goopspec/BLUEPRINT.md if it exists");
         lines.push("    - Search memory for relevant context");
+        if (ctx.sessionId) {
+          lines.push(`    - Active session is ${ctx.sessionId}; use session-scoped .goopspec paths`);
+        }
+        if (requestedSessionName) {
+          lines.push(`    - /goop-discuss requested session name: ${requestedSessionName}`);
+        }
         lines.push("");
         lines.push("    Follow the instructions above and return a structured response.");
         lines.push("  `");
