@@ -57,6 +57,7 @@ async function findMatchingFiles(
     return files;
   } catch {
     // If ripgrep fails or not available, return empty set (fallback to full scan)
+    log("ripgrep (rg) not found, falling back to built-in search");
     return new Set();
   }
 }

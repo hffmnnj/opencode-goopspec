@@ -31,6 +31,7 @@ import {
 import { AGENT_MODEL_SUGGESTIONS, ALL_AGENTS } from "../../features/setup/model-suggestions.js";
 import { MCP_PRESETS } from "../../features/setup/types.js";
 import type { MemorySetupInput, SetupInput } from "../../features/setup/types.js";
+import { getGlobalConfigPath } from "../../shared/paths.js";
 
 type SetupScope = SetupInput["scope"];
 type McpPreset = SetupInput["mcpPreset"];
@@ -127,6 +128,7 @@ function formatSearchProvider(provider: SearchProvider): string {
 export async function runInit(): Promise<void> {
   const projectDir = process.cwd();
   const defaultProjectName = basename(projectDir) || "goopspec-project";
+  const globalConfigPath = getGlobalConfigPath();
 
   try {
     showBanner();
@@ -170,7 +172,7 @@ export async function runInit(): Promise<void> {
           message: "Where should GoopSpec configuration be written?",
           options: [
             { value: "project", label: "Project", hint: ".goopspec/config.json" },
-            { value: "global", label: "Global", hint: "~/.config/goopspec/config.json" },
+            { value: "global", label: "Global", hint: globalConfigPath },
             { value: "both", label: "Both", hint: "Global defaults + project overrides" },
           ],
           initialValue: "project",
