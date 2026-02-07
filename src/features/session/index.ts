@@ -14,4 +14,6 @@ export {
   validateSessionId,
 } from "./types.js";
 
+export { resolveSession } from "./resolver.js";
+
 export type { SessionInfo, SessionIndex } from "./types.js";
