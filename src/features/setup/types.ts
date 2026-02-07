@@ -155,6 +155,8 @@ export interface SetupPlan {
   projectName?: string;
   /** Quick mode - skip prompts */
   quick?: boolean;
+  /** Search MCP provider */
+  searchProvider?: SearchProvider;
 }
 
 /**
@@ -359,6 +361,8 @@ export interface SetupStatus {
     installed: string[];
     missing: string[];
   };
+  /** Search MCP provider */
+  searchProvider?: SearchProvider;
   /** Agent models configured */
   agentModels: Record<string, string>;
 }
