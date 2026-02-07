@@ -5,6 +5,8 @@
 
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
 import type { PluginInput } from "@opencode-ai/plugin";
+import { tmpdir } from "os";
+import { join } from "path";
 import {
   createAuthenticatedClient,
   injectPromptWithFallback,
@@ -40,14 +42,17 @@ function createMockClient(overrides: Partial<OpenCodeClient> = {}): OpenCodeClie
 }
 
 function createMockPluginInput(client: OpenCodeClient = createMockClient()): PluginInput {
+  const testPath = join(tmpdir(), "test");
   return {
     client,
     project: { id: "test-project", name: "Test" },
-    directory: "/tmp/test",
-    worktree: "/tmp/test",
+    directory: testPath,
+    worktree: testPath,
     serverUrl: new URL("http://localhost:3000"),
   } as unknown as PluginInput;
 }
+
+const TEST_PATH = join(tmpdir(), "test");
 
 // ============================================================================
 // createAuthenticatedClient Tests
@@ -178,16 +183,16 @@ describe("injectPromptViaTui", () => {
   it("calls TUI methods in correct order", async () => {
     const client = createMockClient();
     
-    const result = await injectPromptViaTui(client, "test prompt", "/tmp/test");
+    const result = await injectPromptViaTui(client, "test prompt", TEST_PATH);
     
     expect(result).toBe(true);
     expect(client.tui.clearPrompt).toHaveBeenCalled();
     expect(client.tui.appendPrompt).toHaveBeenCalledWith({
-      query: { directory: "/tmp/test" },
+      query: { directory: TEST_PATH },
       body: { text: "test prompt" },
     });
     expect(client.tui.submitPrompt).toHaveBeenCalledWith({
-      query: { directory: "/tmp/test" },
+      query: { directory: TEST_PATH },
     });
   });
 
@@ -201,7 +206,7 @@ describe("injectPromptViaTui", () => {
       },
     });
     
-    const result = await injectPromptViaTui(client, "test", "/tmp/test");
+    const result = await injectPromptViaTui(client, "test", TEST_PATH);
     
     expect(result).toBe(false);
   });
@@ -216,7 +221,7 @@ describe("injectPromptViaTui", () => {
       },
     });
     
-    const result = await injectPromptViaTui(client, "test", "/tmp/test");
+    const result = await injectPromptViaTui(client, "test", TEST_PATH);
     
     expect(result).toBe(true);
     expect(client.tui.appendPrompt).toHaveBeenCalled();
@@ -235,7 +240,7 @@ describe("injectPromptWithFallback", () => {
       client,
       "session-123",
       "test prompt",
-      "/tmp/test"
+      TEST_PATH
     );
     
     expect(result.success).toBe(true);
@@ -243,7 +248,7 @@ describe("injectPromptWithFallback", () => {
     expect(client.session.prompt).toHaveBeenCalledWith({
       path: { id: "session-123" },
       body: { parts: [{ type: "text", text: "test prompt" }] },
-      query: { directory: "/tmp/test" },
+      query: { directory: TEST_PATH },
     });
   });
 
@@ -259,7 +264,7 @@ describe("injectPromptWithFallback", () => {
       client,
       "session-123",
       "test prompt",
-      "/tmp/test"
+      TEST_PATH
     );
     
     expect(result.success).toBe(true);
@@ -279,7 +284,7 @@ describe("injectPromptWithFallback", () => {
       client,
       "session-123",
       "test prompt",
-      "/tmp/test"
+      TEST_PATH
     );
     
     expect(result.success).toBe(true);
@@ -304,7 +309,7 @@ describe("injectPromptWithFallback", () => {
       client,
       "session-123",
       "test prompt",
-      "/tmp/test"
+      TEST_PATH
     );
     
     expect(result.success).toBe(false);

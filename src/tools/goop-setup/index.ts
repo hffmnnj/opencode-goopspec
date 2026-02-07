@@ -7,7 +7,7 @@
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, ToolContext } from "../../core/types.js";
-import { 
+import {
   detectEnvironment, 
   planSetup, 
   applySetup,
@@ -17,6 +17,7 @@ import {
   resetSetup,
   getSetupStatus,
 } from "../../features/setup/index.js";
+import { detectPlatform, getSqliteVecPackage } from "../../features/setup/platform.js";
 import { AGENT_MODEL_SUGGESTIONS } from "../../features/setup/model-suggestions.js";
 import type { 
   SetupInput, 
@@ -261,6 +262,8 @@ function formatResult(result: SetupResult, searchProvider?: "exa" | "brave"): st
  */
 function formatMemoryStatus(memorySetup: MemorySetupResult): string {
   const lines: string[] = ["## Memory System", ""];
+  const platform = detectPlatform();
+  const sqliteVecPackage = getSqliteVecPackage(platform);
   
   lines.push(`**Status**: ${memorySetup.enabled ? "✅ Enabled" : "❌ Disabled"}`);
   lines.push("");
@@ -276,8 +279,7 @@ function formatMemoryStatus(memorySetup: MemorySetupResult): string {
     lines.push("");
     lines.push("**To enable:** Install sqlite-vec for your platform:");
     lines.push("```bash");
-    lines.push("bun add sqlite-vec-linux-x64  # Linux x64");
-    lines.push("bun add sqlite-vec-darwin-arm64  # macOS Apple Silicon");
+    lines.push(`bun add ${sqliteVecPackage}  # ${platform.description}`);
     lines.push("```");
   }
   lines.push("");

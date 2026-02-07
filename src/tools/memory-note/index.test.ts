@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach } from "bun:test";
+import { tmpdir } from "os";
+import { join } from "path";
 import { createMemoryNoteTool } from "./index.js";
 import {
   createMockPluginContext,
@@ -17,7 +19,7 @@ describe("createMemoryNoteTool", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = `/tmp/memory-note-test-${Date.now()}`;
+    testDir = join(tmpdir(), `memory-note-test-${Date.now()}`);
     ctx = createMockPluginContext({
       testDir,
       includeMemory: true,

@@ -83,6 +83,20 @@ export type TaskMode = "quick" | "standard" | "comprehensive" | "milestone";
  */
 export type WorkflowDepth = "shallow" | "standard" | "deep";
 
+export interface SessionInfo {
+  id: string;
+  description?: string;
+  phase: string;
+  mode: string;
+  lastActivity: string;
+  createdAt: string;
+}
+
+export interface SessionIndex {
+  sessions: SessionInfo[];
+  lastUpdated: string;
+}
+
 export interface GoopState {
   version: number;
   project: {
@@ -295,6 +309,7 @@ export interface PluginContext {
   config: GoopSpecConfig;
   resolver: ResourceResolver;
   stateManager: StateManager;
+  sessionId?: string;
   memoryManager?: MemoryManager;
 }
 

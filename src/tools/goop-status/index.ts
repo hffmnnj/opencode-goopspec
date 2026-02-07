@@ -7,6 +7,8 @@
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, GoopState, ToolContext } from "../../core/types.js";
+import { listSessions } from "../../features/session/manager.js";
+import { createStateManager } from "../../features/state-manager/manager.js";
 import { getActiveAgents } from "../../features/team/registry.js";
 
 /**
@@ -138,7 +140,37 @@ async function formatStatus(state: GoopState | null, verbose: boolean, ctx: Plug
   lines.push("");
   lines.push(`**Project:** ${projectName}`);
   lines.push(`**Initialized:** ${initialized}`);
+  if (ctx.sessionId) {
+    lines.push(`**Current Session:** ${ctx.sessionId}`);
+  }
   lines.push("");
+
+  if (ctx.sessionId) {
+    const sessions = listSessions(ctx.input.directory);
+    if (sessions.length > 0) {
+      lines.push("## Active Sessions");
+      for (const session of sessions) {
+        const isCurrent = session.id === ctx.sessionId;
+        let wave = "0/0";
+        try {
+          const sessionState = createStateManager(
+            ctx.input.directory,
+            state.project.name,
+            ctx.config,
+            session.id,
+          ).getState();
+          wave = `${sessionState.workflow.currentWave}/${sessionState.workflow.totalWaves}`;
+        } catch {
+          wave = "unknown";
+        }
+
+        lines.push(
+          `- **${session.id}**${isCurrent ? " (current)" : ""} — Phase: ${session.phase} · Wave: ${wave} · Last Activity: ${session.lastActivity}`,
+        );
+      }
+      lines.push("");
+    }
+  }
   
   // Workflow status with new fields
   const workflow = state.workflow || { 

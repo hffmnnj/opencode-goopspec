@@ -28,6 +28,7 @@ import {
   type ConflictInfo,
 } from "../../features/team/conflict.js";
 import type { AgentRegistration } from "../../features/team/types.js";
+import { getSessionGoopspecPath } from "../../shared/paths.js";
 
 function normalizeReferencePath(name: string): string {
   return name.trim().replace(/\\/g, "/").replace(/^\.\/?/, "");
@@ -262,9 +263,17 @@ function buildAgentPrompt(
   agentDef: AgentDefinition,
   userPrompt: string,
   additionalContext?: string,
-  teamContext?: TeamAwarenessContext
+   teamContext?: TeamAwarenessContext,
+   sessionId?: string,
 ): string {
   const sections: string[] = [];
+  const scopedSessionId = typeof sessionId === "string" && sessionId.trim().length > 0
+    ? sessionId.trim()
+    : undefined;
+  const specPath = getSessionGoopspecPath("", "SPEC.md", scopedSessionId).replace(/\\/g, "/");
+  const blueprintPath = getSessionGoopspecPath("", "BLUEPRINT.md", scopedSessionId).replace(/\\/g, "/");
+  const chroniclePath = getSessionGoopspecPath("", "CHRONICLE.md", scopedSessionId).replace(/\\/g, "/");
+  const researchPath = getSessionGoopspecPath("", "RESEARCH.md", scopedSessionId).replace(/\\/g, "/");
   
   // Agent identity
   sections.push(`# Agent: ${agentDef.name}`);
@@ -274,10 +283,16 @@ function buildAgentPrompt(
   
   // Planning file paths
   sections.push("## Planning Files (Read These First)\n");
-  sections.push("- SPEC.md: `.goopspec/SPEC.md` - Specification contract");
-  sections.push("- BLUEPRINT.md: `.goopspec/BLUEPRINT.md` - Execution plan");
-  sections.push("- CHRONICLE.md: `.goopspec/CHRONICLE.md` - Progress log");
-  sections.push("- RESEARCH.md: `.goopspec/RESEARCH.md` - Research findings");
+  sections.push(`- SPEC.md: \`${specPath}\` - Specification contract`);
+  sections.push(`- BLUEPRINT.md: \`${blueprintPath}\` - Execution plan`);
+  sections.push(`- CHRONICLE.md: \`${chroniclePath}\` - Progress log`);
+  sections.push(`- RESEARCH.md: \`${researchPath}\` - Research findings`);
+  if (scopedSessionId) {
+    sections.push("");
+    sections.push("## Session Context\n");
+    sections.push(`- sessionId: \`${scopedSessionId}\``);
+    sections.push(`- Session root: \`${getSessionGoopspecPath("", "", scopedSessionId).replace(/\\/g, "/")}\``);
+  }
   sections.push("");
   
   // Load and inject skills
@@ -406,6 +421,7 @@ function formatTaskDelegation(
   subagentType: string,
   availableSubagents: string[],
   teamContext: TeamAwarenessContext,
+  sessionId: string | undefined,
   conflicts: ConflictInfo[] = [],
   conflictWarnings: string[] = []
 ): string {
@@ -445,6 +461,7 @@ function formatTaskDelegation(
     userPrompt: userPrompt,
     composedPrompt: enrichedPrompt,
     team_context: teamContext,
+    ...(sessionId ? { session_id: sessionId } : {}),
     conflicts: conflicts,
     conflict_warnings: conflictWarnings,
   };
@@ -624,13 +641,23 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
       }
 
       const mergedTeamContext = mergeTeamContexts(teamContext, autoTeamContext);
+      const activeSessionId = typeof ctx.sessionId === "string" && ctx.sessionId.trim().length > 0
+        ? ctx.sessionId.trim()
+        : undefined;
       const conflictContext = conflictWarnings.length > 0
         ? ["## File Conflict Warnings", "", ...conflictWarnings].join("\n")
         : "";
       const combinedContext = [args.context, conflictContext].filter(Boolean).join("\n\n");
 
       // Build composed prompt (used as system content)
-      const composedPrompt = buildAgentPrompt(ctx, agentDef, args.prompt, combinedContext, mergedTeamContext);
+      const composedPrompt = buildAgentPrompt(
+        ctx,
+        agentDef,
+        args.prompt,
+        combinedContext,
+        mergedTeamContext,
+        activeSessionId,
+      );
       
       const client = ctx.input.client as OpenCodeClient;
       const availableSubagents = await fetchAvailableAgents(client);
@@ -661,6 +688,7 @@ export function createGoopDelegateTool(ctx: PluginContext): ToolDefinition {
         subagentType,
         availableSubagents,
         mergedTeamContext,
+        activeSessionId,
         conflicts,
         conflictWarnings
       );

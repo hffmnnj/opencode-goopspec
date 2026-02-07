@@ -130,6 +130,7 @@ const GoopSpecPlugin: Plugin = async (input) => {
       config,
       resolver,
       stateManager,
+      sessionId: undefined,
       memoryManager: memoryClient,
     };
 

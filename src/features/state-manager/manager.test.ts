@@ -4,12 +4,14 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, rmSync, existsSync, readFileSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 import { createStateManager, initializeGoopspec } from "./manager";
+import { createSession } from "../session/manager.js";
 import type { ADLEntry, HistoryEntry } from "../../core/types";
 
 // Use a temp directory for tests
-const TEST_DIR = "/tmp/goopspec-test-" + Date.now();
+const TEST_DIR = join(tmpdir(), `goopspec-test-${Date.now()}`);
 
 describe("state-manager", () => {
   beforeEach(() => {
@@ -382,6 +384,103 @@ describe("state-manager", () => {
       const state = manager.getState();
       expect(state.workflow.currentWave).toBe(2);
       expect(state.workflow.totalWaves).toBe(5);
+    });
+  });
+
+  describe("session-aware routing", () => {
+    it("should persist session state in session directory", () => {
+      createSession(TEST_DIR, "feat-auth");
+      const manager = createStateManager(TEST_DIR, "session-project", undefined, "feat-auth");
+
+      manager.setState({
+        project: {
+          name: "session-project",
+          initialized: new Date().toISOString(),
+        },
+      });
+
+      const sessionStatePath = join(
+        TEST_DIR,
+        ".goopspec",
+        "sessions",
+        "feat-auth",
+        "state.json",
+      );
+      const rootStatePath = join(TEST_DIR, ".goopspec", "state.json");
+
+      expect(existsSync(sessionStatePath)).toBe(true);
+      expect(existsSync(rootStatePath)).toBe(false);
+    });
+
+    it("should keep root state path behavior when no session is provided", () => {
+      const manager = createStateManager(TEST_DIR, "root-project");
+
+      manager.setState({
+        project: {
+          name: "root-project",
+          initialized: new Date().toISOString(),
+        },
+      });
+
+      const rootStatePath = join(TEST_DIR, ".goopspec", "state.json");
+      expect(existsSync(rootStatePath)).toBe(true);
+    });
+
+    it("should write checkpoints and history inside the session directory", () => {
+      createSession(TEST_DIR, "feat-routing");
+      const manager = createStateManager(TEST_DIR, "routing-project", undefined, "feat-routing");
+      const state = manager.getState();
+
+      manager.saveCheckpoint("cp-session", {
+        timestamp: new Date().toISOString(),
+        state,
+      });
+
+      manager.appendHistory({
+        timestamp: new Date().toISOString(),
+        type: "tool_call",
+        data: { tool: "goop_status" },
+      });
+
+      const sessionCheckpointPath = join(
+        TEST_DIR,
+        ".goopspec",
+        "sessions",
+        "feat-routing",
+        "checkpoints",
+        "cp-session.json",
+      );
+      const today = new Date().toISOString().split("T")[0];
+      const sessionHistoryPath = join(
+        TEST_DIR,
+        ".goopspec",
+        "sessions",
+        "feat-routing",
+        "history",
+        `${today}.json`,
+      );
+
+      expect(existsSync(sessionCheckpointPath)).toBe(true);
+      expect(existsSync(sessionHistoryPath)).toBe(true);
+    });
+
+    it("should sync session phase and mode metadata to active session index", () => {
+      createSession(TEST_DIR, "feat-sync");
+      const manager = createStateManager(TEST_DIR, "sync-project", undefined, "feat-sync");
+
+      manager.transitionPhase("plan");
+      manager.setMode("quick");
+
+      const indexPath = join(TEST_DIR, ".goopspec", "sessions", "_active.json");
+      const index = JSON.parse(readFileSync(indexPath, "utf-8")) as {
+        sessions: Array<{ id: string; phase: string; mode: string; lastActivity: string }>;
+      };
+      const target = index.sessions.find((session) => session.id === "feat-sync");
+
+      expect(target).toBeDefined();
+      expect(target?.phase).toBe("plan");
+      expect(target?.mode).toBe("quick");
+      expect(typeof target?.lastActivity).toBe("string");
     });
   });
 });

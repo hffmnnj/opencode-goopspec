@@ -1,6 +1,7 @@
 ---
 name: goop-discuss
 description: Capture user vision through discovery interview before planning
+argument-hint: "[session-name]"
 phase: discuss
 next-step: "When discovery is complete, create the blueprint"
 next-command: /goop-plan
@@ -28,6 +29,11 @@ goop_reference({ name: "discuss-process" })
 
 **You conduct the interview directly.** Do NOT spawn agents for conversation.
 
+If the command includes a session name (example: `/goop-discuss feat-auth`), create and bind that session before starting the interview:
+- Call `createSession(projectDir, "feat-auth")`
+- Call `setSession(ctx, "feat-auth")`
+- Continue the interview within the bound session scope
+
 **Exception:** After the vision question, you offer opt-in creative brainstorming with The Visionary (`goop-creative`). This is the only agent delegation during the interview.
 
 ### The Six Questions
@@ -47,6 +53,8 @@ goop_reference({ name: "discuss-process" })
 | `goop_state` | Update workflow state (NEVER edit state.json directly) |
 | `question` | Capture structured user choices (including depth selection) |
 | `goop_delegate` | Delegate to creative agent (opt-in) |
+| `createSession` | Create a session when `/goop-discuss <name>` is used |
+| `setSession` | Bind the created session to plugin context |
 | `memory_search` | Find prior context |
 | `memory_save` | Persist interview results |
 | `goop_reference` | Load detailed process |
