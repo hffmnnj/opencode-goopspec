@@ -147,6 +147,11 @@ export async function main(): Promise<void> {
           await runModels();
           break;
         }
+        case "mcp": {
+          const { runMcp } = await import("./commands/mcp.js");
+          await runMcp();
+          break;
+        }
         case "memory": {
           const { runMemory } = await import("./commands/memory.js");
           await runMemory();

@@ -1,4 +1,4 @@
-export const CLI_COMMANDS = ["init", "models", "memory", "status", "verify", "reset"] as const;
+export const CLI_COMMANDS = ["init", "models", "mcp", "memory", "status", "verify", "reset"] as const;
 
 export type CliCommand = (typeof CLI_COMMANDS)[number];
 
