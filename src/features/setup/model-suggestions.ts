@@ -11,6 +11,16 @@ export interface AgentModelSuggestion {
 }
 
 export const AGENT_MODEL_SUGGESTIONS: Record<string, AgentModelSuggestion> = {
+  "goop-creative": {
+    suggestions: [
+      "anthropic/claude-opus-4-6",
+      "kimi-for-coding/k2p5",
+      "openai/gpt-5.3-codex",
+      "opencode/minimax-m2.1-free",
+    ],
+    description:
+      "Creative ideation, architecture brainstorming, and design exploration",
+  },
   "goop-debugger": {
     suggestions: [
       "openai/gpt-5.3-codex",
