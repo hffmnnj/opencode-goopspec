@@ -9,6 +9,8 @@ import { existsSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 
+import { getHomeDir } from "./platform.js";
+
 const SHARED_RESOURCE_NAMES = ["memory.db", "config.json", "archive"] as const;
 
 function hasSessionId(sessionId?: string): sessionId is string {
@@ -62,8 +64,7 @@ export function getProjectGoopspecDir(projectDir: string): string {
  * Get the global goopspec config directory
  */
 export function getGlobalConfigDir(): string {
-  const home = process.env.HOME || process.env.USERPROFILE || "";
-  return join(home, ".config", "opencode");
+  return join(getHomeDir(), ".config", "opencode");
 }
 
 /**
