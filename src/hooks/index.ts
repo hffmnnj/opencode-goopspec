@@ -3,7 +3,7 @@
  * @module hooks
  */
 
-import type { Hooks, PluginInput } from "@opencode-ai/plugin";
+import type { Hooks } from "@opencode-ai/plugin";
 import type { PluginContext } from "../core/types.js";
 import { createChatMessageHook } from "./chat-message.js";
 import { createToolLifecycleHooks } from "./tool-lifecycle.js";
@@ -13,15 +13,13 @@ import { createCommandProcessor } from "./command-processor.js";
 import { createOrchestratorEnforcementHooks } from "./orchestrator-enforcement.js";
 import { createAutoProgressionHook } from "./auto-progression.js";
 import { createCommentCheckerHooks } from "./comment-checker.js";
-import { createContinuationEnforcer } from "./continuation-enforcer.js";
 
 /**
  * Create all GoopSpec hooks
  * 
  * @param ctx - Plugin context with state manager, resolver, etc.
- * @param input - Optional PluginInput for hooks that need client access (continuation enforcer)
  */
-export function createHooks(ctx: PluginContext, input?: PluginInput): Partial<Hooks> {
+export function createHooks(ctx: PluginContext): Partial<Hooks> {
   const toolLifecycleHooks = createToolLifecycleHooks(ctx);
   const commandProcessorHooks = createCommandProcessor(ctx);
   const enforcementHooks = createOrchestratorEnforcementHooks(ctx);
@@ -33,11 +31,6 @@ export function createHooks(ctx: PluginContext, input?: PluginInput): Partial<Ho
   ].filter(
     (hook): hook is NonNullable<Hooks["chat.message"]> => Boolean(hook)
   );
-  
-  // Create continuation enforcer if we have client access
-  const continuationEnforcer = input 
-    ? createContinuationEnforcer(ctx, input)
-    : null;
   
   // Combine all tool.execute.before hooks
   const toolExecuteBeforeHooks = [
@@ -64,10 +57,6 @@ export function createHooks(ctx: PluginContext, input?: PluginInput): Partial<Ho
     event: async (eventInput) => {
       // Run base event handler
       await baseEventHandler(eventInput);
-      // Run continuation enforcer event handler
-      if (continuationEnforcer) {
-        await continuationEnforcer.handler(eventInput);
-      }
     },
     "chat.message": async (input, output) => {
       for (const hook of chatMessageHooks) {
@@ -114,14 +103,6 @@ export { createToolLifecycleHooks } from "./tool-lifecycle.js";
 export { createCommandProcessor } from "./command-processor.js";
 export { createEventHandler } from "./event-handler.js";
 export { createSystemTransformHook } from "./system-transform.js";
-export { 
-  createContinuationEnforcer,
-  isContinuationActive,
-  getPromptCount,
-  resetContinuation,
-  updateTodoCount
-} from "./continuation-enforcer.js";
-export type { ContinuationConfig } from "./continuation-enforcer.js";
 export { 
   createCommentCheckerHooks,
   analyzeComments,

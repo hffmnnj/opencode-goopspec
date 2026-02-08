@@ -10,6 +10,7 @@ import { log, logError } from "../shared/logger.js";
 import { createMemoryContextBuilder } from "../features/memory/context-builder.js";
 import { buildEnforcementContext } from "../features/enforcement/index.js";
 import { getSessionGoopspecPath } from "../shared/paths.js";
+import { ensurePosixPath } from "../shared/platform.js";
 
 type SystemTransformInput = {
   sessionID: string;
@@ -25,7 +26,7 @@ type SystemTransformOutput = {
 };
 
 function normalizePromptPath(path: string): string {
-  return path.replace(/\\/g, "/");
+  return ensurePosixPath(path);
 }
 
 function buildSessionContextBlock(sessionId: string): string {
@@ -124,11 +125,11 @@ ${sessionContext}`;
 
 ## Persistent Memory Context
 
-The following memories are relevant to this session. Use them to maintain continuity and avoid repeating mistakes.
+Use these memories for continuity and to avoid repeated mistakes.
 
 ${memoryContext}
 
-Use the memory tools (memory_save, memory_search, memory_note, memory_decision) to store and retrieve information for future sessions.`;
+Use memory tools to save decisions and observations for future sessions.`;
       }
 
       log("System context injected", {
