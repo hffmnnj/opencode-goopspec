@@ -48,7 +48,7 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
     try {
       // Build the orchestrator agent configuration
       const orchestrator = createGoopSpecOrchestrator({
-        model: pluginConfig.orchestrator?.model,
+        pluginConfig,
         thinkingBudget: pluginConfig.orchestrator?.thinkingBudget,
         phaseGates: pluginConfig.orchestrator?.phaseGates,
         waveExecution: pluginConfig.orchestrator?.waveExecution,

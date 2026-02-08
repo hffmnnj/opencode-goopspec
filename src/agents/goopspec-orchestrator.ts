@@ -6,6 +6,7 @@
  */
 
 import type { 
+  GoopSpecConfig,
   ResourceResolver, 
   ResolvedResource,
   PhaseGateMode, 
@@ -19,6 +20,7 @@ import { log } from "../shared/logger.js";
 // ============================================================================
 
 export interface OrchestratorOptions {
+  pluginConfig?: GoopSpecConfig;
   model?: string;
   thinkingBudget?: number;
   phaseGates?: PhaseGateMode;
@@ -51,6 +53,7 @@ export interface OrchestratorAgentConfig {
  */
 export function createGoopSpecOrchestrator(options: OrchestratorOptions): OrchestratorAgentConfig {
   const { resolver } = options;
+  const model = resolveOrchestratorModel(options);
   
   // Get available sub-agents and skills for dynamic prompt generation
   const availableAgents = resolver.resolveAll("agent");
@@ -76,7 +79,7 @@ export function createGoopSpecOrchestrator(options: OrchestratorOptions): Orches
     // OpenCode looks up agents by name when switching via Tab
     name: "goopspec",
     mode: "primary",
-    model: options.model ?? "anthropic/claude-opus-4-6",
+    model,
     thinking: { 
       type: "enabled", 
       budgetTokens: options.thinkingBudget ?? 32000 
@@ -105,6 +108,21 @@ export function createGoopSpecOrchestrator(options: OrchestratorOptions): Orches
       task: "allow",
     },
   };
+}
+
+function resolveOrchestratorModel(options: OrchestratorOptions): string {
+  const agentsModel = options.pluginConfig?.agents?.["goop-orchestrator"]?.model;
+  const orchestratorModel = options.pluginConfig?.orchestrator?.model ?? options.model;
+  const frontmatterModel = getOrchestratorFrontmatterModel(options.resolver);
+
+  return agentsModel ?? orchestratorModel ?? frontmatterModel ?? "anthropic/claude-opus-4-6";
+}
+
+function getOrchestratorFrontmatterModel(resolver: ResourceResolver): string | undefined {
+  const orchestratorResource = resolver.resolve("agent", "goop-orchestrator");
+  const configuredModel = orchestratorResource?.frontmatter.model;
+
+  return typeof configuredModel === "string" ? configuredModel : undefined;
 }
 
 /**
