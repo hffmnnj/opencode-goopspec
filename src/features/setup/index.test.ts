@@ -1,128 +1,28 @@
-import { beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 
+import { applySetup } from "./index.js";
 import type { SetupPlan } from "./types.js";
 
-const existsSyncMock = mock(() => false);
-const mkdirSyncMock = mock(() => undefined);
-const writeFileSyncMock = mock(() => undefined);
-
-const dirnameMock = mock((input: string) => {
-  if (input.includes("\\")) {
-    const index = input.lastIndexOf("\\");
-    return index > 0 ? input.slice(0, index) : "";
-  }
-
-  const index = input.lastIndexOf("/");
-  return index > 0 ? input.slice(0, index) : "";
-});
-
-const installMcpsMock = mock(async () => [] as string[]);
-
-mock.module("fs", () => ({
-  existsSync: existsSyncMock,
-  readFileSync: mock(() => "{}"),
-  writeFileSync: writeFileSyncMock,
-  mkdirSync: mkdirSyncMock,
-  rmSync: mock(() => undefined),
-}));
-
-mock.module("path", () => ({
-  dirname: dirnameMock,
-}));
-
-mock.module("../../shared/logger.js", () => ({
-  log: mock(() => undefined),
-  logError: mock(() => undefined),
-}));
-
-mock.module("./mcp-installer.js", () => ({
-  installMcps: installMcpsMock,
-}));
-
-mock.module("../../core/opencode-config.js", () => ({
-  hasOpenCodeConfig: mock(() => false),
-  getOpenCodeConfigPath: mock(() => ""),
-  readOpenCodeConfig: mock(() => ({})),
-  getExistingMcps: mock(() => []),
-}));
-
-mock.module("../../core/config.js", () => ({
-  DEFAULT_CONFIG: {
-    enforcement: "assist",
-    adlEnabled: true,
-    defaultModel: "anthropic/claude-sonnet-4-5",
-    mcp: {},
-  },
-  validateConfig: mock(() => ({ valid: true })),
-}));
-
-mock.module("../state-manager/manager.js", () => ({
-  initializeGoopspec: mock(async () => undefined),
-}));
-
-mock.module("./dependencies.js", () => ({
-  detectAllDependencies: mock(async () => ({
-    platform: { packageSuffix: "linux-x64" },
-    sqliteVec: { available: true },
-    onnxRuntime: { available: true },
-    transformers: { available: true },
-  })),
-}));
-
-mock.module("./installer.js", () => ({
-  installSqliteVec: mock(async () => ({ success: true })),
-  installLocalEmbeddings: mock(async () => ({ allSucceeded: true, results: [], degradedFeatures: [] })),
-}));
-
-mock.module("./feature-catalog.js", () => ({
-  getDefaultFeatures: mock(() => []),
-  isFeatureAvailable: mock(() => true),
-}));
-
-mock.module("./distillation-config.js", () => ({
-  createDistillationConfig: mock(() => ({ enabled: false })),
-  getDistillationModel: mock(() => "anthropic/claude-sonnet-4-5"),
-}));
-
-let applySetup: (plan: SetupPlan) => Promise<{
-  success: boolean;
-  configsWritten: string[];
-  mcpsInstalled: string[];
-  errors: string[];
-  warnings: string[];
-}>;
-
 describe("setup applySetup path handling", () => {
-  beforeAll(async () => {
-    ({ applySetup } = await import("./index.js"));
-  });
+  const tempDirs: string[] = [];
 
-  beforeEach(() => {
-    existsSyncMock.mockReset();
-    mkdirSyncMock.mockReset();
-    writeFileSyncMock.mockReset();
-    dirnameMock.mockReset();
-    installMcpsMock.mockReset();
-
-    existsSyncMock.mockReturnValue(false);
-    mkdirSyncMock.mockReturnValue(undefined);
-    writeFileSyncMock.mockReturnValue(undefined);
-    installMcpsMock.mockResolvedValue([]);
-
-    dirnameMock.mockImplementation((input: string) => {
-      if (input.includes("\\")) {
-        const index = input.lastIndexOf("\\");
-        return index > 0 ? input.slice(0, index) : "";
+  afterEach(() => {
+    while (tempDirs.length > 0) {
+      const dir = tempDirs.pop();
+      if (dir) {
+        rmSync(dir, { recursive: true, force: true });
       }
-
-      const index = input.lastIndexOf("/");
-      return index > 0 ? input.slice(0, index) : "";
-    });
+    }
   });
 
-  it("extracts config directory from Windows-style config path", async () => {
-    const configPath = "C:\\Users\\test\\.config\\opencode\\goopspec.json";
-    const expectedDir = "C:\\Users\\test\\.config\\opencode";
+  it("writes config file into a nested directory", async () => {
+    const baseDir = mkdtempSync(join(tmpdir(), "goopspec-setup-test-"));
+    tempDirs.push(baseDir);
+    const configPath = join(baseDir, ".config", "opencode", "goopspec.json");
+
     const plan: SetupPlan = {
       actions: [],
       summary: "",
@@ -140,15 +40,15 @@ describe("setup applySetup path handling", () => {
     const result = await applySetup(plan);
 
     expect(result.success).toBe(true);
-    expect(dirnameMock).toHaveBeenCalledWith(configPath);
-    expect(mkdirSyncMock).toHaveBeenCalledWith(expectedDir, { recursive: true });
-    expect(writeFileSyncMock).toHaveBeenCalledWith(configPath, JSON.stringify({ test: true }, null, 2));
-    expect(mkdirSyncMock).not.toHaveBeenCalledWith("", { recursive: true });
+    expect(result.configsWritten).toEqual([configPath]);
+    expect(JSON.parse(readFileSync(configPath, "utf-8"))).toEqual({ test: true });
   });
 
-  it("extracts config directory from Unix-style config path", async () => {
-    const configPath = "/home/user/.config/opencode/goopspec.json";
-    const expectedDir = "/home/user/.config/opencode";
+  it("handles Unix-style paths without mkdir('') errors", async () => {
+    const baseDir = mkdtempSync(join(tmpdir(), "goopspec-setup-test-"));
+    tempDirs.push(baseDir);
+    const configPath = `${baseDir}/deep/nested/goopspec.json`;
+
     const plan: SetupPlan = {
       actions: [],
       summary: "",
@@ -156,8 +56,8 @@ describe("setup applySetup path handling", () => {
       configsToWrite: [
         {
           path: configPath,
-          scope: "global",
-          content: { test: true },
+          scope: "project",
+          content: { nested: true },
         },
       ],
       dirsToCreate: [],
@@ -166,8 +66,7 @@ describe("setup applySetup path handling", () => {
     const result = await applySetup(plan);
 
     expect(result.success).toBe(true);
-    expect(dirnameMock).toHaveBeenCalledWith(configPath);
-    expect(mkdirSyncMock).toHaveBeenCalledWith(expectedDir, { recursive: true });
-    expect(writeFileSyncMock).toHaveBeenCalledWith(configPath, JSON.stringify({ test: true }, null, 2));
+    expect(result.errors).toEqual([]);
+    expect(JSON.parse(readFileSync(configPath, "utf-8"))).toEqual({ nested: true });
   });
 });

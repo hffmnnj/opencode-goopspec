@@ -10,6 +10,7 @@ import {
   normalizePath,
   resolve,
   sep,
+  safeDirname,
 } from "./platform.js";
 
 describe("platform abstraction layer", () => {
@@ -93,6 +94,20 @@ describe("platform abstraction layer", () => {
 
     it("keeps forward slash paths unchanged", () => {
       expect(ensurePosixPath("/home/user")).toBe("/home/user");
+    });
+  });
+
+  describe("safeDirname", () => {
+    it("handles Windows-style paths", () => {
+      expect(safeDirname("C:\\Users\\test\\.config\\opencode\\goopspec.json")).toBe(
+        "C:\\Users\\test\\.config\\opencode",
+      );
+    });
+
+    it("handles Unix-style paths", () => {
+      expect(safeDirname("/home/test/.config/opencode/goopspec.json")).toBe(
+        "/home/test/.config/opencode",
+      );
     });
   });
 

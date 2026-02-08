@@ -13,6 +13,11 @@ import { getHomeDir } from "./platform.js";
 
 const SHARED_RESOURCE_NAMES = ["memory.db", "config.json", "archive"] as const;
 
+type PathLike = {
+  basename(value: string): string;
+  resolve(...paths: string[]): string;
+};
+
 function hasSessionId(sessionId?: string): sessionId is string {
   return typeof sessionId === "string" && sessionId.trim().length > 0;
 }
@@ -21,6 +26,10 @@ function isSharedResource(filename: string): boolean {
   return SHARED_RESOURCE_NAMES.some(
     (resource) => filename === resource || filename.startsWith(`${resource}/`),
   );
+}
+
+export function isDistDirectory(currentDir: string, pathImpl: PathLike = { basename, resolve }): boolean {
+  return pathImpl.basename(pathImpl.resolve(currentDir)) === "dist";
 }
 
 /**
@@ -35,7 +44,7 @@ export function getPackageRoot(): string {
   // After bundling, we're in dist/index.js (single file)
   // In development, we're in src/shared/paths.ts
   // Check if we're in dist/ (bundled) or src/shared/ (dev)
-  if (basename(resolve(currentDir)) === "dist") {
+  if (isDistDirectory(currentDir)) {
     // Bundled: go up 1 level from dist/
     return resolve(currentDir, "..");
   }
