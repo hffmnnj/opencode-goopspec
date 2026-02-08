@@ -406,3 +406,73 @@ Risks:
 | Skill compression | Medium | Loss of workflow clarity | Keep phase/gate checklist language intact |
 | Auto-injected optimization | Medium | Missing required user interaction behavior | Keep minimal mandatory instruction; test user-facing agents |
 | Tool description compression | Low-Medium | Ambiguous tool selection | Keep action verbs + constraints; verify tool behavior |
+
+---
+
+# RESEARCH: Wave 2 - Tool Description Audit (Task 2.1)
+
+**Date:** 2026-02-08
+**Scope:** All 16 tool description strings in `src/tools/*/index.ts`, with args schemas reviewed for duplication.
+**Methodology:** Reuse Wave 1 token baseline (`chars / 4`) and compare description text against each tool's schema fields (`args` enum/options/descriptions).
+
+## Current Total (Validation)
+
+- **Current tool description total:** `1,010.75` estimated tokens (rounds to `1,011` baseline)
+- **Baseline match:** Yes (same 16 tool descriptions from Wave 1)
+
+## Per-Tool Audit
+
+| Tool | Current Tokens | Category | Redundancy / Compression Opportunity | Est. Savings |
+|---|---:|---|---|---:|
+| `goop_state` | 214.00 | verbose | Repeats full action enum already in `action` schema; includes safety warning duplicated by agent instructions | 120.00 (56%) |
+| `goop_reference` | 180.50 | verbose | Long embedded examples/lists of refs/templates; usage notes repeat `name/type/section/list` schema behavior | 95.00 (53%) |
+| `goop_setup` | 96.50 | moderate | Action list duplicates `action` enum; verbose phrasing can become compact one-liners | 24.00 (25%) |
+| `memory_save` | 88.75 | moderate | "Use this to..." bullet list overlaps with `type/facts/concepts/sourceFiles/importance` schema guidance | 27.00 (30%) |
+| `memory_search` | 82.75 | moderate | Recall examples duplicate `query/types/concepts/minImportance` semantics in schema | 25.00 (30%) |
+| `memory_decision` | 64.50 | moderate | Decision-use bullets restate fields (`decision/reasoning/alternatives/impact/concepts`) | 19.00 (29%) |
+| `memory_forget` | 60.00 | moderate | Deletion use-cases are verbose; schema already communicates `id/query/confirm` behavior | 18.00 (30%) |
+| `memory_note` | 50.50 | moderate | "Simplified memory_save" and usage bullets are redundant; schema already minimal | 15.00 (30%) |
+| `goop_delegate` | 34.75 | minimal | Already concise; only minor tightening possible (remove "native task tool invocation" wording) | 2.00 (6%) |
+| `goop_skill` | 29.00 | minimal | Clear and short; minor trim only | 2.00 (7%) |
+| `goop_adl` | 27.75 | minimal | Slightly verbose sentence; action semantics already in enum | 2.00 (7%) |
+| `session_search` | 27.50 | minimal | Already concise and specific; tiny wording cleanup possible | 2.00 (7%) |
+| `goop_spec` | 17.25 | minimal | Already compact and descriptive | 0.50 (3%) |
+| `goop_checkpoint` | 16.25 | minimal | Already compact and descriptive | 0.50 (3%) |
+| `goop_status` | 15.50 | minimal | Already compact and descriptive | 0.50 (3%) |
+| `slashcommand` | 5.25 | minimal | Essentially irreducible; dynamic command list built elsewhere | 0.00 (0%) |
+
+## Category Summary
+
+| Category | Tools | Current Tokens | Est. Savings | Notes |
+|---|---:|---:|---:|---|
+| verbose (>40%) | 2 | 394.50 | 215.00 | `goop_state`, `goop_reference` dominate tool-level opportunity |
+| moderate (10-40%) | 6 | 442.50 | 128.00 | Primarily memory tools + `goop_setup` |
+| minimal (<=10%) | 8 | 173.75 | 9.50 | Keep mostly unchanged; avoid over-optimization |
+| **Total** | **16** | **1,010.75** | **352.50** | ~34.9% tool-description reduction potential |
+
+## Compression Recommendations (for Task 2.2)
+
+### Highest-Impact Tools
+
+1. **`goop_state`**: replace 12-line action narrative with a single purpose sentence; rely on `action` enum for action catalog.
+2. **`goop_reference`**: remove embedded example lists and usage tutorial language; keep one sentence for references/templates + one for section extraction.
+3. **Memory tool cluster** (`memory_save`, `memory_search`, `memory_decision`, `memory_forget`, `memory_note`): compress "when to use" bullets into one short intent line per tool.
+
+### Common Redundancy Patterns Found
+
+- **Schema duplication:** descriptions restate enum options that are already encoded in `tool.schema.enum(...)`.
+- **Parameter duplication:** prose explains fields that already have explicit schema `.describe(...)` text.
+- **Inline training/examples:** long "Use this to..." and example-heavy guidance can be trimmed because agent prompts already carry usage policy.
+- **Low-value verbosity:** many descriptions can be reduced to "what it does" + one critical caveat (if any) without harming tool selection.
+
+### Minimal Description Floor
+
+For each tool, keep:
+- primary verb + object (what action it performs),
+- one disambiguator if tool family overlaps (for memory tools),
+- one safety caveat only when high-risk (`goop_state`, `memory_forget`).
+
+Avoid keeping:
+- full action/option catalogs already encoded in schemas,
+- long usage examples/anti-patterns,
+- guidance duplicated in agent system prompts.
