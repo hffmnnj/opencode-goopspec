@@ -138,8 +138,8 @@ const GoopSpecPlugin: Plugin = async (input) => {
     const tools = createTools(ctx);
     log("Tools created", { toolCount: Object.keys(tools).length });
 
-    // Create all hooks (pass input for hooks that need client access)
-    const hooksFromFactory = createHooks(ctx, input);
+    // Create all hooks
+    const hooksFromFactory = createHooks(ctx);
     log("Hooks created");
 
     // Create config handler for orchestrator agent registration
