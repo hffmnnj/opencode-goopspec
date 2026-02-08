@@ -476,3 +476,129 @@ Avoid keeping:
 - full action/option catalogs already encoded in schemas,
 - long usage examples/anti-patterns,
 - guidance duplicated in agent system prompts.
+
+---
+
+# RESEARCH: Wave 3 - Agent Prompt Audit (Task 3.1)
+
+**Date:** 2026-02-08  
+**Scope:** All 13 agent prompt definitions in `agents/*.md`, with injected `skills/*`, `references/*`, and `templates/*` from frontmatter.  
+**Methodology:** estimated tokens = `chars / 4`.
+
+Composed prompt formula used (as requested):
+
+`composed_chars = raw_agent_markdown + injected_skills + injected_references + 773 (memory boilerplate) + 1,393 (question tool boilerplate)`
+
+Notes:
+- `references:` entries that point to `templates/*` were counted in injected references (same compose chain in `src/agents/agent-factory.ts`).
+- This audit uses frontmatter lists and file-size aggregation (not LLM runtime tokenization).
+
+## Per-Agent Composed Prompt Size (All 13, Ranked)
+
+| Rank | Agent | Composed Chars | Est. Tokens |
+|---:|---|---:|---:|
+| 1 | `goop-orchestrator` | 137,938 | 34,484.50 |
+| 2 | `goop-planner` | 114,130 | 28,532.50 |
+| 3 | `goop-executor` | 104,786 | 26,196.50 |
+| 4 | `goop-verifier` | 90,332 | 22,583.00 |
+| 5 | `goop-researcher` | 85,144 | 21,286.00 |
+| 6 | `goop-writer` | 79,662 | 19,915.50 |
+| 7 | `goop-debugger` | 78,418 | 19,604.50 |
+| 8 | `goop-librarian` | 74,530 | 18,632.50 |
+| 9 | `goop-tester` | 69,697 | 17,424.25 |
+| 10 | `goop-designer` | 69,013 | 17,253.25 |
+| 11 | `goop-explorer` | 64,248 | 16,062.00 |
+| 12 | `goop-creative` | 56,772 | 14,193.00 |
+| 13 | `memory-distiller` | 41,602 | 10,400.50 |
+
+## Per-Agent Breakdown (Raw vs Injected vs Boilerplate)
+
+| Agent | Raw Markdown | Injected Skills | Injected References | Boilerplate | Composed Total |
+|---|---:|---:|---:|---:|---:|
+| `goop-orchestrator` | 22,496 | 28,589 | 84,687 | 2,166 | 137,938 |
+| `goop-planner` | 16,165 | 26,875 | 68,924 | 2,166 | 114,130 |
+| `goop-executor` | 12,775 | 25,089 | 64,756 | 2,166 | 104,786 |
+| `goop-verifier` | 11,821 | 24,204 | 52,141 | 2,166 | 90,332 |
+| `goop-researcher` | 13,785 | 19,840 | 49,353 | 2,166 | 85,144 |
+| `goop-writer` | 12,984 | 13,262 | 51,250 | 2,166 | 79,662 |
+| `goop-debugger` | 10,983 | 19,993 | 45,276 | 2,166 | 78,418 |
+| `goop-librarian` | 10,041 | 19,840 | 42,483 | 2,166 | 74,530 |
+| `goop-tester` | 12,892 | 14,165 | 40,474 | 2,166 | 69,697 |
+| `goop-designer` | 12,684 | 11,732 | 42,431 | 2,166 | 69,013 |
+| `goop-explorer` | 9,970 | 9,629 | 42,483 | 2,166 | 64,248 |
+| `goop-creative` | 7,580 | 20,609 | 26,417 | 2,166 | 56,772 |
+| `memory-distiller` | 9,244 | 0 | 30,192 | 2,166 | 41,602 |
+
+## Largest Injected Skills/References by Impact (size x injection count)
+
+| Rank | Injected Content | Type | Size (chars) | Injection Count | Total Impact (chars) | Est. Impact Tokens |
+|---:|---|---|---:|---:|---:|---:|
+| 1 | `references/subagent-protocol.md` | reference | 10,035 | 12 | 120,420 | 30,105.00 |
+| 2 | `references/plugin-architecture.md` | reference | 9,144 | 12 | 109,728 | 27,432.00 |
+| 3 | `references/response-format.md` | reference | 9,126 | 12 | 109,512 | 27,378.00 |
+| 4 | `references/xml-response-schema.md` | reference | 7,256 | 13 | 94,328 | 23,582.00 |
+| 5 | `skills/goop-core/skill.md` (`goop-core`) | skill | 11,350 | 8 | 90,800 | 22,700.00 |
+| 6 | `skills/memory-usage/skill.md` (`memory-usage`) | skill | 5,467 | 12 | 65,604 | 16,401.00 |
+| 7 | `references/handoff-protocol.md` | reference | 6,870 | 7 | 48,090 | 12,022.50 |
+| 8 | `references/context-injection.md` | reference | 6,922 | 6 | 41,532 | 10,383.00 |
+| 9 | `references/phase-gates.md` | reference | 8,732 | 3 | 26,196 | 6,549.00 |
+| 10 | `references/git-workflow.md` | reference | 7,645 | 2 | 15,290 | 3,822.50 |
+
+## Injection Frequency (Most Reused)
+
+### References
+
+| Content | Injected By Agents |
+|---|---:|
+| `references/xml-response-schema.md` | 13 |
+| `references/subagent-protocol.md` | 12 |
+| `references/plugin-architecture.md` | 12 |
+| `references/response-format.md` | 12 |
+| `references/handoff-protocol.md` | 7 |
+| `references/context-injection.md` | 6 |
+
+### Skills
+
+| Content | Injected By Agents |
+|---|---:|
+| `memory-usage` | 12 |
+| `goop-core` | 8 |
+| `architecture-design` | 2 |
+| `testing` | 2 |
+| `research` | 2 |
+| `code-review` | 2 |
+
+## Shared Boilerplate Overhead
+
+- Per agent boilerplate (fixed):
+  - Memory instructions: **773 chars** (193.25 est. tokens)
+  - Question tool instructions: **1,393 chars** (348.25 est. tokens)
+  - **Total per agent:** **2,166 chars** (541.50 est. tokens)
+- Across all 13 agents:
+  - **28,158 chars** total (7,039.50 est. tokens)
+
+## Compression Opportunities (Per Agent)
+
+| Agent | Largest Cost Drivers | Specific Opportunities |
+|---|---|---|
+| `goop-orchestrator` | references (61.4%), skills (20.7%) | Trim high-frequency injected references first (`subagent-protocol`, `plugin-architecture`, `response-format`); split `goop-core` into role/phase slices; collapse repeated XML/handoff prose duplicated across references. |
+| `goop-planner` | references (60.4%), skills (23.5%) | Keep planning-critical templates but trim verbose template guidance; reduce overlap between `goop-core`, `workflow-specify`, and phase-gate references; replace long examples with compact checklists. |
+| `goop-executor` | references (61.8%), skills (23.9%) | De-duplicate response-format/XML/handoff instructions; compress `atomic-commits` + `git-workflow` overlap; keep only one canonical commit format block. |
+| `goop-verifier` | references (57.7%), skills (26.8%) | Merge repeated verification/security instructions between `verification` skill and `security-checklist`; trim duplicated protocol headers and sample envelopes. |
+| `goop-researcher` | references (58.0%), skills (23.3%) | Compress research-report formatting examples; slim shared protocol references to concise action rules + one canonical schema link. |
+| `goop-writer` | references (64.3%) | Highest reference dominance among top-half agents: consolidate template instructions (`summary`, `retrospective`, `milestone`) and reduce repeated markdown style examples. |
+| `goop-debugger` | references (57.7%), skills (25.5%) | Trim overlap between `debugging`, `scientific-method`, and deviation rules; keep one concise experiment loop section. |
+| `goop-librarian` | references (57.0%), skills (26.6%) | Reduce duplication between `research` skill and response-format artifacts guidance; shorten repeated handoff/context paragraphs. |
+| `goop-tester` | references (58.1%), skills (20.3%) | Compress testing examples (unit/integration/e2e snippets) in injected skills; retain command matrix and quality gates only. |
+| `goop-designer` | references (61.5%) | Trim verbose design prose in skills (`ui-design`, `ux-patterns`, `responsive-design`) and rely on compact principles + acceptance checks. |
+| `goop-explorer` | references (66.1%) | Highest reference ratio in non-top-3; compress shared protocol references aggressively since agent-specific markdown is already relatively small. |
+| `goop-creative` | skills (36.3%), references (46.5%) | Primary lever is skill compression (`goop-core` + `architecture-design`); keep creative constraints but shorten narrative examples. |
+| `memory-distiller` | references (72.6%) | No injected skills; largest win is pruning injected references to a minimal memory-distillation protocol subset plus concise XML schema requirements. |
+
+## Key Findings
+
+1. **Injected references dominate every large agent** (typically ~57-66% of composed size).
+2. **Cross-agent shared documents are the main multiplier** (`subagent-protocol`, `plugin-architecture`, `response-format`, `xml-response-schema`).
+3. **Shared skills also have high fan-out**, especially `goop-core` and `memory-usage`.
+4. **Boilerplate is modest per-agent but non-trivial in aggregate** (7,039.50 estimated tokens across 13 agents).
+5. **Best Wave 3.2/4.2 compression path:** start with high-impact shared references + shared skills before trimming individual agent markdown.
