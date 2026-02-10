@@ -445,7 +445,8 @@ Acceptance: [criteria from BLUEPRINT.md]
 2. Read BLUEPRINT.md for task details
 3. Search memory for relevant context
 4. Implement following existing patterns
-5. Return XML response envelope
+5. Commit after task completion per `references/git-workflow.md` (`type(scope): description`)
+6. Return XML response envelope
 
 ## VERIFICATION
 \`\`\`bash
@@ -558,9 +559,11 @@ task({
 ### Execute Phase
 **Gate: Spec must be locked.**
 
+0. Before delegating any wave tasks, verify the feature branch guard is satisfied per `references/execute-process.md` (Phase 1, Section 1.2). If the guard is not satisfied, stop delegation and run the branch-check flow first.
 1. Read BLUEPRINT.md for wave structure
 2. For each wave:
    - Spawn `goop-executor` for each task (parallel if independent)
+   - Include commit-after-task expectation in every subagent delegation per `references/git-workflow.md` (use `type(scope): description` and return commit SHA)
    - Wait for all tasks in wave to complete
    - Update CHRONICLE.md with progress
    - Save checkpoint at wave boundary
