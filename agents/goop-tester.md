@@ -478,7 +478,7 @@ export class LoginPage {
   <next_steps>
     <for_orchestrator>Do NOT proceed to acceptance. Delegate fixes.</for_orchestrator>
     <required_action>
-      <item>Delegate to goop-executor with specific fixes.</item>
+      <item>Delegate to goop-executor-{tier} with specific fixes.</item>
       <item>Re-run tests after fixes.</item>
     </required_action>
   </next_steps>

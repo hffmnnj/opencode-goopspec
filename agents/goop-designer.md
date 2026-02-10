@@ -435,7 +435,7 @@ List screens and states to verify visually.
       <step>Add responsive styles</step>
       <step>Test accessibility</step>
     </implementation>
-    <delegate>goop-executor</delegate>
+    <delegate>goop-executor-frontend</delegate>
   </next_steps>
 </response>
 ```
@@ -459,7 +459,7 @@ List screens and states to verify visually.
       <component name="[Component 1]" purpose="[purpose]" />
       <component name="[Component 2]" purpose="[purpose]" />
     </key_components>
-    <delegate>goop-executor</delegate>
+    <delegate>goop-executor-frontend</delegate>
     <task>Implement [feature] per design spec</task>
     <files>src/components/[Feature].tsx</files>
     <verify>Visual matches spec, accessibility passes</verify>

@@ -402,7 +402,7 @@ task({
 ```typescript
 // Step 1: Engineer the prompt
 goop_delegate({
-  agent: "goop-executor",
+  agent: "goop-executor-{tier}",
   prompt: "Implement user authentication",
   context: "Stack: Next.js, Auth: NextAuth"
 })
@@ -410,7 +410,7 @@ goop_delegate({
 
 // Step 2: Execute (REQUIRED - copy from goop_delegate output)
 task({
-  subagent_type: "goop-executor",
+  subagent_type: "goop-executor-{tier}",
   description: "Implement auth",
   prompt: `[The composedPrompt from goop_delegate output]`
 })
@@ -420,7 +420,7 @@ task({
 
 ```typescript
 task({
-  subagent_type: "goop-[agent-name]",  // e.g., "goop-executor"
+  subagent_type: "goop-[agent-name]",  // e.g., "goop-executor-medium"
   description: "3-5 word summary",
   prompt: `
 ## TASK
@@ -478,7 +478,7 @@ task({
 
 | subagent_type | Use For |
 |---------------|---------|
-| `goop-executor` | Code implementation, features, fixes |
+| `goop-executor-{tier}` | Code implementation, features, fixes |
 | `goop-explorer` | Fast codebase mapping, pattern detection |
 | `goop-researcher` | Deep domain research, technology evaluation |
 | `goop-planner` | Architecture design, blueprint creation |
@@ -497,7 +497,7 @@ task({
 
 | Pattern Detected | Auto-Action | Agent |
 |-----------------|-------------|-------|
-| User says "implement", "create", "build", "add feature" | Gather requirements → spawn planner → spawn executor | `goop-planner` → `goop-executor` |
+| User says "implement", "create", "build", "add feature" | Gather requirements → spawn planner → spawn tiered executor | `goop-planner` → `goop-executor-{tier}` |
 | User says "find", "where is", "show me", "search" | Spawn explorer immediately | `goop-explorer` |
 | User says "how does X work", "trace", "understand" | Spawn explorer or librarian (parallel in standard/deep when independent) | `goop-explorer` / `goop-librarian` |
 | User says "research", "compare", "evaluate options" | Spawn researcher immediately (or researcher + explorer in parallel for deep mode) | `goop-researcher` (+ `goop-explorer`) |
@@ -562,7 +562,7 @@ task({
 0. Before delegating any wave tasks, verify the feature branch guard is satisfied per `references/execute-process.md` (Phase 1, Section 1.2). If the guard is not satisfied, stop delegation and run the branch-check flow first.
 1. Read BLUEPRINT.md for wave structure
 2. For each wave:
-   - Spawn `goop-executor` for each task (parallel if independent)
+   - Read each task's `Executor` field from BLUEPRINT.md and spawn `goop-executor-{tier}` accordingly (parallel if independent)
    - Include commit-after-task expectation in every subagent delegation per `references/git-workflow.md` (use `type(scope): description` and return commit SHA)
    - Wait for all tasks in wave to complete
    - Update CHRONICLE.md with progress

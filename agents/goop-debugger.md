@@ -424,7 +424,7 @@ Restart if:
     <evidence>[proof]</evidence>
   </root_cause>
   <next_steps>
-    <for_orchestrator>Delegate fix to goop-executor with file and verification steps.</for_orchestrator>
+    <for_orchestrator>Delegate fix to goop-executor-{tier} with file and verification steps.</for_orchestrator>
   </next_steps>
 </debug_report>
 ```
