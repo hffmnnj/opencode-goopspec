@@ -74,6 +74,7 @@ Wave {{number}}: {{name}} {{#parallel}}[PARALLEL]{{/parallel}}{{^parallel}}[SEQU
 | Attribute | Value |
 |-----------|-------|
 | **Intent** | {{intent}} |
+| **Executor** | {{executor}} |
 | **Parallel** | {{#parallel}}Yes{{/parallel}}{{^parallel}}No{{/parallel}} |
 {{#depends_on}}| **Depends On** | Task {{depends_on}} |{{/depends_on}}
 {{#blocks}}| **Blocks** | Task {{blocks}} |{{/blocks}}
