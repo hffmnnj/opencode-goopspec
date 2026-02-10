@@ -133,7 +133,10 @@ describe("goop_setup tool", () => {
       const expectedAgents = [
         "goop-debugger",
         "goop-designer",
-        "goop-executor",
+        "goop-executor-low",
+        "goop-executor-medium",
+        "goop-executor-high",
+        "goop-executor-frontend",
         "goop-explorer",
         "goop-librarian",
         "goop-orchestrator",
