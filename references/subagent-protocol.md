@@ -81,13 +81,21 @@ memory_decision({
 
 Every subagent MUST:
 
+For full commit conventions and examples, see `references/git-workflow.md`.
+
 ```typescript
-// 1. Update chronicle with outcome
+// 1. Commit all task changes before reporting completion
+//    Format: type(scope): description
+//    See references/git-workflow.md for full rules
+git add [changed files]
+git commit -m "type(scope): description"
+
+// 2. Update chronicle with outcome
 Edit(".goopspec/CHRONICLE.md", {
   update: "Task 2.1: COMPLETE (commit: abc123)"
 })
 
-// 2. Persist learnings
+// 3. Persist learnings
 memory_save({
   type: "observation",
   title: "[task] completed",
@@ -96,7 +104,8 @@ memory_save({
   importance: 0.6
 })
 
-// 3. Return clear summary to orchestrator
+// 4. Return clear summary to orchestrator
+//    Include commit SHA in both the summary fields and XML artifacts.commits
 return {
   status: "complete",
   summary: "[what was done]",
