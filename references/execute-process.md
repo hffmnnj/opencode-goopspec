@@ -27,7 +27,45 @@ IF state.specLocked != true:
   ---
 ```
 
-### 1.2 Gate passed
+### 1.2 Feature branch guard
+
+Before starting wave delegation, ensure execution is not starting from the default branch.
+
+```bash
+git branch --show-current
+git remote show origin | grep 'HEAD branch' | sed 's/.*: //'
+```
+
+Set:
+- `currentBranch` = output of `git branch --show-current`
+- `defaultBranch` = detected HEAD branch from origin (fallback to `main` if detection is empty)
+
+Evaluate against default-branch set:
+- `main`
+- `master`
+- `defaultBranch`
+
+If `currentBranch` is in that set, use `question` tool:
+- header: "Git Branch Guard"
+- question: "You're on `[currentBranch]`, which is a default branch. Create a feature branch before execution?"
+- options:
+  - "Create feature branch (Recommended)" — Create and switch to a feature branch
+  - "Stay on current branch" — Continue on `[currentBranch]`
+
+Suggested branch name:
+- Derive from SPEC title in `.goopspec/SPEC.md`
+- Pattern: `feat/<spec-title-kebab-case>`
+- Example: `# SPEC: Git Workflow Improvements` -> `feat/git-workflow-improvements`
+
+**On "Create feature branch":**
+
+```bash
+git checkout -b feat/<spec-title-kebab-case>
+```
+
+If `currentBranch` is NOT in the default-branch set, proceed silently with no prompt.
+
+### 1.3 Gate passed
 
 ```
 ## 🔮 GoopSpec · Execution
