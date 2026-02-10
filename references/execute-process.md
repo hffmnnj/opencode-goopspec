@@ -269,23 +269,36 @@ Use `question` tool:
 
 Follow the PR creation process from git-workflow reference:
 
-1. Check branch status:
+1. **Ask which branch to target.**
+
+Use `question` tool:
+- header: "PR Target Branch"
+- question: "Which branch should this PR merge into?"
+- options:
+  - "main" — Merge into main branch
+  - "develop" — Merge into develop branch
+
+The user can also type a custom branch name.
+
+Store the answer as `$TARGET_BRANCH`.
+
+2. Check branch status:
 ```bash
 git branch --show-current
-git log main..HEAD --oneline
-git diff main...HEAD --stat
+git log $TARGET_BRANCH..HEAD --oneline
+git diff $TARGET_BRANCH...HEAD --stat
 ```
 
-2. Generate PR title and description:
+3. Generate PR title and description:
 - **Title:** `type(scope): Descriptive summary` (no GoopSpec terminology)
 - **Body:** Summary, Changes, Testing (from CHRONICLE.md), Notes
 
-3. Create PR:
+4. Create PR:
 ```bash
-gh pr create --title "type(scope): Title" --body "..." [--draft]
+gh pr create --base $TARGET_BRANCH --title "type(scope): Title" --body "..." [--draft]
 ```
 
-4. Display PR URL
+5. Display PR URL
 
 ### 6.2 Display next steps
 
