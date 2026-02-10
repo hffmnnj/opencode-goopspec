@@ -244,7 +244,7 @@ The Conductor never writes implementation code. It directs specialists.
 | `goop-executor-medium` | The Builder (Medium) | `kimi-for-coding/k2p5` | Handles business logic and test-oriented implementation |
 | `goop-executor-high` | The Builder (High) | `openai/gpt-5.3-codex` | Handles complex architecture and security-sensitive work |
 | `goop-executor-frontend` | The Builder (Frontend) | `anthropic/claude-opus-4-6` | Handles UI, styling, responsiveness, and accessibility work |
-| `goop-planner` | The Architect | `anthropic/claude-opus-4-6` | Creates specs and blueprints |
+| `goop-planner` | The Architect | `openai/gpt-5.3-codex` | Creates specs and blueprints |
 | `goop-researcher` | The Scholar | `openai/gpt-5.2` | Deep domain research |
 | `goop-explorer` | The Scout | `google/gemini-3-flash` | Fast codebase mapping |
 | `goop-verifier` | The Auditor | `openai/gpt-5.3-codex` | Verifies against spec |
