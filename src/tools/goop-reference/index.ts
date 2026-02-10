@@ -10,8 +10,14 @@
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, ResolvedResource, ToolContext } from "../../core/types.js";
+import { GOOPSPEC_VERSION } from "../../core/version.js";
 
 type ReferenceCategory = "reference" | "template";
+
+function appendVersionFooter(content: string): string {
+  const trimmedContent = content.trimEnd();
+  return `${trimmedContent}\n\n*GoopSpec v${GOOPSPEC_VERSION}*`;
+}
 
 /**
  * Format resource info for listing
@@ -70,22 +76,7 @@ function getSection(resource: ResolvedResource, section?: string): string | null
  */
 export function createGoopReferenceTool(ctx: PluginContext): ToolDefinition {
   return tool({
-    description: `Load reference documents or templates for specialized knowledge.
-
-**References** provide protocols, checklists, and patterns:
-- subagent-protocol: How subagents communicate with orchestrator
-- deviation-rules: When to auto-fix vs ask user
-- security-checklist: Security verification checklist
-- response-format: Standardized agent response formats
-
-**Templates** provide document structures:
-- spec: SPEC.md template for requirements
-- blueprint: BLUEPRINT.md template for execution plans
-- chronicle: CHRONICLE.md template for progress tracking
-
-Use \`list: true\` to see all available resources.
-Use \`type\` to filter: "reference" or "template" or "all".
-Use \`section\` to extract a specific section from the document.`,
+    description: "Load GoopSpec references or templates, list available resources, or extract a specific section from a resource.",
     args: {
       name: tool.schema.string().optional(),
       type: tool.schema.enum(["reference", "template", "all"]).optional(),
@@ -131,7 +122,7 @@ Use \`section\` to extract a specific section from the document.`,
         lines.push("Use `goop_reference({ name: \"resource-name\" })` to load content.");
         lines.push("Use `goop_reference({ name: \"resource-name\", section: \"Section Name\" })` to extract a specific section.");
         
-        return lines.join("\n");
+        return appendVersionFooter(lines.join("\n"));
       }
       
       // Load specific resource
@@ -170,15 +161,15 @@ Use \`section\` to extract a specific section from the document.`,
       if (args.section) {
         const sectionContent = getSection(resource, args.section);
         if (sectionContent) {
-          return [
-            `# ${resource.name} - ${args.section}`,
-            "",
-            `*Extracted from ${foundType}: ${resource.name}*`,
-            "",
-            "---",
-            "",
-            sectionContent,
-          ].join("\n");
+            return appendVersionFooter([
+              `# ${resource.name} - ${args.section}`,
+              "",
+              `*Extracted from ${foundType}: ${resource.name}*`,
+              "",
+              "---",
+              "",
+              sectionContent,
+            ].join("\n"));
         } else {
           return [
             `Section "${args.section}" not found in ${resource.name}.`,
@@ -203,13 +194,11 @@ Use \`section\` to extract a specific section from the document.`,
         lines.push(`**Category:** ${resource.frontmatter.category}`, "");
       }
       
-      if (resource.frontmatter.version) {
-        lines.push(`**Version:** ${resource.frontmatter.version}`, "");
-      }
+      lines.push(`**Version:** ${GOOPSPEC_VERSION}`, "");
       
       lines.push("---", "", resource.body);
       
-      return lines.join("\n");
+      return appendVersionFooter(lines.join("\n"));
     },
   });
 }

@@ -4,10 +4,11 @@
 
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
 import { mkdirSync, rmSync, existsSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 import { installMcps, isMcpInstalled, getInstalledMcps } from "./mcp-installer";
 
-const TEST_DIR = "/tmp/goopspec-mcp-test-" + Date.now();
+const TEST_DIR = join(tmpdir(), `goopspec-mcp-test-${Date.now()}`);
 
 describe("mcp-installer", () => {
   beforeEach(() => {

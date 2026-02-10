@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach } from "bun:test";
+import { tmpdir } from "os";
+import { join } from "path";
 import { createChatMessageHook } from "./chat-message.js";
 import {
   createMockPluginContext,
@@ -32,7 +34,7 @@ describe("createChatMessageHook", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = `/tmp/chat-message-test-${Date.now()}`;
+    testDir = join(tmpdir(), `chat-message-test-${Date.now()}`);
     ctx = createMockPluginContext({
       testDir,
       config: {

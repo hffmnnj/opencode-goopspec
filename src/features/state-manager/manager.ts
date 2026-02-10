@@ -6,7 +6,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync, readdirSync, renameSync, mkdirSync } from "fs";
-import { join, dirname } from "path";
+import { join, dirname, basename } from "path";
 import type { 
   GoopState, 
   StateManager, 
@@ -18,7 +18,8 @@ import type {
   TaskInfo,
   GoopSpecConfig
 } from "../../core/types.js";
-import { getProjectGoopspecDir } from "../../shared/paths.js";
+import { listSessions, updateSessionIndex } from "../session/manager.js";
+import { getProjectGoopspecDir, getSessionGoopspecPath } from "../../shared/paths.js";
 import { log, logError } from "../../shared/logger.js";
 
 // ============================================================================
@@ -89,7 +90,9 @@ function migrateOldState(oldState: Record<string, unknown>, projectName?: string
     projectName || 
     (existingProject?.name as string) ||
     (projectState?.name as string) || 
-    (projectState?.project_path as string)?.split('/').pop() ||
+    (projectState?.project_path
+      ? basename(projectState.project_path as string)
+      : undefined) ||
     "unnamed";
   
   // Determine initialized date
@@ -246,13 +249,14 @@ function getTodayDateString(): string {
 export function createStateManager(
   projectDir: string, 
   projectName?: string,
-  config?: GoopSpecConfig
+  config?: GoopSpecConfig,
+  sessionId?: string,
 ): StateManager {
   const goopspecDir = getProjectGoopspecDir(projectDir);
-  const statePath = join(goopspecDir, STATE_FILENAME);
-  const adlPath = join(goopspecDir, ADL_FILENAME);
-  const checkpointsDir = join(goopspecDir, CHECKPOINTS_DIR);
-  const historyDir = join(goopspecDir, HISTORY_DIR);
+  const statePath = getSessionGoopspecPath(projectDir, STATE_FILENAME, sessionId);
+  const adlPath = getSessionGoopspecPath(projectDir, ADL_FILENAME, sessionId);
+  const checkpointsDir = getSessionGoopspecPath(projectDir, CHECKPOINTS_DIR, sessionId);
+  const historyDir = getSessionGoopspecPath(projectDir, HISTORY_DIR, sessionId);
 
   // In-memory cache of current state
   let cachedState: GoopState | null = null;
@@ -263,6 +267,52 @@ export function createStateManager(
   function ensureGoopspecDir(): void {
     if (!existsSync(goopspecDir)) {
       mkdirSync(goopspecDir, { recursive: true });
+    }
+  }
+
+  /**
+   * Keep active session index metadata in sync with state changes
+   */
+  function syncSessionMetadata(state: GoopState): void {
+    if (!sessionId) {
+      return;
+    }
+
+    try {
+      const sessions = listSessions(projectDir);
+      let hasChanges = false;
+
+      const nextSessions = sessions.map((session) => {
+        if (session.id !== sessionId) {
+          return session;
+        }
+
+        const nextPhase = state.workflow.phase;
+        const nextMode = state.workflow.mode;
+        const nextLastActivity = state.workflow.lastActivity;
+
+        if (
+          session.phase === nextPhase
+          && session.mode === nextMode
+          && session.lastActivity === nextLastActivity
+        ) {
+          return session;
+        }
+
+        hasChanges = true;
+        return {
+          ...session,
+          phase: nextPhase,
+          mode: nextMode,
+          lastActivity: nextLastActivity,
+        };
+      });
+
+      if (hasChanges) {
+        updateSessionIndex(projectDir, nextSessions);
+      }
+    } catch (error) {
+      logError(`Failed to sync session metadata for ${sessionId}`, error);
     }
   }
 
@@ -309,6 +359,7 @@ export function createStateManager(
     ensureGoopspecDir();
     atomicWriteFile(statePath, JSON.stringify(state, null, 2));
     cachedState = state;
+    syncSessionMetadata(state);
   }
 
   // -------------------------------------------------------------------------

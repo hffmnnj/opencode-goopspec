@@ -7,7 +7,7 @@
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import type { PluginContext, ToolContext } from "../../core/types.js";
-import { 
+import {
   detectEnvironment, 
   planSetup, 
   applySetup,
@@ -17,6 +17,7 @@ import {
   resetSetup,
   getSetupStatus,
 } from "../../features/setup/index.js";
+import { detectPlatform, getSqliteVecPackage } from "../../features/setup/platform.js";
 import { AGENT_MODEL_SUGGESTIONS } from "../../features/setup/model-suggestions.js";
 import type { 
   SetupInput, 
@@ -141,6 +142,17 @@ function formatPlan(plan: SetupPlan): string {
     lines.push(`- Project name: ${plan.projectName ?? "unnamed"}`);
     lines.push("");
   }
+
+  if (plan.searchProvider) {
+    lines.push("## Search Provider");
+    lines.push(`- Provider: ${plan.searchProvider === "brave" ? "Brave Search" : "Exa"}`);
+    if (plan.searchProvider === "brave") {
+      lines.push("- API key guidance: Set BRAVE_API_KEY environment variable");
+    } else {
+      lines.push("- API key guidance: Set EXA_API_KEY environment variable or configure Exa MCP server");
+    }
+    lines.push("");
+  }
   
   if (plan.dirsToCreate && plan.dirsToCreate.length > 0) {
     lines.push("## Directories to Create");
@@ -189,7 +201,7 @@ function formatPlan(plan: SetupPlan): string {
 /**
  * Format result for display
  */
-function formatResult(result: SetupResult): string {
+function formatResult(result: SetupResult, searchProvider?: "exa" | "brave"): string {
   const lines = ["# GoopSpec Setup Result", ""];
   
   if (result.success) {
@@ -223,6 +235,17 @@ function formatResult(result: SetupResult): string {
     lines.push(...result.errors.map(e => `- ❌ ${e}`));
     lines.push("");
   }
+
+  if (searchProvider) {
+    lines.push("## Search Provider");
+    lines.push(`- Provider: ${searchProvider === "brave" ? "Brave Search" : "Exa"}`);
+    if (searchProvider === "brave") {
+      lines.push("- API key guidance: Set BRAVE_API_KEY environment variable");
+    } else {
+      lines.push("- API key guidance: Set EXA_API_KEY environment variable or configure Exa MCP server");
+    }
+    lines.push("");
+  }
   
   if (result.success) {
     lines.push("## Next Steps");
@@ -239,6 +262,8 @@ function formatResult(result: SetupResult): string {
  */
 function formatMemoryStatus(memorySetup: MemorySetupResult): string {
   const lines: string[] = ["## Memory System", ""];
+  const platform = detectPlatform();
+  const sqliteVecPackage = getSqliteVecPackage(platform);
   
   lines.push(`**Status**: ${memorySetup.enabled ? "✅ Enabled" : "❌ Disabled"}`);
   lines.push("");
@@ -254,8 +279,7 @@ function formatMemoryStatus(memorySetup: MemorySetupResult): string {
     lines.push("");
     lines.push("**To enable:** Install sqlite-vec for your platform:");
     lines.push("```bash");
-    lines.push("bun add sqlite-vec-linux-x64  # Linux x64");
-    lines.push("bun add sqlite-vec-darwin-arm64  # macOS Apple Silicon");
+    lines.push(`bun add ${sqliteVecPackage}  # ${platform.description}`);
     lines.push("```");
   }
   lines.push("");
@@ -304,7 +328,7 @@ function formatMemoryStatus(memorySetup: MemorySetupResult): string {
 /**
  * Format init result for display
  */
-function formatInitResult(result: InitResult): string {
+function formatInitResult(result: InitResult, searchProvider?: "exa" | "brave"): string {
   const lines = ["# GoopSpec Initialization Result", ""];
   
   if (result.success) {
@@ -324,6 +348,17 @@ function formatInitResult(result: InitResult): string {
   if (result.configsWritten.length > 0) {
     lines.push("## Configurations Written");
     lines.push(...result.configsWritten.map(c => `- ${c}`));
+    lines.push("");
+  }
+
+  if (searchProvider) {
+    lines.push("## Search Provider");
+    lines.push(`- Provider: ${searchProvider === "brave" ? "Brave Search" : "Exa"}`);
+    if (searchProvider === "brave") {
+      lines.push("- API key guidance: Set BRAVE_API_KEY environment variable");
+    } else {
+      lines.push("- API key guidance: Set EXA_API_KEY environment variable or configure Exa MCP server");
+    }
     lines.push("");
   }
   
@@ -477,6 +512,8 @@ function formatStatus(status: SetupStatus): string {
   if (status.mcps.missing.length > 0) {
     lines.push(`- Recommended: ${status.mcps.missing.join(", ")}`);
   }
+
+  lines.push(`- Search provider: ${status.searchProvider === "brave" ? "Brave Search" : "Exa"}`);
   
   if (Object.keys(status.agentModels).length > 0) {
     lines.push("");
@@ -498,15 +535,7 @@ function formatStatus(status: SetupStatus): string {
  */
 export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
   return tool({
-    description: `GoopSpec configuration tool. Actions:
-- 'detect': Check current setup state
-- 'init': Full first-time initialization wizard
-- 'plan': Preview changes before applying
-- 'apply': Write configuration changes
-- 'verify': Check if setup is complete and working
-- 'reset': Reset configuration to defaults
-- 'models': Show agent model suggestions
-- 'status': Show current configuration summary`,
+    description: "GoopSpec configuration and setup tool for detect/init/plan/apply/verify/reset/models/status actions.",
     args: {
       action: tool.schema.enum(["detect", "init", "plan", "apply", "verify", "reset", "models", "status"]),
       // Scope options
@@ -519,6 +548,7 @@ export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
       agentModels: tool.schema.record(tool.schema.string(), tool.schema.string()).optional(),
       // MCP options
       mcpPreset: tool.schema.enum(["core", "recommended", "none"]).optional(),
+      searchProvider: tool.schema.enum(["exa", "brave"]).optional(),
       // Orchestrator options
       enableOrchestrator: tool.schema.boolean().optional(),
       // Memory options
@@ -610,6 +640,7 @@ export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
             default: args.defaultModel,
           },
           mcpPreset: args.mcpPreset ?? "recommended",
+          searchProvider: args.searchProvider ?? "exa",
           enableOrchestrator: args.enableOrchestrator,
           agentModels: args.agentModels,
           memory: memoryConfig,
@@ -633,7 +664,7 @@ export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
           
           // Execute init
           const result = await applyInit(projectDir, plan);
-          return formatInitResult(result);
+          return formatInitResult(result, plan.searchProvider);
         }
         
         // ====================================================================
@@ -662,7 +693,7 @@ export function createGoopSetupTool(_ctx: PluginContext): ToolDefinition {
           }
           
           const result = await applySetup(plan);
-          return formatResult(result);
+          return formatResult(result, plan.searchProvider);
         }
         
         return `Unknown action: ${args.action}`;

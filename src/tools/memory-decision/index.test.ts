@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach } from "bun:test";
+import { tmpdir } from "os";
+import { join } from "path";
 import { createMemoryDecisionTool } from "./index.js";
 import {
   createMockPluginContext,
@@ -17,7 +19,7 @@ describe("createMemoryDecisionTool", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = `/tmp/memory-decision-test-${Date.now()}`;
+    testDir = join(tmpdir(), `memory-decision-test-${Date.now()}`);
     ctx = createMockPluginContext({
       testDir,
       includeMemory: true,

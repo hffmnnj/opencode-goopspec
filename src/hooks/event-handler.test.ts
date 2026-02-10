@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach } from "bun:test";
+import { tmpdir } from "os";
+import { join } from "path";
 import { createEventHandler } from "./event-handler.js";
 import {
   createMockPluginContext,
@@ -16,7 +18,7 @@ describe("createEventHandler", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = `/tmp/event-handler-test-${Date.now()}`;
+    testDir = join(tmpdir(), `event-handler-test-${Date.now()}`);
     ctx = createMockPluginContext({
       testDir,
       config: {

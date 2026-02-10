@@ -4,13 +4,14 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, rmSync, existsSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 import { createArchiveManager } from "./manager.js";
 import { extractLearnings } from "./learnings.js";
 import type { MemoryManager, MemoryInput } from "../../core/types.js";
 
 // Use a temp directory for tests
-const TEST_DIR = "/tmp/goopspec-archive-test-" + Date.now();
+const TEST_DIR = join(tmpdir(), `goopspec-archive-test-${Date.now()}`);
 
 describe("archive-manager", () => {
   beforeEach(() => {

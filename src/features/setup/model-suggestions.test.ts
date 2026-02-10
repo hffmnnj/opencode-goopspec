@@ -2,8 +2,8 @@ import { describe, it, expect } from "bun:test";
 import { AGENT_MODEL_SUGGESTIONS, ALL_AGENTS } from "./model-suggestions.js";
 
 describe("model suggestions", () => {
-  it("includes all 11 agents", () => {
-    expect(Object.keys(AGENT_MODEL_SUGGESTIONS)).toHaveLength(11);
+  it("includes all 12 agents", () => {
+    expect(Object.keys(AGENT_MODEL_SUGGESTIONS)).toHaveLength(12);
   });
 
   it("includes known required agents", () => {

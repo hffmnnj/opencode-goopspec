@@ -83,6 +83,20 @@ export type TaskMode = "quick" | "standard" | "comprehensive" | "milestone";
  */
 export type WorkflowDepth = "shallow" | "standard" | "deep";
 
+export interface SessionInfo {
+  id: string;
+  description?: string;
+  phase: string;
+  mode: string;
+  lastActivity: string;
+  createdAt: string;
+}
+
+export interface SessionIndex {
+  sessions: SessionInfo[];
+  lastUpdated: string;
+}
+
 export interface GoopState {
   version: number;
   project: {
@@ -167,6 +181,10 @@ export interface ADLEntry {
 
 export type EnforcementLevel = "assist" | "warn" | "strict";
 
+export const SEARCH_PROVIDERS = ["exa", "brave"] as const;
+
+export type SearchProvider = (typeof SEARCH_PROVIDERS)[number];
+
 export interface AgentConfig {
   model?: string;
   temperature?: number;
@@ -175,6 +193,7 @@ export interface AgentConfig {
 export interface McpConfig {
   context7?: boolean;
   exa?: boolean;
+  searchProvider?: SearchProvider;
   playwright?: boolean;
   memory?: boolean;
   github?: boolean;
@@ -290,6 +309,7 @@ export interface PluginContext {
   config: GoopSpecConfig;
   resolver: ResourceResolver;
   stateManager: StateManager;
+  sessionId?: string;
   memoryManager?: MemoryManager;
 }
 

@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach } from "bun:test";
+import { tmpdir } from "os";
+import { join } from "path";
 import { createMemoryForgetTool } from "./index.js";
 import {
   createMockPluginContext,
@@ -18,7 +20,7 @@ describe("createMemoryForgetTool", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = `/tmp/memory-forget-test-${Date.now()}`;
+    testDir = join(tmpdir(), `memory-forget-test-${Date.now()}`);
     ctx = createMockPluginContext({
       testDir,
       includeMemory: true,

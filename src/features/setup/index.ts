@@ -7,6 +7,7 @@
 
 import { existsSync, readFileSync } from "fs";
 import { getGlobalConfigPath, getProjectGoopspecDir, joinPath } from "../../shared/paths.js";
+import { safeDirname } from "../../shared/platform.js";
 import { hasOpenCodeConfig, getOpenCodeConfigPath, readOpenCodeConfig, getExistingMcps } from "../../core/opencode-config.js";
 import { DEFAULT_CONFIG, validateConfig } from "../../core/config.js";
 import { installMcps } from "./mcp-installer.js";
@@ -109,6 +110,7 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
   const actions: SetupAction[] = [];
   const configsToWrite: ConfigWrite[] = [];
   const dirsToCreate: string[] = [];
+  const searchProvider = input.searchProvider ?? "exa";
   
   // Determine which MCPs to install
   const mcpsToInstall: string[] = [];
@@ -135,6 +137,7 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
       },
       mcp: {
         ...DEFAULT_CONFIG.mcp,
+        searchProvider,
       },
     };
     
@@ -189,6 +192,9 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
         phaseGates: input.phaseGates ?? "ask",
         waveExecution: input.waveExecution ?? "sequential",
       },
+      mcp: {
+        searchProvider,
+      },
     };
     
     // Add agent model overrides to project config
@@ -238,6 +244,7 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
     `GoopSpec will be configured for: ${input.scope}`,
     input.models.orchestrator && `Orchestrator model: ${input.models.orchestrator}`,
     input.mcpPreset !== "none" && `MCP preset: ${input.mcpPreset}`,
+    `Search provider: ${searchProvider}`,
     input.enableOrchestrator && "GoopSpec will be set as default agent",
     input.memory?.enabled !== false && "Memory system: enabled",
     input.memory?.embeddings?.provider && `Embedding provider: ${input.memory.embeddings.provider}`,
@@ -254,6 +261,7 @@ export async function planSetup(input: SetupInput, env: SetupEnvironment): Promi
     memoryConfig: input.memory,
     projectName: input.projectName,
     quick: input.quick,
+    searchProvider,
   };
 }
 
@@ -360,7 +368,7 @@ export async function applySetup(plan: SetupPlan): Promise<SetupResult> {
     // Write all config files
     for (const configWrite of plan.configsToWrite) {
       try {
-        const dir = configWrite.path.substring(0, configWrite.path.lastIndexOf("/"));
+        const dir = safeDirname(configWrite.path);
         if (!existsSync(dir)) {
           mkdirSync(dir, { recursive: true });
         }
@@ -894,6 +902,7 @@ export async function getSetupStatus(projectDir: string): Promise<SetupStatus> {
   let projectName: string | undefined;
   let memoryEnabled = false;
   let memoryProvider: string | undefined;
+  let searchProvider: "exa" | "brave" = "exa";
   const agentModels: Record<string, string> = {};
   
   // Read project config for details
@@ -904,6 +913,9 @@ export async function getSetupStatus(projectDir: string): Promise<SetupStatus> {
       projectName = config.projectName;
       memoryEnabled = config.memory?.enabled !== false;
       memoryProvider = config.memory?.embeddings?.provider ?? "local";
+      if (config.mcp?.searchProvider === "exa" || config.mcp?.searchProvider === "brave") {
+        searchProvider = config.mcp.searchProvider;
+      }
       
       if (config.agents) {
         for (const [name, agent] of Object.entries(config.agents)) {
@@ -924,6 +936,18 @@ export async function getSetupStatus(projectDir: string): Promise<SetupStatus> {
       const content = readFileSync(statePath, "utf-8");
       const state = JSON.parse(content);
       projectName = state.project?.name;
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  if (searchProvider === "exa" && env.hasGlobalGoopSpecConfig) {
+    try {
+      const content = readFileSync(env.globalConfigPath, "utf-8");
+      const config = JSON.parse(content);
+      if (config.mcp?.searchProvider === "exa" || config.mcp?.searchProvider === "brave") {
+        searchProvider = config.mcp.searchProvider;
+      }
     } catch {
       // Ignore parse errors
     }
@@ -950,6 +974,7 @@ export async function getSetupStatus(projectDir: string): Promise<SetupStatus> {
       installed: env.existingMcps,
       missing: missingMcps,
     },
+    searchProvider,
     agentModels,
   };
 }

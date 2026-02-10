@@ -28,8 +28,9 @@
     "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
     "build:cli": "bun build ./src/cli/index.ts --outfile ./dist/cli.js --target node --format esm",
     "build:worker": "bun build ./src/features/memory/worker/index.ts --outdir ./dist/worker --target bun",
+    "lint": "eslint src/",
     "typecheck": "bunx tsc --noEmit",
-    "clean": "rm -rf dist",
+    "clean": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true})\"",
     "test": "bun test",
     "version:bump": "bun scripts/version-bump.ts",
     "prepublishOnly": "bun run build"
@@ -58,13 +59,22 @@
     "onnxruntime-node": "^1.24.1",
     "picocolors": "^1.1.1",
     "sqlite-vec": "^0.1.7-alpha.2",
-    "sqlite-vec-linux-x64": "^0.1.7-alpha.2",
     "zod": "^4.1.8"
   },
+  "optionalDependencies": {
+    "sqlite-vec-darwin-arm64": "0.1.7-alpha.2",
+    "sqlite-vec-darwin-x64": "0.1.7-alpha.2",
+    "sqlite-vec-linux-x64": "0.1.7-alpha.2",
+    "sqlite-vec-linux-arm64": "0.1.7-alpha.2",
+    "sqlite-vec-windows-x64": "0.1.7-alpha.2"
+  },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.13.9",
+    "bun-types": "latest",
+    "eslint": "^10.0.0",
     "typescript": "^5.8.2",
-    "bun-types": "latest"
+    "typescript-eslint": "^8.54.0"
   },
   "peerDependencies": {
     "@opencode-ai/plugin": "^1.1.0"

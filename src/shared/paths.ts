@@ -6,8 +6,31 @@
  */
 
 import { existsSync } from "fs";
-import { dirname, join, resolve } from "path";
+import { basename, dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
+
+import { getHomeDir } from "./platform.js";
+
+const SHARED_RESOURCE_NAMES = ["memory.db", "config.json", "archive"] as const;
+
+type PathLike = {
+  basename(value: string): string;
+  resolve(...paths: string[]): string;
+};
+
+function hasSessionId(sessionId?: string): sessionId is string {
+  return typeof sessionId === "string" && sessionId.trim().length > 0;
+}
+
+function isSharedResource(filename: string): boolean {
+  return SHARED_RESOURCE_NAMES.some(
+    (resource) => filename === resource || filename.startsWith(`${resource}/`),
+  );
+}
+
+export function isDistDirectory(currentDir: string, pathImpl: PathLike = { basename, resolve }): boolean {
+  return pathImpl.basename(pathImpl.resolve(currentDir)) === "dist";
+}
 
 /**
  * Get the package root directory
@@ -21,7 +44,7 @@ export function getPackageRoot(): string {
   // After bundling, we're in dist/index.js (single file)
   // In development, we're in src/shared/paths.ts
   // Check if we're in dist/ (bundled) or src/shared/ (dev)
-  if (currentDir.endsWith("/dist") || currentDir.endsWith("\\dist")) {
+  if (isDistDirectory(currentDir)) {
     // Bundled: go up 1 level from dist/
     return resolve(currentDir, "..");
   }
@@ -50,8 +73,7 @@ export function getProjectGoopspecDir(projectDir: string): string {
  * Get the global goopspec config directory
  */
 export function getGlobalConfigDir(): string {
-  const home = process.env.HOME || process.env.USERPROFILE || "";
-  return join(home, ".config", "opencode");
+  return join(getHomeDir(), ".config", "opencode");
 }
 
 /**
@@ -104,4 +126,56 @@ export function joinPath(...paths: string[]): string {
  */
 export function resolvePath(...paths: string[]): string {
   return resolve(...paths);
+}
+
+/**
+ * Get the session directory path for a project
+ */
+export function getSessionDir(projectDir = "", sessionId = ""): string {
+  const normalizedSessionId = sessionId.trim();
+  if (!normalizedSessionId) {
+    return join(getProjectGoopspecDir(projectDir), "sessions");
+  }
+
+  return join(getProjectGoopspecDir(projectDir), "sessions", normalizedSessionId);
+}
+
+/**
+ * Get .goopspec path for session-scoped or root-scoped resources
+ */
+export function getSessionGoopspecPath(
+  projectDir = "",
+  filename = "",
+  sessionId?: string,
+): string {
+  if (isSharedResource(filename)) {
+    return getSharedResourcePath(projectDir, filename);
+  }
+
+  if (!hasSessionId(sessionId)) {
+    return join(getProjectGoopspecDir(projectDir), filename);
+  }
+
+  return join(getSessionDir(projectDir, sessionId), filename);
+}
+
+/**
+ * Get root-level shared resource path
+ */
+export function getSharedResourcePath(projectDir = "", filename = ""): string {
+  return join(getProjectGoopspecDir(projectDir), filename);
+}
+
+/**
+ * Ensure a session directory exists with standard subdirectories
+ */
+export async function ensureSessionDir(projectDir = "", sessionId = ""): Promise<void> {
+  if (!hasSessionId(sessionId)) {
+    return;
+  }
+
+  const sessionDir = getSessionDir(projectDir, sessionId);
+  await ensureDir(sessionDir);
+  await ensureDir(join(sessionDir, "checkpoints"));
+  await ensureDir(join(sessionDir, "history"));
 }

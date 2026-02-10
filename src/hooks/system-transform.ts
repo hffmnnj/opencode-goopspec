@@ -9,6 +9,8 @@ import type { PluginContext } from "../core/types.js";
 import { log, logError } from "../shared/logger.js";
 import { createMemoryContextBuilder } from "../features/memory/context-builder.js";
 import { buildEnforcementContext } from "../features/enforcement/index.js";
+import { getSessionGoopspecPath } from "../shared/paths.js";
+import { ensurePosixPath } from "../shared/platform.js";
 
 type SystemTransformInput = {
   sessionID: string;
@@ -22,6 +24,34 @@ type SystemTransformInput = {
 type SystemTransformOutput = {
   system: string;
 };
+
+function normalizePromptPath(path: string): string {
+  return ensurePosixPath(path);
+}
+
+function buildSessionContextBlock(sessionId: string): string {
+  const specPath = normalizePromptPath(getSessionGoopspecPath("", "SPEC.md", sessionId));
+  const blueprintPath = normalizePromptPath(getSessionGoopspecPath("", "BLUEPRINT.md", sessionId));
+  const chroniclePath = normalizePromptPath(getSessionGoopspecPath("", "CHRONICLE.md", sessionId));
+  const researchPath = normalizePromptPath(getSessionGoopspecPath("", "RESEARCH.md", sessionId));
+  const statePath = normalizePromptPath(getSessionGoopspecPath("", "state.json", sessionId));
+  const checkpointsPath = normalizePromptPath(getSessionGoopspecPath("", "checkpoints", sessionId));
+  const historyPath = normalizePromptPath(getSessionGoopspecPath("", "history", sessionId));
+
+  return [
+    "<session>",
+    `id: ${sessionId}`,
+    "paths:",
+    `  spec: ${specPath}`,
+    `  blueprint: ${blueprintPath}`,
+    `  chronicle: ${chroniclePath}`,
+    `  research: ${researchPath}`,
+    `  state: ${statePath}`,
+    `  checkpoints: ${checkpointsPath}`,
+    `  history: ${historyPath}`,
+    "</session>",
+  ].join("\n");
+}
 
 /**
  * Create the experimental.chat.system.transform hook
@@ -42,6 +72,10 @@ export function createSystemTransformHook(ctx: PluginContext) {
     try {
       const state = ctx.stateManager.getState();
       const enforcementContext = buildEnforcementContext(state);
+      const sessionContext =
+        typeof ctx.sessionId === "string" && ctx.sessionId.trim().length > 0
+          ? buildSessionContextBlock(ctx.sessionId.trim())
+          : "";
 
       let memoryContext = "";
       if (ctx.memoryManager && ctx.config.memory?.injection?.enabled !== false) {
@@ -62,7 +96,11 @@ export function createSystemTransformHook(ctx: PluginContext) {
         }
       }
 
-      if (!enforcementContext && (!memoryContext || memoryContext.trim().length === 0)) {
+      if (
+        !enforcementContext
+        && (!memoryContext || memoryContext.trim().length === 0)
+        && sessionContext.trim().length === 0
+      ) {
         log("No enforcement or memory context to inject");
         return output;
       }
@@ -74,21 +112,30 @@ export function createSystemTransformHook(ctx: PluginContext) {
 ${enforcementContext}`;
       }
 
+      if (sessionContext.trim().length > 0) {
+        enhancedSystem = `${enhancedSystem}
+
+## Session Context
+
+${sessionContext}`;
+      }
+
       if (memoryContext.trim().length > 0) {
         enhancedSystem = `${enhancedSystem}
 
 ## Persistent Memory Context
 
-The following memories are relevant to this session. Use them to maintain continuity and avoid repeating mistakes.
+Use these memories for continuity and to avoid repeated mistakes.
 
 ${memoryContext}
 
-Use the memory tools (memory_save, memory_search, memory_note, memory_decision) to store and retrieve information for future sessions.`;
+Use memory tools to save decisions and observations for future sessions.`;
       }
 
       log("System context injected", {
         originalLength: output.system.length,
         enforcementLength: enforcementContext.length,
+        sessionLength: sessionContext.length,
         memoryLength: memoryContext.length,
         enhancedLength: enhancedSystem.length,
       });

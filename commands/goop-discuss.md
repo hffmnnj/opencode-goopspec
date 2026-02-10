@@ -1,6 +1,7 @@
 ---
 name: goop-discuss
 description: Capture user vision through discovery interview before planning
+argument-hint: "[session-name]"
 phase: discuss
 next-step: "When discovery is complete, create the blueprint"
 next-command: /goop-plan

@@ -31,9 +31,11 @@ import {
 import { AGENT_MODEL_SUGGESTIONS, ALL_AGENTS } from "../../features/setup/model-suggestions.js";
 import { MCP_PRESETS } from "../../features/setup/types.js";
 import type { MemorySetupInput, SetupInput } from "../../features/setup/types.js";
+import { getGlobalConfigPath } from "../../shared/paths.js";
 
 type SetupScope = SetupInput["scope"];
 type McpPreset = SetupInput["mcpPreset"];
+type SearchProvider = NonNullable<SetupInput["searchProvider"]>;
 type MemoryProvider = NonNullable<NonNullable<MemorySetupInput["embeddings"]>["provider"]>;
 
 function handleCancel(value: unknown): void {
@@ -79,6 +81,13 @@ function toMemoryProvider(value: string): MemoryProvider {
   throw new Error(`Invalid memory provider selection: ${value}`);
 }
 
+function toSearchProvider(value: string): SearchProvider {
+  if (value === "exa" || value === "brave") {
+    return value;
+  }
+  throw new Error(`Invalid search provider selection: ${value}`);
+}
+
 function formatScope(scope: SetupScope): string {
   if (scope === "global") {
     return "Global";
@@ -109,9 +118,17 @@ function formatMemoryProvider(provider: MemoryProvider): string {
   return "Local";
 }
 
+function formatSearchProvider(provider: SearchProvider): string {
+  if (provider === "brave") {
+    return "Brave Search";
+  }
+  return "Exa";
+}
+
 export async function runInit(): Promise<void> {
   const projectDir = process.cwd();
   const defaultProjectName = basename(projectDir) || "goopspec-project";
+  const globalConfigPath = getGlobalConfigPath();
 
   try {
     showBanner();
@@ -133,7 +150,7 @@ export async function runInit(): Promise<void> {
       }
     }
 
-    sectionHeader("Step 1/6: Project", "📦");
+    sectionHeader("Step 1/7: Project", "📦");
     const projectName = resolveText(
       await text({
         message: "Project name:",
@@ -148,14 +165,14 @@ export async function runInit(): Promise<void> {
       }),
     ).trim();
 
-    sectionHeader("Step 2/6: Scope", "📁");
+    sectionHeader("Step 2/7: Scope", "📁");
     const scope = toScope(
       resolveString(
         await select({
           message: "Where should GoopSpec configuration be written?",
           options: [
             { value: "project", label: "Project", hint: ".goopspec/config.json" },
-            { value: "global", label: "Global", hint: "~/.config/goopspec/config.json" },
+            { value: "global", label: "Global", hint: globalConfigPath },
             { value: "both", label: "Both", hint: "Global defaults + project overrides" },
           ],
           initialValue: "project",
@@ -163,7 +180,7 @@ export async function runInit(): Promise<void> {
       ),
     );
 
-    sectionHeader("Step 3/6: MCP Preset", "🔌");
+    sectionHeader("Step 3/7: MCP Preset", "🔌");
     const mcpPreset = toMcpPreset(
       resolveString(
         await select({
@@ -178,7 +195,27 @@ export async function runInit(): Promise<void> {
       ),
     );
 
-    sectionHeader("Step 4/6: Agent Models", "🤖");
+    sectionHeader("Step 4/7: Search Provider", "🔎");
+    const searchProvider = toSearchProvider(
+      resolveString(
+        await select({
+          message: "Which search provider should GoopSpec use?",
+          options: [
+            { value: "exa", label: "Exa", hint: "General web search and research context" },
+            { value: "brave", label: "Brave Search", hint: "Brave web/news/image/video APIs" },
+          ],
+          initialValue: "exa",
+        }),
+      ),
+    );
+
+    if (searchProvider === "brave") {
+      showInfo("Set BRAVE_API_KEY environment variable");
+    } else {
+      showInfo("Set EXA_API_KEY environment variable or configure Exa MCP server");
+    }
+
+    sectionHeader("Step 5/7: Agent Models", "🤖");
     showInfo(`${ALL_AGENTS.length} agent roles available`);
 
     const modelMode = resolveString(
@@ -246,7 +283,7 @@ export async function runInit(): Promise<void> {
       }
     }
 
-    sectionHeader("Step 5/6: Memory", "🧠");
+    sectionHeader("Step 6/7: Memory", "🧠");
     const enableMemory = resolveBoolean(
       await confirm({
         message: "Enable memory system?",
@@ -297,7 +334,7 @@ export async function runInit(): Promise<void> {
       previewSpinner.stop("Memory capability check complete");
     }
 
-    sectionHeader("Step 6/6: Orchestrator", "🎭");
+    sectionHeader("Step 7/7: Orchestrator", "🎭");
     const enableOrchestrator = resolveBoolean(
       await confirm({
         message: "Enable GoopSpec orchestrator by default?",
@@ -351,6 +388,7 @@ export async function runInit(): Promise<void> {
         orchestrator: orchestratorModel,
       },
       mcpPreset,
+      searchProvider,
       enableOrchestrator,
       agentModels: Object.keys(agentModels).length > 0 ? agentModels : undefined,
       memory: memoryConfig,
@@ -361,6 +399,7 @@ export async function runInit(): Promise<void> {
     console.log(pc.dim(`  Project: ${projectName}`));
     console.log(pc.dim(`  Scope: ${formatScope(scope)}`));
     console.log(pc.dim(`  MCP preset: ${formatMcpPreset(mcpPreset)} (${MCP_PRESETS[mcpPreset].join(", ") || "none"})`));
+    console.log(pc.dim(`  Search provider: ${formatSearchProvider(searchProvider)}`));
     console.log(pc.dim(`  Agent models: ${Object.keys(agentModels).length > 0 ? "Custom per-agent" : "Recommended defaults"}`));
     console.log(pc.dim(`  Memory: ${enableMemory ? "Enabled" : "Disabled"}`));
     if (memoryProvider) {

@@ -5,6 +5,7 @@
 import pc from "picocolors";
 
 import { detectEnvironment, resetSetup } from "../../features/setup/index.js";
+import { getGlobalConfigPath } from "../../shared/paths.js";
 import {
   cancel,
   confirm,
@@ -32,6 +33,7 @@ function handleCancel<T>(value: T | symbol): asserts value is T {
 
 export async function runReset(): Promise<void> {
   const projectDir = process.cwd();
+  const globalConfigPath = getGlobalConfigPath();
 
   try {
     showBanner();
@@ -50,7 +52,7 @@ export async function runReset(): Promise<void> {
       message: "What do you want to reset?",
       options: [
         { value: "project", label: "Project config only", hint: ".goopspec/config.json" },
-        { value: "global", label: "Global config only", hint: "~/.config/goopspec/config.json" },
+        { value: "global", label: "Global config only", hint: globalConfigPath },
         { value: "both", label: "Both", hint: "Global + project configs" },
       ],
       initialValue: "project",

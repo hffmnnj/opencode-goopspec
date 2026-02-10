@@ -1,5 +1,7 @@
 /// <reference types="bun-types" />
 
+import { ensurePosixPath } from "../src/shared/platform.js";
+
 type CliOptions = {
   version?: string;
   dryRun: boolean;
@@ -38,11 +40,6 @@ Examples:
 
 const FILE_PATTERNS = [
   "*.example.json",
-  "agents/**/*.md",
-  "skills/**/*.md",
-  "references/**/*.md",
-  "templates/**/*.md",
-  "commands/**/*.md",
   "src/**/*.ts",
 ];
 
@@ -51,21 +48,6 @@ const EXPLICIT_FILES = ["package.json", "README.md"];
 const JSON_VERSION_PATTERN: UpdatePattern = {
   name: "json-version-field",
   regex: /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/g,
-};
-
-const YAML_FRONTMATTER_PATTERN: UpdatePattern = {
-  name: "yaml-frontmatter-version",
-  regex: /(^version:\s*)(\d+\.\d+\.\d+)(\s*$)/gm,
-};
-
-const MARKDOWN_FOOTER_PATTERN: UpdatePattern = {
-  name: "markdown-footer-version",
-  regex: /(\*[^*]*\s+v)(\d+\.\d+\.\d+)(\*)/g,
-};
-
-const XML_ATTRIBUTE_PATTERN: UpdatePattern = {
-  name: "xml-version-attribute",
-  regex: /(version=")(\d+\.\d+\.\d+)(")/g,
 };
 
 const BADGE_URL_PATTERN: UpdatePattern = {
@@ -79,11 +61,6 @@ const PATTERN_REGISTRY: PatternRegistryEntry[] = [
     match: (filePath) =>
       filePath === "package.json" || filePath.endsWith(".example.json"),
     patterns: [JSON_VERSION_PATTERN],
-  },
-  {
-    name: "markdown",
-    match: (filePath) => filePath.endsWith(".md"),
-    patterns: [YAML_FRONTMATTER_PATTERN, MARKDOWN_FOOTER_PATTERN, XML_ATTRIBUTE_PATTERN],
   },
   {
     name: "readme-badge",
@@ -142,7 +119,7 @@ function printUsageError(message: string): void {
 }
 
 function normalizePath(path: string): string {
-  return path.replace(/\\/g, "/");
+  return ensurePosixPath(path);
 }
 
 function shouldExclude(path: string): boolean {

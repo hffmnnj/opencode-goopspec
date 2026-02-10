@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach } from "bun:test";
+import { tmpdir } from "os";
+import { join } from "path";
 import { createToolLifecycleHooks } from "./tool-lifecycle.js";
 import {
   createMockPluginContext,
@@ -16,7 +18,7 @@ describe("createToolLifecycleHooks", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = `/tmp/tool-lifecycle-test-${Date.now()}`;
+    testDir = join(tmpdir(), `tool-lifecycle-test-${Date.now()}`);
     ctx = createMockPluginContext({
       testDir,
       config: {

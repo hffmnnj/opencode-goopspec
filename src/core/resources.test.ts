@@ -27,6 +27,7 @@ describe("Resource Integration", () => {
       "goop-tester",
       "goop-designer",
       "goop-writer",
+      "goop-creative",
       "memory-distiller",
     ];
 
