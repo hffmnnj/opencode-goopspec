@@ -453,4 +453,4 @@ planning. Want to do that first?"
 
 ---
 
-*Discovery Interview Process v0.2.5*
+*Discovery Interview Process v0.2.6*
