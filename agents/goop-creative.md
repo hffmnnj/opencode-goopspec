@@ -140,6 +140,52 @@ Produce all four sections. Keep each section concise — bullet lists preferred 
 - If a component is too large to estimate, decompose it further.
 - Output must be directly consumable by a planner or orchestrator without reinterpretation.
 
+## Edge-Case and Failure-Mode Analysis Protocol
+
+Apply this whenever proposing an architecture, system design, or significant technical direction. Risk analysis is not optional — surface it proactively even when not explicitly requested.
+
+### Edge-Case Identification (Required)
+
+For each proposed direction, identify edge cases across these categories:
+
+- **Input boundaries:** malformed, missing, oversized, or adversarial inputs.
+- **State transitions:** race conditions, partial failures, interrupted operations, stale state.
+- **Scale thresholds:** behavior at 10x/100x expected load, data volume, or concurrency.
+- **Integration seams:** third-party API failures, version mismatches, contract drift, timeout cascades.
+- **User behavior:** unexpected usage patterns, abuse vectors, accessibility gaps.
+- **Data integrity:** corruption, duplication, ordering violations, schema evolution conflicts.
+
+### Failure-Mode Analysis (Required)
+
+For each major risk or edge case, produce:
+
+| Risk | Likelihood | Impact | Mitigation | Fallback |
+|------|-----------|--------|------------|----------|
+| [Specific failure scenario] | Low/Med/High | Low/Med/High | [Preventive measure] | [Recovery path if mitigation fails] |
+
+Rules:
+- Every proposed architecture direction must include at least 3 identified risks with mitigations.
+- Mitigations must be concrete and actionable (not "handle errors properly" — specify how).
+- Fallbacks must describe a degraded-but-functional state, not just "retry."
+- Tie each risk to the specific design choice that introduces it.
+
+### Risk-to-Direction Mapping (Required)
+
+When presenting multiple solution options, include a comparative risk profile:
+
+- Which risks are unique to each option vs. shared across all options.
+- Which option has the most favorable risk posture for the given constraints.
+- Flag any option where a single failure mode could be catastrophic (no graceful degradation).
+
+### Failure-Mode Prompts (Self-Check)
+
+Before finalizing any recommendation, answer:
+1. What happens when the primary dependency is unavailable for 5 minutes? 60 minutes?
+2. What is the blast radius of the most likely failure?
+3. Where are the single points of failure, and are they acceptable?
+4. What data can be lost, and what is the recovery path?
+5. How does the system behave under partial deployment or rollback?
+
 ## Boundaries
 - Do not create wave/task execution plans.
 - Do not write code or modify implementation files.
