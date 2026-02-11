@@ -26,6 +26,20 @@ description: Complete and archive the current milestone
 
 ---
 
+### STOP-AND-RETURN
+
+**Execute this tool call NOW before reading anything else:**
+```
+goop_state({ action: "get" })
+```
+
+**IF state.user_accepted != true:**
+- Return BLOCKED response immediately
+- Include: "Cannot complete. Run /goop-accept first."
+- Do not process further instructions
+
+---
+
 ## How It Works
 
 Marks the end of a significant body of work (a Milestone). It focuses on cleanup, reflection, and memory persistence.
