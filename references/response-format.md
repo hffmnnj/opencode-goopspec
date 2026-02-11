@@ -74,9 +74,16 @@ Use these exact headers:
 |--------|--------|------|
 | Complete | `## TASK COMPLETE` | Work finished successfully |
 | Partial | `## TASK PARTIAL` | Some progress, more needed |
-| Blocked | `## TASK BLOCKED` | Cannot proceed, need help |
+| Blocked | `## TASK BLOCKED` | Cannot proceed, need help. **STOP processing immediately.** |
 | Failed | `## TASK FAILED` | Cannot complete task |
 | Checkpoint | `## CHECKPOINT REACHED` | Need user decision/verification |
+
+**BLOCKED Status Semantics:**
+When returning BLOCKED status, agents MUST:
+- Stop processing immediately
+- Do not continue with further instructions
+- Return BLOCKED response with clear blocker description
+- Include recovery action (which command to run)
 
 ## Next Steps Format
 

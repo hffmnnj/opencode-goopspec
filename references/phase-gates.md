@@ -57,9 +57,13 @@ Ensure the six discovery questions are answered before any planning begins.
 ```
 /goop-plan invoked:
   IF state.interview_complete != true:
+    STOP: Return BLOCKED response immediately
     REFUSE: "Discovery interview required. Run /goop-discuss first."
+    DO NOT CONTINUE processing
   IF REQUIREMENTS.md does not exist:
+    STOP: Return BLOCKED response immediately
     REFUSE: "No requirements found. Run /goop-discuss first."
+    DO NOT CONTINUE processing
   ELSE:
     PROCEED with planning
 ```
@@ -102,9 +106,13 @@ Lock the specification contract with explicit user confirmation.
 ```
 /goop-execute invoked:
   IF state.spec_locked != true:
+    STOP: Return BLOCKED response immediately
     REFUSE: "Specification not locked. Run /goop-plan to confirm and lock first."
+    DO NOT CONTINUE processing
   IF SPEC.md traceability incomplete:
+    STOP: Return BLOCKED response immediately
     REFUSE: "Traceability incomplete. Every must-have needs mapped tasks."
+    DO NOT CONTINUE processing
   ELSE:
     PROCEED with execution
 ```
@@ -164,9 +172,13 @@ CHRONICLE.md shows:
 ```
 /goop-accept invoked:
   IF CHRONICLE.md shows incomplete waves:
+    STOP: Return BLOCKED response immediately
     REFUSE: "Execution incomplete. [N] tasks remaining in Wave [M]."
+    DO NOT CONTINUE processing
   IF blockers exist:
+    STOP: Return BLOCKED response immediately
     REFUSE: "Blockers unresolved: [list]"
+    DO NOT CONTINUE processing
   ELSE:
     PROCEED with acceptance
 ```
@@ -236,11 +248,17 @@ ACCEPT / REJECT with [reasons]
 ```
 /goop-complete invoked:
   IF verification_passed != true:
+    STOP: Return BLOCKED response immediately
     REFUSE: "Verification not passed. Review report."
+    DO NOT CONTINUE processing
   IF user_accepted != true:
+    STOP: Return BLOCKED response immediately
     REFUSE: "User acceptance required. Type 'accept' to proceed."
+    DO NOT CONTINUE processing
   IF must-haves have FAIL status:
+    STOP: Return BLOCKED response immediately
     REFUSE: "Must-haves incomplete: [list]"
+    DO NOT CONTINUE processing
   ELSE:
     PROCEED with completion
 ```

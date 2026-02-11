@@ -25,6 +25,20 @@ description: Resume from a saved checkpoint
 
 ---
 
+### STOP-AND-RETURN
+
+**Execute this tool call NOW before reading anything else:**
+```
+goop_checkpoint({ action: "list" })
+```
+
+**IF no checkpoints or sessions exist:**
+- Return BLOCKED response immediately
+- Include: "Cannot resume. No checkpoint found. Run /goop-pause first or start fresh with /goop-execute."
+- Do not process further instructions
+
+---
+
 ## How It Works
 
 Loads a saved state, restores the workflow context, and prepares the agent to continue exactly where it left off.
