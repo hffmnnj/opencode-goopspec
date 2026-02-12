@@ -2678,6 +2678,14 @@ describe("merge-failure", () => {
     expect(result.remediation).toContain("write/maintainer access");
   });
 
+  it("maps resource-not-accessible responses to permission-denied", () => {
+    const result = handleMergeResult(
+      commandResult({ stderr: "GraphQL: Resource not accessible by integration" }),
+    );
+
+    expect(result.status).toBe("permission-denied");
+  });
+
   it("returns generic failure for unknown errors", () => {
     const result = handleMergeResult(
       commandResult({ stderr: "unexpected transport error" }),

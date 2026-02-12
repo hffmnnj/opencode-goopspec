@@ -194,7 +194,7 @@ export function createGoopPrReviewTool(
       if (fixPrompt) {
         lines.push(fixPrompt);
       } else {
-          const totalFindings = d.countFindings(report);
+        const totalFindings = d.countFindings(report);
         if (totalFindings === 0) {
           lines.push("No actionable findings. No fixes needed.");
         } else {

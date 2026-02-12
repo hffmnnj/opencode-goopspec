@@ -170,6 +170,7 @@ export function handleMergeResult(result: MergeCommandResult): MergeExecutionRes
 
   if (
     lowerOutput.includes("permission") ||
+    lowerOutput.includes("resource not accessible") ||
     lowerOutput.includes("not authorized") ||
     lowerOutput.includes("forbidden")
   ) {
