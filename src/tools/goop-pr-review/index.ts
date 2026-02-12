@@ -146,6 +146,21 @@ export function createGoopPrReviewTool(ctx: PluginContext): ToolDefinition {
             const skippedCount = orchestration.summary.skipped.length;
             const failedCount = orchestration.summary.failed.length;
             lines.push(`Summary: applied=${appliedCount}, skipped=${skippedCount}, failed=${failedCount}`);
+
+            lines.push("");
+            lines.push("Post-fix verification:");
+            lines.push(`- status: ${orchestration.verification.status}`);
+            lines.push(`- summary: ${orchestration.verification.summary}`);
+
+            for (const check of orchestration.verification.checks) {
+              const marker = check.passed ? "pass" : "fail";
+              lines.push(`- ${check.name}: ${marker} (${check.command})`);
+            }
+
+            if (orchestration.verification.rollbackGuidance) {
+              lines.push("- rollback guidance:");
+              lines.push(`  ${orchestration.verification.rollbackGuidance.reason}`);
+            }
           }
         }
       }

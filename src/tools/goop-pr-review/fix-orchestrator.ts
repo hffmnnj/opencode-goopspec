@@ -8,6 +8,9 @@
  */
 
 import { log, logError } from "../../shared/logger.js";
+import type { ExecResult } from "./github.js";
+import { createFixHandlers } from "./fix-handlers.js";
+import { verifyAfterFix, type PostFixVerificationResult } from "./verify-after-fix.js";
 import { FIX_CATEGORIES, type FixCategory, type ReviewContext } from "./types.js";
 
 export const FIX_EXECUTION_STATUSES = ["applied", "skipped", "failed"] as const;
@@ -29,6 +32,12 @@ export interface FixExecutionResult {
   status: FixExecutionStatus;
   message: string;
   delegated?: FixDelegationRequest;
+  commands?: Array<{
+    command: string;
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+  }>;
 }
 
 export interface FixOrchestrationSummary {
@@ -41,6 +50,7 @@ export interface FixOrchestrationResult {
   selected: FixCategory[];
   results: FixExecutionResult[];
   summary: FixOrchestrationSummary;
+  verification: PostFixVerificationResult;
 }
 
 export interface FixOrchestratorContext {
@@ -55,22 +65,10 @@ export type FixHandler = (
 export interface FixOrchestratorOptions {
   handlers?: Partial<Record<FixCategory, FixHandler>>;
   delegateFix?: (request: FixDelegationRequest) => Promise<FixDelegationResult>;
+  run?: (cmd: string) => Promise<ExecResult>;
   stopOnFailure?: boolean;
+  skipPostFixVerification?: boolean;
 }
-
-const DEFAULT_DELEGATION_AGENTS: Record<FixCategory, FixDelegationRequest["agent"]> = {
-  lint: "goop-executor-medium",
-  tests: "goop-executor-high",
-  comments: "goop-executor-medium",
-  requirements: "goop-executor-high",
-};
-
-const DEFAULT_DELEGATION_REASONS: Record<FixCategory, string> = {
-  lint: "Lint and format remediation often spans related modules and requires deterministic cleanup.",
-  tests: "Failing test remediation can require implementation-level code changes.",
-  comments: "Review comment remediation may involve code and architecture adjustments.",
-  requirements: "Requirement remediation may require implementation work against missing must-haves.",
-};
 
 const DELEGATED_CATEGORIES = new Set<FixCategory>(["tests", "comments", "requirements"]);
 
@@ -95,43 +93,18 @@ function createNotImplementedHandler(category: FixCategory): FixHandler {
   });
 }
 
-function createDelegationHandler(
-  category: FixCategory,
-  delegateFix?: (request: FixDelegationRequest) => Promise<FixDelegationResult>,
-): FixHandler {
-  return async () => {
-    const request: FixDelegationRequest = {
-      category,
-      agent: DEFAULT_DELEGATION_AGENTS[category],
-      reason: DEFAULT_DELEGATION_REASONS[category],
-    };
-
-    if (!delegateFix) {
-      return {
-        status: "skipped",
-        message: `Delegation requested for '${category}' but no delegate function is configured.`,
-        delegated: request,
-      };
-    }
-
-    const delegationResult = await delegateFix(request);
-    return {
-      status: delegationResult.status,
-      message: delegationResult.message,
-      delegated: request,
-    };
-  };
-}
-
 function buildDispatcher(options: FixOrchestratorOptions): Record<FixCategory, FixHandler> {
+  const defaultHandlers = createFixHandlers({
+    delegateFix: options.delegateFix,
+    run: options.run,
+  });
   const handlers = options.handlers ?? {};
 
   const dispatcher: Record<FixCategory, FixHandler> = {
-    lint: handlers.lint ?? createNotImplementedHandler("lint"),
-    tests: handlers.tests ?? createDelegationHandler("tests", options.delegateFix),
-    comments: handlers.comments ?? createDelegationHandler("comments", options.delegateFix),
-    requirements:
-      handlers.requirements ?? createDelegationHandler("requirements", options.delegateFix),
+    lint: handlers.lint ?? defaultHandlers.lint,
+    tests: handlers.tests ?? defaultHandlers.tests,
+    comments: handlers.comments ?? defaultHandlers.comments,
+    requirements: handlers.requirements ?? defaultHandlers.requirements,
   };
 
   for (const category of FIX_CATEGORIES) {
@@ -190,6 +163,7 @@ export async function orchestrateFixes(
         status: outcome.status,
         message: outcome.message,
         delegated: outcome.delegated,
+        commands: outcome.commands,
       };
 
       results.push(result);
@@ -237,9 +211,19 @@ export async function orchestrateFixes(
     }
   }
 
+  const verification = options.skipPostFixVerification
+    ? {
+        status: "skipped" as const,
+        checks: [],
+        regressionsDetected: false,
+        summary: "Post-fix verification skipped by orchestrator option.",
+      }
+    : await verifyAfterFix(reviewContext, summary.applied, { run: options.run });
+
   return {
     selected,
     results,
     summary,
+    verification,
   };
 }

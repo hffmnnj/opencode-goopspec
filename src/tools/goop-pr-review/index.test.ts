@@ -66,6 +66,14 @@ import {
   type DirtyWorktreeResult,
 } from "./prompts.js";
 import { orchestrateFixes, type FixHandler } from "./fix-orchestrator.js";
+import {
+  createFixHandlers,
+  handleLintFormat,
+  handleTestRemediation,
+  handleCommentRemediation,
+  handleRequirementRemediation,
+} from "./fix-handlers.js";
+import { verifyAfterFix } from "./verify-after-fix.js";
 
 // ============================================================================
 // Fixtures
@@ -2132,6 +2140,7 @@ describe("fix-orchestrator", () => {
 
     const result = await orchestrateFixes(["lint", "tests", "lint"], buildReviewContext(), {
       handlers,
+      skipPostFixVerification: true,
     });
 
     expect(calls).toEqual(["lint", "tests"]);
@@ -2149,7 +2158,7 @@ describe("fix-orchestrator", () => {
     const result = await orchestrateFixes(
       ["lint", "tests", "comments"],
       buildReviewContext(),
-      { handlers },
+      { handlers, skipPostFixVerification: true },
     );
 
     expect(result.summary.applied).toEqual(["lint"]);
@@ -2159,15 +2168,28 @@ describe("fix-orchestrator", () => {
 
   it("supports delegation path for implementation-heavy categories", async () => {
     const delegated: string[] = [];
-    const result = await orchestrateFixes(["tests", "requirements"], buildReviewContext(), {
-      delegateFix: async (request) => {
-        delegated.push(`${request.category}:${request.agent}`);
-        return {
-          status: "applied",
-          message: `delegated to ${request.agent}`,
-        };
+    const result = await orchestrateFixes(
+      ["tests", "requirements"],
+      buildReviewContext({
+        checks: [{ name: "CI / test", status: "COMPLETED", conclusion: "FAILURE" }],
+        specAvailability: {
+          specExists: true,
+          blueprintExists: true,
+          specPath: "/tmp/spec",
+          blueprintPath: "/tmp/blueprint",
+        },
+      }),
+      {
+        delegateFix: async (request) => {
+          delegated.push(`${request.category}:${request.agent}`);
+          return {
+            status: "applied",
+            message: `delegated to ${request.agent}`,
+          };
+        },
+        skipPostFixVerification: true,
       },
-    });
+    );
 
     expect(delegated).toEqual([
       "tests:goop-executor-high",
@@ -2178,7 +2200,9 @@ describe("fix-orchestrator", () => {
   });
 
   it("handles empty selection without execution", async () => {
-    const result = await orchestrateFixes([], buildReviewContext());
+    const result = await orchestrateFixes([], buildReviewContext(), {
+      skipPostFixVerification: true,
+    });
     expect(result.selected).toEqual([]);
     expect(result.results).toEqual([]);
     expect(result.summary.applied).toEqual([]);
@@ -2193,7 +2217,10 @@ describe("fix-orchestrator", () => {
       },
     };
 
-    const result = await orchestrateFixes(["lint"], buildReviewContext(), { handlers });
+    const result = await orchestrateFixes(["lint"], buildReviewContext(), {
+      handlers,
+      skipPostFixVerification: true,
+    });
 
     expect(result.summary.failed).toEqual(["lint"]);
     expect(result.results[0].status).toBe("failed");
@@ -2240,7 +2267,7 @@ describe("selection-routing", () => {
     const result = await orchestrateFixes(
       ["lint", "comments", "requirements"],
       buildReviewContext(),
-      { handlers },
+      { handlers, skipPostFixVerification: true },
     );
 
     expect(calls).toEqual(["lint", "comments", "requirements"]);
@@ -2264,10 +2291,252 @@ describe("selection-routing", () => {
       },
     };
 
-    const result = await orchestrateFixes(["lint", "tests"], buildReviewContext(), { handlers });
+    const result = await orchestrateFixes(["lint", "tests"], buildReviewContext(), {
+      handlers,
+      skipPostFixVerification: true,
+    });
 
     expect(calls).toEqual(["lint", "tests"]);
     expect(result.summary.failed).toEqual(["lint"]);
     expect(result.summary.applied).toEqual(["tests"]);
+  });
+});
+
+// ============================================================================
+// fix-handlers
+// ============================================================================
+
+describe("fix-handlers", () => {
+  function buildReviewContext(overrides: Partial<ReviewContext> = {}): ReviewContext {
+    return {
+      pr: validPrMetadata(),
+      files: [],
+      checks: [],
+      reviews: [],
+      comments: [],
+      specAvailability: {
+        specExists: false,
+        blueprintExists: false,
+        specPath: "",
+        blueprintPath: "",
+      },
+      workingDirectoryClean: true,
+      ...overrides,
+    };
+  }
+
+  it("handleLintFormat applies lint and format commands", async () => {
+    const calls: string[] = [];
+    const result = await handleLintFormat(
+      { category: "lint", reviewContext: buildReviewContext() },
+      {
+        run: async (cmd) => {
+          calls.push(cmd);
+          return { stdout: "ok", stderr: "", exitCode: 0 };
+        },
+      },
+    );
+
+    expect(result.status).toBe("applied");
+    expect(calls).toEqual(["bun run lint --fix", "bun run format"]);
+    expect(result.commands?.length).toBe(2);
+  });
+
+  it("handleLintFormat reports failure when command fails", async () => {
+    const result = await handleLintFormat(
+      { category: "lint", reviewContext: buildReviewContext() },
+      {
+        run: async (cmd) => ({
+          stdout: "",
+          stderr: cmd.includes("lint") ? "lint failed" : "",
+          exitCode: cmd.includes("lint") ? 1 : 0,
+        }),
+      },
+    );
+
+    expect(result.status).toBe("failed");
+    expect(result.message).toContain("lint failed");
+    expect(result.commands?.length).toBe(1);
+  });
+
+  it("handleTestRemediation delegates when failing test signals exist", async () => {
+    const result = await handleTestRemediation(
+      {
+        category: "tests",
+        reviewContext: buildReviewContext({
+          checks: [{ name: "CI / test", status: "COMPLETED", conclusion: "FAILURE" }],
+        }),
+      },
+      {
+        delegateFix: async () => ({ status: "applied", message: "delegated test fix" }),
+      },
+    );
+
+    expect(result.status).toBe("applied");
+    expect(result.delegated?.agent).toBe("goop-executor-high");
+  });
+
+  it("handleTestRemediation skips when no failing test signals exist", async () => {
+    const result = await handleTestRemediation(
+      { category: "tests", reviewContext: buildReviewContext() },
+      {},
+    );
+
+    expect(result.status).toBe("skipped");
+    expect(result.message).toContain("No failing test signals");
+  });
+
+  it("handleCommentRemediation delegates when review comments exist", async () => {
+    const result = await handleCommentRemediation(
+      {
+        category: "comments",
+        reviewContext: buildReviewContext({
+          comments: [{ author: "reviewer", body: "Please fix this", createdAt: "2026-02-12" }],
+        }),
+      },
+      {
+        delegateFix: async () => ({ status: "applied", message: "delegated comment fix" }),
+      },
+    );
+
+    expect(result.status).toBe("applied");
+    expect(result.delegated?.agent).toBe("goop-executor-medium");
+  });
+
+  it("handleRequirementRemediation skips when spec files are unavailable", async () => {
+    const result = await handleRequirementRemediation(
+      { category: "requirements", reviewContext: buildReviewContext() },
+      {},
+    );
+
+    expect(result.status).toBe("skipped");
+    expect(result.message).toContain("Spec files are unavailable");
+  });
+
+  it("handleRequirementRemediation delegates when spec files exist", async () => {
+    const result = await handleRequirementRemediation(
+      {
+        category: "requirements",
+        reviewContext: buildReviewContext({
+          specAvailability: {
+            specExists: true,
+            blueprintExists: true,
+            specPath: "/tmp/spec",
+            blueprintPath: "/tmp/blueprint",
+          },
+        }),
+      },
+      {
+        delegateFix: async () => ({ status: "applied", message: "delegated requirements fix" }),
+      },
+    );
+
+    expect(result.status).toBe("applied");
+    expect(result.delegated?.agent).toBe("goop-executor-high");
+  });
+
+  it("createFixHandlers returns all required category handlers", async () => {
+    const handlers = createFixHandlers({
+      run: async () => ({ stdout: "", stderr: "", exitCode: 0 }),
+    });
+
+    expect(typeof handlers.lint).toBe("function");
+    expect(typeof handlers.tests).toBe("function");
+    expect(typeof handlers.comments).toBe("function");
+    expect(typeof handlers.requirements).toBe("function");
+  });
+});
+
+// ============================================================================
+// verify-after-fix
+// ============================================================================
+
+describe("verify-after-fix", () => {
+  function buildReviewContext(overrides: Partial<ReviewContext> = {}): ReviewContext {
+    return {
+      pr: validPrMetadata(),
+      files: [],
+      checks: [],
+      reviews: [],
+      comments: [],
+      specAvailability: {
+        specExists: false,
+        blueprintExists: false,
+        specPath: "",
+        blueprintPath: "",
+      },
+      workingDirectoryClean: true,
+      ...overrides,
+    };
+  }
+
+  it("skips verification when no categories were applied", async () => {
+    const result = await verifyAfterFix(buildReviewContext(), []);
+    expect(result.status).toBe("skipped");
+    expect(result.checks).toEqual([]);
+    expect(result.regressionsDetected).toBe(false);
+  });
+
+  it("runs targeted checks and passes when commands succeed", async () => {
+    const calls: string[] = [];
+    const result = await verifyAfterFix(buildReviewContext(), ["lint", "tests"], {
+      run: async (cmd) => {
+        calls.push(cmd);
+        return { stdout: "ok", stderr: "", exitCode: 0 };
+      },
+    });
+
+    expect(result.status).toBe("pass");
+    expect(result.regressionsDetected).toBe(false);
+    expect(calls).toEqual(["bun run lint", "bun run typecheck", "bun test"]);
+  });
+
+  it("detects regressions and returns rollback guidance on failure", async () => {
+    const result = await verifyAfterFix(buildReviewContext(), ["requirements"], {
+      run: async (cmd) => {
+        if (cmd === "bun test") {
+          return { stdout: "", stderr: "failing test", exitCode: 1 };
+        }
+        return { stdout: "ok", stderr: "", exitCode: 0 };
+      },
+    });
+
+    expect(result.status).toBe("fail");
+    expect(result.regressionsDetected).toBe(true);
+    expect(result.rollbackGuidance).toBeDefined();
+    expect(result.rollbackGuidance?.reason).toContain("Post-fix verification failed");
+    expect(result.rollbackGuidance?.steps.length).toBeGreaterThan(0);
+  });
+});
+
+describe("post-fix", () => {
+  function buildReviewContext(overrides: Partial<ReviewContext> = {}): ReviewContext {
+    return {
+      pr: validPrMetadata(),
+      files: [],
+      checks: [],
+      reviews: [],
+      comments: [],
+      specAvailability: {
+        specExists: false,
+        blueprintExists: false,
+        specPath: "",
+        blueprintPath: "",
+      },
+      workingDirectoryClean: true,
+      ...overrides,
+    };
+  }
+
+  it("orchestrator emits verification outcomes after applied fixes", async () => {
+    const result = await orchestrateFixes(["lint"], buildReviewContext(), {
+      handlers: {
+        lint: async () => ({ status: "applied", message: "done" }),
+      },
+      run: async () => ({ stdout: "ok", stderr: "", exitCode: 0 }),
+    });
+
+    expect(result.verification.status).toBe("pass");
+    expect(result.verification.checks.length).toBeGreaterThan(0);
   });
 });
