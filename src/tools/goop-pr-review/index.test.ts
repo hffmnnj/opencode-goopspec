@@ -1,5 +1,5 @@
 /**
- * Tests for PR Review types and spec-context detection
+ * Tests for PR Review: types, spec-context detection, preflight, and resolver
  * @module tools/goop-pr-review/index.test
  */
 
@@ -7,8 +7,19 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import {
+  createMockPluginContext,
+  createMockToolContext,
   setupTestEnvironment,
+  type PluginContext,
 } from "../../test-utils.js";
+import { createGoopPrReviewTool } from "./index.js";
+import {
+  ghPreflight,
+  resolvePr,
+  parsePrInput,
+  formatPrSummary,
+  type ExecResult,
+} from "./github.js";
 import {
   PrMetadataSchema,
   createDefaultReport,
@@ -319,5 +330,393 @@ describe("spec-context", () => {
 
       expect(isSpecModeEnabled(availability)).toBe(false);
     });
+  });
+});
+
+// ============================================================================
+// Test Helpers for gh mock
+// ============================================================================
+
+function mockExec(overrides: Partial<ExecResult> = {}): (cmd: string) => Promise<ExecResult> {
+  return async () => ({
+    stdout: "",
+    stderr: "",
+    exitCode: 0,
+    ...overrides,
+  });
+}
+
+function mockExecByCommand(
+  handlers: Record<string, Partial<ExecResult>>,
+): (cmd: string) => Promise<ExecResult> {
+  return async (cmd: string) => {
+    for (const [pattern, result] of Object.entries(handlers)) {
+      if (cmd.includes(pattern)) {
+        return { stdout: "", stderr: "", exitCode: 0, ...result };
+      }
+    }
+    return { stdout: "", stderr: "unknown command", exitCode: 1 };
+  };
+}
+
+const SAMPLE_PR_JSON: string = JSON.stringify({
+  number: 42,
+  title: "Add user authentication",
+  author: { login: "octocat" },
+  state: "OPEN",
+  headRefName: "feat/auth",
+  baseRefName: "main",
+  url: "https://github.com/owner/repo/pull/42",
+  additions: 150,
+  deletions: 30,
+  changedFiles: 8,
+  isDraft: false,
+});
+
+// ============================================================================
+// parsePrInput
+// ============================================================================
+
+describe("parsePrInput", () => {
+  it("parses plain number", () => {
+    expect(parsePrInput("42")).toBe(42);
+  });
+
+  it("parses number with whitespace", () => {
+    expect(parsePrInput("  42  ")).toBe(42);
+  });
+
+  it("parses GitHub URL", () => {
+    expect(parsePrInput("https://github.com/owner/repo/pull/99")).toBe(99);
+  });
+
+  it("parses GitHub URL with trailing slash", () => {
+    expect(parsePrInput("https://github.com/owner/repo/pull/7/")).toBe(7);
+  });
+
+  it("parses GitHub URL with extra path segments", () => {
+    expect(parsePrInput("https://github.com/owner/repo/pull/7/files")).toBe(7);
+  });
+
+  it("returns null for non-numeric text", () => {
+    expect(parsePrInput("not-a-number")).toBeNull();
+  });
+
+  it("returns null for empty string", () => {
+    expect(parsePrInput("")).toBeNull();
+  });
+
+  it("returns null for URL without pull segment", () => {
+    expect(parsePrInput("https://github.com/owner/repo/issues/5")).toBeNull();
+  });
+});
+
+// ============================================================================
+// ghPreflight
+// ============================================================================
+
+describe("preflight", () => {
+  it("succeeds when gh is installed and authenticated", async () => {
+    const run = mockExecByCommand({
+      "gh --version": { stdout: "gh version 2.45.0 (2024-01-01)" },
+      "gh auth status": { stdout: "Logged in to github.com" },
+    });
+
+    const result = await ghPreflight(run);
+
+    expect(result.ok).toBe(true);
+    expect(result.ghVersion).toBe("2.45.0");
+    expect(result.authenticated).toBe(true);
+  });
+
+  it("fails when gh is not installed", async () => {
+    const run = mockExec({ exitCode: 127, stderr: "command not found: gh" });
+
+    const result = await ghPreflight(run);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("not installed");
+    expect(result.remediation).toContain("https://cli.github.com/");
+  });
+
+  it("fails when gh is not authenticated", async () => {
+    const run = mockExecByCommand({
+      "gh --version": { stdout: "gh version 2.45.0 (2024-01-01)" },
+      "gh auth status": { exitCode: 1, stderr: "not logged in" },
+    });
+
+    const result = await ghPreflight(run);
+
+    expect(result.ok).toBe(false);
+    expect(result.authenticated).toBe(false);
+    expect(result.error).toContain("not authenticated");
+    expect(result.remediation).toContain("gh auth login");
+  });
+
+  it("extracts version even with multi-line output", async () => {
+    const run = mockExecByCommand({
+      "gh --version": {
+        stdout: "gh version 2.50.0 (2024-06-01)\nhttps://github.com/cli/cli/releases/tag/v2.50.0",
+      },
+      "gh auth status": { stdout: "Logged in" },
+    });
+
+    const result = await ghPreflight(run);
+
+    expect(result.ok).toBe(true);
+    expect(result.ghVersion).toBe("2.50.0");
+  });
+});
+
+// ============================================================================
+// resolvePr
+// ============================================================================
+
+describe("resolver", () => {
+  it("resolves an open PR by number", async () => {
+    const run = mockExecByCommand({
+      "gh pr view": { stdout: SAMPLE_PR_JSON },
+    });
+
+    const result = await resolvePr("42", run);
+
+    expect(result.ok).toBe(true);
+    expect(result.pr).toBeDefined();
+    expect(result.pr!.number).toBe(42);
+    expect(result.pr!.title).toBe("Add user authentication");
+    expect(result.pr!.author).toBe("octocat");
+    expect(result.pr!.state).toBe("open");
+    expect(result.pr!.sourceBranch).toBe("feat/auth");
+    expect(result.pr!.targetBranch).toBe("main");
+    expect(result.pr!.additions).toBe(150);
+    expect(result.pr!.deletions).toBe(30);
+    expect(result.pr!.changedFiles).toBe(8);
+  });
+
+  it("resolves a PR from a GitHub URL", async () => {
+    const run = mockExecByCommand({
+      "gh pr view": { stdout: SAMPLE_PR_JSON },
+    });
+
+    const result = await resolvePr("https://github.com/owner/repo/pull/42", run);
+
+    expect(result.ok).toBe(true);
+    expect(result.pr!.number).toBe(42);
+  });
+
+  it("rejects invalid input format", async () => {
+    const run = mockExec();
+
+    const result = await resolvePr("not-valid", run);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("Invalid PR reference");
+    expect(result.remediation).toContain("Examples");
+  });
+
+  it("handles PR not found", async () => {
+    const run = mockExecByCommand({
+      "gh pr view": {
+        exitCode: 1,
+        stderr: "Could not resolve to a PullRequest",
+      },
+    });
+
+    const result = await resolvePr("9999", run);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("not found");
+    expect(result.remediation).toContain("Verify the PR number");
+  });
+
+  it("handles closed PR", async () => {
+    const closedPr = JSON.stringify({
+      number: 10,
+      title: "Old feature",
+      author: { login: "dev" },
+      state: "CLOSED",
+      headRefName: "feat/old",
+      baseRefName: "main",
+      url: "https://github.com/owner/repo/pull/10",
+      additions: 5,
+      deletions: 2,
+      changedFiles: 1,
+      isDraft: false,
+    });
+
+    const run = mockExecByCommand({
+      "gh pr view": { stdout: closedPr },
+    });
+
+    const result = await resolvePr("10", run);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("closed");
+    expect(result.remediation).toContain("Reopen");
+  });
+
+  it("handles merged PR", async () => {
+    const mergedPr = JSON.stringify({
+      number: 11,
+      title: "Merged feature",
+      author: { login: "dev" },
+      state: "MERGED",
+      headRefName: "feat/done",
+      baseRefName: "main",
+      url: "https://github.com/owner/repo/pull/11",
+      additions: 20,
+      deletions: 5,
+      changedFiles: 3,
+      isDraft: false,
+    });
+
+    const run = mockExecByCommand({
+      "gh pr view": { stdout: mergedPr },
+    });
+
+    const result = await resolvePr("11", run);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("merged");
+    expect(result.remediation).toContain("open PR");
+  });
+
+  it("handles gh command failure", async () => {
+    const run = mockExecByCommand({
+      "gh pr view": {
+        exitCode: 1,
+        stderr: "HTTP 500: Internal Server Error",
+      },
+    });
+
+    const result = await resolvePr("42", run);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("Failed to fetch");
+    expect(result.remediation).toContain("network");
+  });
+
+  it("handles malformed JSON from gh", async () => {
+    const run = mockExecByCommand({
+      "gh pr view": { stdout: "not json {{{" },
+    });
+
+    const result = await resolvePr("42", run);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("parse");
+  });
+
+  it("handles missing author gracefully", async () => {
+    const noAuthor = JSON.stringify({
+      number: 42,
+      title: "No author PR",
+      author: null,
+      state: "OPEN",
+      headRefName: "feat/x",
+      baseRefName: "main",
+      url: "https://github.com/owner/repo/pull/42",
+      additions: 1,
+      deletions: 0,
+      changedFiles: 1,
+      isDraft: false,
+    });
+
+    const run = mockExecByCommand({
+      "gh pr view": { stdout: noAuthor },
+    });
+
+    const result = await resolvePr("42", run);
+
+    expect(result.ok).toBe(true);
+    expect(result.pr!.author).toBe("unknown");
+  });
+});
+
+// ============================================================================
+// formatPrSummary
+// ============================================================================
+
+describe("formatPrSummary", () => {
+  const pr: PrMetadata = {
+    number: 42,
+    title: "Add user authentication",
+    author: "octocat",
+    state: "open",
+    sourceBranch: "feat/auth",
+    targetBranch: "main",
+    url: "https://github.com/owner/repo/pull/42",
+    additions: 150,
+    deletions: 30,
+    changedFiles: 8,
+  };
+
+  it("includes PR number and title", () => {
+    const summary = formatPrSummary(pr);
+    expect(summary).toContain("PR #42");
+    expect(summary).toContain("Add user authentication");
+  });
+
+  it("includes author", () => {
+    const summary = formatPrSummary(pr);
+    expect(summary).toContain("octocat");
+  });
+
+  it("includes branch info", () => {
+    const summary = formatPrSummary(pr);
+    expect(summary).toContain("feat/auth");
+    expect(summary).toContain("main");
+  });
+
+  it("includes change stats", () => {
+    const summary = formatPrSummary(pr);
+    expect(summary).toContain("+150");
+    expect(summary).toContain("-30");
+    expect(summary).toContain("8 files");
+  });
+
+  it("includes URL", () => {
+    const summary = formatPrSummary(pr);
+    expect(summary).toContain("https://github.com/owner/repo/pull/42");
+  });
+});
+
+// ============================================================================
+// Tool Integration
+// ============================================================================
+
+describe("createGoopPrReviewTool", () => {
+  let ctx: PluginContext;
+  let toolContext: ReturnType<typeof createMockToolContext>;
+  let cleanup: () => void;
+
+  beforeEach(() => {
+    const env = setupTestEnvironment("goop-pr-review-test");
+    cleanup = env.cleanup;
+    ctx = createMockPluginContext({ testDir: env.testDir });
+    toolContext = createMockToolContext({ directory: env.testDir });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("creates tool with correct description", () => {
+    const t = createGoopPrReviewTool(ctx);
+    expect(t.description).toContain("pull request");
+  });
+
+  it("creates tool with pr arg", () => {
+    const t = createGoopPrReviewTool(ctx);
+    expect(t.args).toHaveProperty("pr");
+  });
+
+  it("returns a string result when executed without args", async () => {
+    const t = createGoopPrReviewTool(ctx);
+    const result = await t.execute({}, toolContext);
+
+    // Either preflight fails (no gh in CI) or it asks for PR input
+    expect(typeof result).toBe("string");
+    expect(result.length).toBeGreaterThan(0);
   });
 });
