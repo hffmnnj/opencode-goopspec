@@ -9,8 +9,6 @@ import {
   createOrchestratorEnforcementHooks,
   isOrchestrator,
   wouldBlockPath,
-  hasPendingDelegation,
-  clearPendingDelegation,
   isBlockedTool,
   getToolCategory,
   detectIntent,
@@ -328,8 +326,8 @@ describe("orchestrator-enforcement hooks", () => {
     });
   });
 
-  describe("tool.execute.after hook (delegation enforcement)", () => {
-    it("detects goop_delegate and injects task instruction", async () => {
+  describe("tool.execute.after hook (direct task guidance)", () => {
+    it("does not inject wrapper-specific delegation instructions", async () => {
       const hooks = createOrchestratorEnforcementHooks(ctx);
       const output = {
         title: "Delegation",
@@ -347,35 +345,38 @@ describe("orchestrator-enforcement hooks", () => {
         { tool: "goop_delegate", sessionID: "test-session", callID: "call-1" },
         output
       );
-      
-      expect(output.output).toContain("MANDATORY NEXT STEP");
-      expect(output.output).toContain("goop-executor");
-      expect(hasPendingDelegation("test-session")).toBe(true);
+
+      expect(output.output).not.toContain("MANDATORY NEXT STEP");
+      expect(output.output).not.toContain("Two-Step Delegation Flow");
+      expect(output.output).not.toContain("goop_delegate");
     });
 
-    it("clears pending delegation when task is called", async () => {
+    it("still clears exploration tracking when task is called", async () => {
       const hooks = createOrchestratorEnforcementHooks(ctx);
-      
-      // First set up a pending delegation
-      const delegateOutput = {
-        title: "Delegation",
-        output: `<goop_delegation>{"action":"delegate_via_task","agent":"goop-executor"}</goop_delegation>`,
-        metadata: {},
-      };
+
+      clearExplorationTracking("test-session");
       await hooks["tool.execute.after"](
-        { tool: "goop_delegate", sessionID: "test-session", callID: "call-1" },
-        delegateOutput
+        { tool: "mcp_grep", sessionID: "test-session", callID: "call-1" },
+        { title: "Grep", output: "results", metadata: {} }
       );
-      expect(hasPendingDelegation("test-session")).toBe(true);
-      
-      // Now call task
+      await hooks["tool.execute.after"](
+        { tool: "mcp_grep", sessionID: "test-session", callID: "call-2" },
+        { title: "Grep", output: "results", metadata: {} }
+      );
+
       const taskOutput = { title: "Task", output: "done", metadata: {} };
       await hooks["tool.execute.after"](
         { tool: "task", sessionID: "test-session", callID: "call-2" },
         taskOutput
       );
-      
-      expect(hasPendingDelegation("test-session")).toBe(false);
+
+      const output = { title: "Grep", output: "results", metadata: {} };
+      await hooks["tool.execute.after"](
+        { tool: "mcp_grep", sessionID: "test-session", callID: "call-3" },
+        output
+      );
+
+      expect(output.output).not.toContain("Consider Delegating Exploration");
     });
   });
 
@@ -491,25 +492,34 @@ describe("orchestrator-enforcement hooks", () => {
       });
     });
 
-    describe("delegation completion flow", () => {
-      it("tracks and clears delegation after task call", async () => {
-        const delegateOutput = {
-          title: "Delegation",
-          output: `<goop_delegation>{"action":"delegate_via_task","agent":"goop-executor"}</goop_delegation>`,
-          metadata: {},
-        };
-        await hooks["tool.execute.after"](
-          { tool: "goop_delegate", sessionID: "delegation-flow", callID: "del-1" },
-          delegateOutput
+    describe("delegation guidance quality", () => {
+      it("provides direct task prompt requirements after code block", async () => {
+        const permOutput = { status: "ask" as const };
+        await hooks["permission.ask"](
+          {
+            tool: "mcp_edit",
+            sessionID: "guidance-quality",
+            path: "src/hooks/orchestrator-enforcement.ts",
+            agent: "goopspec",
+          },
+          permOutput
         );
-        expect(hasPendingDelegation("delegation-flow")).toBe(true);
+        expect(permOutput.status).toBe("deny");
 
-        const taskOutput = { title: "Task", output: "result", metadata: {} };
+        const execOutput = { title: "Edit", output: "", metadata: {} };
         await hooks["tool.execute.after"](
-          { tool: "task", sessionID: "delegation-flow", callID: "task-1" },
-          taskOutput
+          { tool: "mcp_edit", sessionID: "guidance-quality", callID: "call-1" },
+          execOutput
         );
-        expect(hasPendingDelegation("delegation-flow")).toBe(false);
+
+        expect(execOutput.output).toContain("task(");
+        expect(execOutput.output).toContain("Task Intent");
+        expect(execOutput.output).toContain("Expected Output");
+        expect(execOutput.output).toContain("Required Context");
+        expect(execOutput.output).toContain("SPEC must-have");
+        expect(execOutput.output).toContain("BLUEPRINT task");
+        expect(execOutput.output).toContain("Constraints");
+        expect(execOutput.output).toContain("Verification");
       });
     });
   });
@@ -567,26 +577,4 @@ describe("orchestrator-enforcement hooks", () => {
     });
   });
 
-  describe("clearPendingDelegation", () => {
-    it("clears pending delegation state", async () => {
-      const hooks = createOrchestratorEnforcementHooks(ctx);
-      
-      // Set up pending delegation
-      const output = {
-        title: "Delegation",
-        output: `<goop_delegation>{"action":"delegate_via_task","agent":"test"}</goop_delegation>`,
-        metadata: {},
-      };
-      await hooks["tool.execute.after"](
-        { tool: "goop_delegate", sessionID: "session-to-clear", callID: "call" },
-        output
-      );
-      
-      expect(hasPendingDelegation("session-to-clear")).toBe(true);
-      
-      clearPendingDelegation("session-to-clear");
-      
-      expect(hasPendingDelegation("session-to-clear")).toBe(false);
-    });
-  });
 });
