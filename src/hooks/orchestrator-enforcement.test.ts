@@ -33,6 +33,8 @@ describe("orchestrator-enforcement hooks", () => {
   afterEach(() => {
     clearExplorationTracking("test-explore");
     clearExplorationTracking("test-explore-nudge");
+    clearExplorationTracking("explore-task-test");
+    clearExplorationTracking("agent-select-explore");
     cleanup();
   });
 
@@ -327,31 +329,26 @@ describe("orchestrator-enforcement hooks", () => {
   });
 
   describe("tool.execute.after hook (direct task guidance)", () => {
-    it("does not inject wrapper-specific delegation instructions", async () => {
+    it("does not inject delegation wrapper instructions for task tool", async () => {
       const hooks = createOrchestratorEnforcementHooks(ctx);
       const output = {
-        title: "Delegation",
-        output: `<goop_delegation>
-{
-  "action": "delegate_via_task",
-  "agent": "goop-executor",
-  "composedPrompt": "Test prompt for executor"
-}
-</goop_delegation>`,
+        title: "Task",
+        output: "Delegated task completed successfully",
         metadata: {},
       };
       
       await hooks["tool.execute.after"](
-        { tool: "goop_delegate", sessionID: "test-session", callID: "call-1" },
+        { tool: "task", sessionID: "test-session", callID: "call-1" },
         output
       );
 
+      // Direct task usage should not trigger any wrapper-style guidance
       expect(output.output).not.toContain("MANDATORY NEXT STEP");
       expect(output.output).not.toContain("Two-Step Delegation Flow");
       expect(output.output).not.toContain("goop_delegate");
     });
 
-    it("still clears exploration tracking when task is called", async () => {
+    it("clears exploration tracking when task is called", async () => {
       const hooks = createOrchestratorEnforcementHooks(ctx);
 
       clearExplorationTracking("test-session");
@@ -377,6 +374,145 @@ describe("orchestrator-enforcement hooks", () => {
       );
 
       expect(output.output).not.toContain("Consider Delegating Exploration");
+    });
+  });
+
+  describe("direct task delegation flow", () => {
+    it("generates delegation guidance referencing task() not goop_delegate()", async () => {
+      const hooks = createOrchestratorEnforcementHooks(ctx);
+      const permOutput = { status: "ask" as const };
+      await hooks["permission.ask"](
+        {
+          tool: "mcp_edit",
+          sessionID: "direct-task-test",
+          path: "src/feature.ts",
+          agent: "goopspec",
+        },
+        permOutput
+      );
+      expect(permOutput.status).toBe("deny");
+
+      const execOutput = { title: "Edit", output: "", metadata: {} };
+      await hooks["tool.execute.after"](
+        { tool: "mcp_edit", sessionID: "direct-task-test", callID: "call-1" },
+        execOutput
+      );
+
+      // Guidance must reference direct task() usage
+      expect(execOutput.output).toContain("task(");
+      expect(execOutput.output).toContain("subagent_type");
+      // Must NOT reference the removed wrapper
+      expect(execOutput.output).not.toContain("goop_delegate(");
+      expect(execOutput.output).not.toContain("goop_delegate");
+    });
+
+    it("research delegation guidance references task() directly", async () => {
+      const hooks = createOrchestratorEnforcementHooks(ctx);
+      const permOutput = { status: "ask" as const };
+      await hooks["permission.ask"](
+        {
+          tool: "mcp_google_search",
+          sessionID: "research-task-test",
+          agent: "goopspec",
+        },
+        permOutput
+      );
+      expect(permOutput.status).toBe("deny");
+
+      const execOutput = { title: "Search", output: "", metadata: {} };
+      await hooks["tool.execute.after"](
+        { tool: "mcp_google_search", sessionID: "research-task-test", callID: "call-1" },
+        execOutput
+      );
+
+      expect(execOutput.output).toContain("task(");
+      expect(execOutput.output).toContain("goop-researcher");
+      expect(execOutput.output).not.toContain("goop_delegate");
+    });
+
+    it("exploration nudge guidance references task() directly", async () => {
+      const hooks = createOrchestratorEnforcementHooks(ctx);
+      clearExplorationTracking("explore-task-test");
+
+      for (let i = 0; i < 3; i++) {
+        const output = { title: "Grep", output: "results", metadata: {} };
+        await hooks["tool.execute.after"](
+          { tool: "mcp_grep", sessionID: "explore-task-test", callID: String(i) },
+          output
+        );
+
+        if (i === 2) {
+          expect(output.output).toContain("task(");
+          expect(output.output).toContain("goop-explorer");
+          expect(output.output).not.toContain("goop_delegate");
+        }
+      }
+
+      clearExplorationTracking("explore-task-test");
+    });
+  });
+
+  describe("agent selection in delegation guidance", () => {
+    it("selects executor tier for code file blocks", async () => {
+      const hooks = createOrchestratorEnforcementHooks(ctx);
+      const permOutput = { status: "ask" as const };
+      await hooks["permission.ask"](
+        {
+          tool: "mcp_edit",
+          sessionID: "agent-select-code",
+          path: "src/index.ts",
+          agent: "goopspec",
+        },
+        permOutput
+      );
+
+      const execOutput = { title: "Edit", output: "", metadata: {} };
+      await hooks["tool.execute.after"](
+        { tool: "mcp_edit", sessionID: "agent-select-code", callID: "call-1" },
+        execOutput
+      );
+
+      expect(execOutput.output).toContain("goop-executor");
+    });
+
+    it("selects goop-researcher for research tool blocks", async () => {
+      const hooks = createOrchestratorEnforcementHooks(ctx);
+      const permOutput = { status: "ask" as const };
+      await hooks["permission.ask"](
+        {
+          tool: "exa_web_search_exa",
+          sessionID: "agent-select-research",
+          agent: "goopspec",
+        },
+        permOutput
+      );
+
+      const execOutput = { title: "Search", output: "", metadata: {} };
+      await hooks["tool.execute.after"](
+        { tool: "exa_web_search_exa", sessionID: "agent-select-research", callID: "call-1" },
+        execOutput
+      );
+
+      expect(execOutput.output).toContain("goop-researcher");
+    });
+
+    it("selects goop-explorer for exploration nudges", async () => {
+      const hooks = createOrchestratorEnforcementHooks(ctx);
+      clearExplorationTracking("agent-select-explore");
+
+      for (let i = 0; i < 3; i++) {
+        const output = { title: "Glob", output: "results", metadata: {} };
+        await hooks["tool.execute.after"](
+          { tool: "mcp_glob", sessionID: "agent-select-explore", callID: String(i) },
+          output
+        );
+
+        if (i === 2) {
+          expect(output.output).toContain("goop-explorer");
+        }
+      }
+
+      clearExplorationTracking("agent-select-explore");
     });
   });
 

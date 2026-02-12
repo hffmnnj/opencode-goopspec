@@ -141,24 +141,38 @@ describe("createGoopSpecOrchestrator", () => {
     expect(orchestrator.prompt).toContain("Phase 5: Confirm");
   });
 
-  it("includes delegation rules in prompt", () => {
+  it("includes delegation rules using direct task flow", () => {
     const resolver = createMockResolver();
     const orchestrator = createGoopSpecOrchestrator({ resolver });
 
     expect(orchestrator.prompt).toContain("<Delegation_Rules>");
+    // Must use direct task() delegation
     expect(orchestrator.prompt).toContain("task(");
+    // Must NOT reference the removed wrapper tool
     expect(orchestrator.prompt).not.toContain("goop_delegate(");
+    expect(orchestrator.prompt).not.toContain("goop_delegate({");
+  });
+
+  it("does not include goop_delegate in permissions", () => {
+    const resolver = createMockResolver();
+    const orchestrator = createGoopSpecOrchestrator({ resolver });
+
+    expect(orchestrator.permission).not.toHaveProperty("goop_delegate");
+    // task tool should be allowed for direct delegation
+    expect(orchestrator.permission.task).toBe("allow");
   });
 
   it("includes direct task prompt payload requirements", () => {
     const resolver = createMockResolver();
     const orchestrator = createGoopSpecOrchestrator({ resolver });
 
+    // Prompt must describe the required payload sections for task delegation
     expect(orchestrator.prompt).toContain("## TASK INTENT");
     expect(orchestrator.prompt).toContain("## EXPECTED OUTPUT");
     expect(orchestrator.prompt).toContain("## PROJECT CONTEXT");
     expect(orchestrator.prompt).toContain("## CONSTRAINTS");
     expect(orchestrator.prompt).toContain("## VERIFICATION");
+    // Context injection requirements
     expect(orchestrator.prompt).toContain("SPEC references");
     expect(orchestrator.prompt).toContain("BLUEPRINT references");
     expect(orchestrator.prompt).toContain("Relevant memory");
@@ -168,14 +182,31 @@ describe("createGoopSpecOrchestrator", () => {
     const resolver = createMockResolver();
     const orchestrator = createGoopSpecOrchestrator({ resolver });
 
+    // All specialist agents must be referenced for routing
     expect(orchestrator.prompt).toContain("goop-researcher");
     expect(orchestrator.prompt).toContain("goop-explorer");
     expect(orchestrator.prompt).toContain("goop-debugger");
     expect(orchestrator.prompt).toContain("goop-verifier");
+    // All executor tiers must be referenced
     expect(orchestrator.prompt).toContain("goop-executor-low");
     expect(orchestrator.prompt).toContain("goop-executor-medium");
     expect(orchestrator.prompt).toContain("goop-executor-high");
     expect(orchestrator.prompt).toContain("goop-executor-frontend");
+  });
+
+  it("maps agent selection to task type categories", () => {
+    const resolver = createMockResolver();
+    const orchestrator = createGoopSpecOrchestrator({ resolver });
+
+    // Prompt should contain guidance linking task types to agents
+    // Research tasks → goop-researcher
+    expect(orchestrator.prompt).toContain("goop-researcher");
+    // Exploration tasks → goop-explorer
+    expect(orchestrator.prompt).toContain("goop-explorer");
+    // Implementation tasks → executor tiers
+    expect(orchestrator.prompt).toContain("goop-executor");
+    // Verification tasks → goop-verifier
+    expect(orchestrator.prompt).toContain("goop-verifier");
   });
 
   it("includes constraints in prompt", () => {

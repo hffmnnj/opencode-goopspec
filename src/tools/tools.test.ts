@@ -197,6 +197,13 @@ describe("Tools", () => {
       expect(Object.keys(tools)).toContain("goop_skill");
       expect(Object.keys(tools)).toContain("slashcommand");
     });
+
+    it("does not include goop_delegate tool", () => {
+      const ctx = createTestContext();
+      const tools = createTools(ctx);
+      
+      expect(Object.keys(tools)).not.toContain("goop_delegate");
+    });
     
     it("all tools have description and args", () => {
       const ctx = createTestContext();
