@@ -74,6 +74,13 @@ import {
   handleRequirementRemediation,
 } from "./fix-handlers.js";
 import { verifyAfterFix } from "./verify-after-fix.js";
+import {
+  promptMergeStrategy,
+  confirmMerge,
+  executeMerge,
+  handleMergeResult,
+  type MergeCommandResult,
+} from "./merge.js";
 
 // ============================================================================
 // Fixtures
@@ -2538,5 +2545,518 @@ describe("post-fix", () => {
 
     expect(result.verification.status).toBe("pass");
     expect(result.verification.checks.length).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================================
+// merge flow
+// ============================================================================
+
+describe("merge-strategy", () => {
+  it("prompts when strategy is missing", () => {
+    const result = promptMergeStrategy();
+    expect(result.status).toBe("prompt");
+    expect(result.prompt).toContain("merge");
+    expect(result.prompt).toContain("squash");
+  });
+
+  it("accepts merge strategy", () => {
+    const result = promptMergeStrategy("merge");
+    expect(result.status).toBe("ready");
+    expect(result.strategy).toBe("merge");
+  });
+
+  it("accepts squash strategy with whitespace and case", () => {
+    const result = promptMergeStrategy("  SQUASH ");
+    expect(result.status).toBe("ready");
+    expect(result.strategy).toBe("squash");
+  });
+
+  it("rejects unsupported strategies", () => {
+    const result = promptMergeStrategy("rebase");
+    expect(result.status).toBe("prompt");
+    expect(result.prompt).toContain("Invalid strategy");
+  });
+});
+
+describe("merge-confirmation", () => {
+  it("requires explicit confirmation before merge", () => {
+    const result = confirmMerge({
+      prNumber: 42,
+      strategy: "merge",
+      unresolvedFindings: 1,
+    });
+
+    expect(result.status).toBe("prompt");
+    expect(result.prompt).toContain("Final merge confirmation required");
+    expect(result.prompt).toContain("Set `mergeConfirm` to `yes`");
+  });
+
+  it("accepts affirmative confirmation values", () => {
+    const result = confirmMerge({
+      prNumber: 42,
+      strategy: "squash",
+      unresolvedFindings: 0,
+      confirmation: "yes",
+    });
+
+    expect(result.status).toBe("confirmed");
+  });
+
+  it("supports boolean confirmation", () => {
+    const result = confirmMerge({
+      prNumber: 42,
+      strategy: "merge",
+      unresolvedFindings: 0,
+      confirmation: true,
+    });
+
+    expect(result.status).toBe("confirmed");
+  });
+
+  it("cancels merge on negative confirmation", () => {
+    const result = confirmMerge({
+      prNumber: 42,
+      strategy: "merge",
+      unresolvedFindings: 2,
+      confirmation: "no",
+    });
+
+    expect(result.status).toBe("cancelled");
+  });
+});
+
+describe("merge-failure", () => {
+  function commandResult(overrides: Partial<MergeCommandResult>): MergeCommandResult {
+    return {
+      command: "gh pr merge 42 --merge --delete-branch",
+      prNumber: 42,
+      strategy: "merge",
+      stdout: "",
+      stderr: "",
+      exitCode: 1,
+      ...overrides,
+    };
+  }
+
+  it("executes gh pr merge with selected merge strategy", async () => {
+    const calls: string[] = [];
+    const result = await executeMerge(42, "merge", async (cmd) => {
+      calls.push(cmd);
+      return { stdout: "merged", stderr: "", exitCode: 0 };
+    });
+
+    expect(calls).toEqual(["gh pr merge 42 --merge --delete-branch"]);
+    expect(result.exitCode).toBe(0);
+  });
+
+  it("executes gh pr merge with squash strategy", async () => {
+    const calls: string[] = [];
+    await executeMerge(42, "squash", async (cmd) => {
+      calls.push(cmd);
+      return { stdout: "merged", stderr: "", exitCode: 0 };
+    });
+
+    expect(calls).toEqual(["gh pr merge 42 --squash --delete-branch"]);
+  });
+
+  it("maps merge conflict errors to actionable status", () => {
+    const result = handleMergeResult(
+      commandResult({ stderr: "Pull request is not mergeable: merge conflict" }),
+    );
+
+    expect(result.status).toBe("conflict");
+    expect(result.remediation).toContain("resolve conflicts");
+  });
+
+  it("maps permission failures to actionable status", () => {
+    const result = handleMergeResult(
+      commandResult({ stderr: "GraphQL: Resource not accessible by integration (permission denied)" }),
+    );
+
+    expect(result.status).toBe("permission-denied");
+    expect(result.remediation).toContain("write/maintainer access");
+  });
+
+  it("returns generic failure for unknown errors", () => {
+    const result = handleMergeResult(
+      commandResult({ stderr: "unexpected transport error" }),
+    );
+
+    expect(result.status).toBe("failed");
+    expect(result.remediation).toContain("Review the gh output");
+  });
+});
+
+// ============================================================================
+// Tool Integration: Success and Failure Branches (Wave 4.2)
+// ============================================================================
+
+describe("integration-flow", () => {
+  let ctx: PluginContext;
+  let toolContext: ReturnType<typeof createMockToolContext>;
+  let cleanup: () => void;
+
+  beforeEach(() => {
+    const env = setupTestEnvironment("goop-pr-review-integration");
+    cleanup = env.cleanup;
+    ctx = createMockPluginContext({ testDir: env.testDir });
+    toolContext = createMockToolContext({ directory: env.testDir });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  function buildIntegrationContext(
+    overrides: Partial<ReviewContext> = {},
+  ): ReviewContext {
+    return {
+      pr: validPrMetadata(),
+      files: [{ path: "src/auth.ts", additions: 10, deletions: 2 }],
+      checks: [],
+      reviews: [],
+      comments: [],
+      specAvailability: {
+        specExists: true,
+        blueprintExists: true,
+        specPath: "/tmp/SPEC.md",
+        blueprintPath: "/tmp/BLUEPRINT.md",
+      },
+      workingDirectoryClean: true,
+      ...overrides,
+    };
+  }
+
+  function buildBaseDeps(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      ghPreflight: async () => ({ ok: true, ghVersion: "2.50.0", authenticated: true }),
+      resolvePr: async () => ({ ok: true, pr: validPrMetadata() }),
+      buildReviewContext: async () => buildIntegrationContext(),
+      analyzeQuality: () => ({
+        checks: [],
+        findings: [],
+        summary: "All quality checks passed.",
+      }),
+      analyzeSecurity: () => ({
+        findings: [],
+        summary: "No security-relevant signals found.",
+      }),
+      analyzeSpecAlignment: () => ({
+        available: true,
+        requirements: [{ id: "MH4", description: "Interactive Merge Flow", covered: true }],
+        findings: [],
+        summary: "All requirements covered.",
+      }),
+      checkDirtyWorktree: async () => ({ clean: true }),
+      getAvailableFixOptions: () => [],
+      buildFixOptionsPrompt: () => null,
+      parseFixSelection: () => [],
+      orchestrateFixes: async () => ({
+        selected: [],
+        results: [],
+        summary: { applied: [], skipped: [], failed: [] },
+        verification: {
+          status: "skipped",
+          summary: "No verification needed",
+          checks: [],
+          regressionsDetected: false,
+        },
+      }),
+      run: async () => ({ stdout: "Merged pull request #42", stderr: "", exitCode: 0 }),
+      ...overrides,
+    };
+  }
+
+  it("executes happy path review -> fixes -> merge", async () => {
+    const mergeCommands: string[] = [];
+    const deps = buildBaseDeps({
+      getAvailableFixOptions: () => [
+        { value: "lint", label: "Lint & Format", hint: "Fix lint and formatting issues" },
+      ],
+      buildFixOptionsPrompt: () => "### Available Fix Options\n- lint",
+      parseFixSelection: () => ["lint"],
+      orchestrateFixes: async () => ({
+        selected: ["lint"],
+        results: [{ category: "lint", status: "applied", message: "lint fixed" }],
+        summary: { applied: ["lint"], skipped: [], failed: [] },
+        verification: {
+          status: "pass",
+          summary: "All checks passed",
+          checks: [
+            { name: "lint", command: "bun run lint", passed: true },
+            { name: "typecheck", command: "bun run typecheck", passed: true },
+          ],
+          regressionsDetected: false,
+        },
+      }),
+      run: async (command: string) => {
+        mergeCommands.push(command);
+        return { stdout: "Merged pull request #42", stderr: "", exitCode: 0 };
+      },
+    });
+
+    const tool = createGoopPrReviewTool(ctx, deps);
+    const result = await tool.execute(
+      {
+        pr: "42",
+        fixSelection: "lint",
+        mergeStrategy: "squash",
+        mergeConfirm: "yes",
+      },
+      toolContext,
+    );
+
+    expect(result).toContain("### Fix Execution");
+    expect(result).toContain("Summary: applied=1, skipped=0, failed=0");
+    expect(result).toContain("Post-fix verification:");
+    expect(result).toContain("- status: success");
+    expect(result).toContain("merged successfully using `squash` strategy");
+    expect(mergeCommands).toEqual([
+      "gh pr merge 42 --squash --delete-branch",
+    ]);
+  });
+
+  it("fails fast when gh is missing", async () => {
+    const tool = createGoopPrReviewTool(
+      ctx,
+      buildBaseDeps({
+        ghPreflight: async () => ({
+          ok: false,
+          error: "GitHub CLI (gh) is not installed.",
+          remediation: "Install gh: https://cli.github.com/",
+        }),
+      }),
+    );
+
+    const result = await tool.execute({ pr: "42" }, toolContext);
+
+    expect(result).toContain("GitHub CLI Preflight Failed");
+    expect(result).toContain("not installed");
+    expect(result).toContain("https://cli.github.com/");
+  });
+
+  it("fails fast when gh auth is unavailable", async () => {
+    const tool = createGoopPrReviewTool(
+      ctx,
+      buildBaseDeps({
+        ghPreflight: async () => ({
+          ok: false,
+          error: "GitHub CLI is not authenticated.",
+          remediation: "Run `gh auth login` to authenticate.",
+        }),
+      }),
+    );
+
+    const result = await tool.execute({ pr: "42" }, toolContext);
+
+    expect(result).toContain("GitHub CLI Preflight Failed");
+    expect(result).toContain("not authenticated");
+    expect(result).toContain("gh auth login");
+  });
+
+  it("handles PR not-found resolution failure", async () => {
+    const tool = createGoopPrReviewTool(
+      ctx,
+      buildBaseDeps({
+        resolvePr: async () => ({
+          ok: false,
+          error: "PR #9999 was not found in this repository.",
+          remediation: "Verify the PR number and ensure repository context is correct.",
+        }),
+      }),
+    );
+
+    const result = await tool.execute({ pr: "9999" }, toolContext);
+
+    expect(result).toContain("PR Resolution Failed");
+    expect(result).toContain("not found");
+  });
+
+  it("handles closed PR resolution failure", async () => {
+    const tool = createGoopPrReviewTool(
+      ctx,
+      buildBaseDeps({
+        resolvePr: async () => ({
+          ok: false,
+          error: "PR #10 is closed.",
+          remediation: "Only open PRs can be reviewed.",
+        }),
+      }),
+    );
+
+    const result = await tool.execute({ pr: "10" }, toolContext);
+
+    expect(result).toContain("PR Resolution Failed");
+    expect(result).toContain("closed");
+  });
+
+  it("handles merged PR resolution failure", async () => {
+    const tool = createGoopPrReviewTool(
+      ctx,
+      buildBaseDeps({
+        resolvePr: async () => ({
+          ok: false,
+          error: "PR #11 has already been merged.",
+          remediation: "Choose an open PR to review.",
+        }),
+      }),
+    );
+
+    const result = await tool.execute({ pr: "11" }, toolContext);
+
+    expect(result).toContain("PR Resolution Failed");
+    expect(result).toContain("merged");
+  });
+
+  it("runs in no-spec mode when .goopspec files are absent", async () => {
+    const tool = createGoopPrReviewTool(
+      ctx,
+      buildBaseDeps({
+        buildReviewContext: async () =>
+          buildIntegrationContext({
+            specAvailability: {
+              specExists: false,
+              blueprintExists: false,
+              specPath: "",
+              blueprintPath: "",
+            },
+          }),
+        analyzeSpecAlignment: () => createNoSpecSection(),
+      }),
+    );
+
+    const result = await tool.execute({ pr: "42" }, toolContext);
+
+    expect(result).toContain("No spec files detected");
+    expect(result).toContain("Review complete. Merge flow ready.");
+  });
+
+  it("reports merge permission denial with actionable guidance", async () => {
+    const tool = createGoopPrReviewTool(
+      ctx,
+      buildBaseDeps({
+        run: async () => ({
+          stdout: "",
+          stderr: "GraphQL: Resource not accessible by integration (permission denied)",
+          exitCode: 1,
+        }),
+      }),
+    );
+
+    const result = await tool.execute(
+      { pr: "42", mergeStrategy: "merge", mergeConfirm: "yes" },
+      toolContext,
+    );
+
+    expect(result).toContain("- status: permission-denied");
+    expect(result).toContain("insufficient permissions");
+  });
+
+  it("reports merge conflict with remediation guidance", async () => {
+    const tool = createGoopPrReviewTool(
+      ctx,
+      buildBaseDeps({
+        run: async () => ({
+          stdout: "",
+          stderr: "Pull request is not mergeable due to conflict",
+          exitCode: 1,
+        }),
+      }),
+    );
+
+    const result = await tool.execute(
+      { pr: "42", mergeStrategy: "merge", mergeConfirm: "yes" },
+      toolContext,
+    );
+
+    expect(result).toContain("- status: conflict");
+    expect(result).toContain("Merge failed due to conflicts");
+  });
+
+  it("surfaces fix handler failures in fix execution summary", async () => {
+    const tool = createGoopPrReviewTool(
+      ctx,
+      buildBaseDeps({
+        getAvailableFixOptions: () => [
+          { value: "comments", label: "Comment Remediation", hint: "Address review comments" },
+        ],
+        parseFixSelection: () => ["comments"],
+        orchestrateFixes: async () => ({
+          selected: ["comments"],
+          results: [
+            {
+              category: "comments",
+              status: "failed",
+              message: "delegation failed",
+            },
+          ],
+          summary: { applied: [], skipped: [], failed: ["comments"] },
+          verification: {
+            status: "skipped",
+            summary: "No applied fixes to verify",
+            checks: [],
+            regressionsDetected: false,
+          },
+        }),
+      }),
+    );
+
+    const result = await tool.execute(
+      { pr: "42", fixSelection: "comments" },
+      toolContext,
+    );
+
+    expect(result).toContain("comments: failed - delegation failed");
+    expect(result).toContain("Summary: applied=0, skipped=0, failed=1");
+  });
+
+  it("surfaces post-fix verification failures with rollback guidance", async () => {
+    const tool = createGoopPrReviewTool(
+      ctx,
+      buildBaseDeps({
+        getAvailableFixOptions: () => [
+          { value: "requirements", label: "Requirements", hint: "Cover missing requirements" },
+        ],
+        parseFixSelection: () => ["requirements"],
+        orchestrateFixes: async () => ({
+          selected: ["requirements"],
+          results: [
+            {
+              category: "requirements",
+              status: "applied",
+              message: "requirements updates applied",
+            },
+          ],
+          summary: { applied: ["requirements"], skipped: [], failed: [] },
+          verification: {
+            status: "fail",
+            summary: "Post-fix verification failed.",
+            checks: [
+              {
+                name: "test",
+                command: "bun test",
+                passed: false,
+                output: "1 failing test",
+              },
+            ],
+            regressionsDetected: true,
+            rollbackGuidance: {
+              reason: "Post-fix verification failed",
+              steps: ["Review the failed tests", "Revert broken changes"],
+            },
+          },
+        }),
+      }),
+    );
+
+    const result = await tool.execute(
+      { pr: "42", fixSelection: "requirements" },
+      toolContext,
+    );
+
+    expect(result).toContain("status: fail");
+    expect(result).toContain("rollback guidance");
+    expect(result).toContain("Post-fix verification failed");
   });
 });
