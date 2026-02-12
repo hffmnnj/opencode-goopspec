@@ -1,6 +1,6 @@
 # Acceptance Process
 
-Detailed process for `/goop-accept` - verification and acceptance of completed work.
+Detailed process for `/goop-accept` - verification, explicit acceptance, and automatic completion/archival.
 
 ## Phase 1: Gate Check
 
@@ -196,6 +196,7 @@ Run complete test suite and report results
 
 Type **"accept"** to complete this milestone.
 Type **"issues"** to report problems.
+Type **"accept-with-issues"** to record known issues before final confirmation.
 Type **"cancel"** to return to execution.
 
 ---
@@ -234,10 +235,10 @@ memory_save({
 - User accepted
 
 ## Next Session
-Run: /goop-complete
+Run: /goop-milestone (or start next planned work)
 
 ## Context
-Verification passed. Ready to archive.
+Verification passed. Milestone finalized and archived.
 ```
 
 4. Display completion and offer PR creation:
@@ -316,17 +317,23 @@ gh pr create --base $TARGET_BRANCH --title "type(scope): Title" --body "..." [--
 
 Display PR URL to user.
 
-6. Display next steps:
+6. Start completion lifecycle (merged from previous `/goop-complete`):
+
+   - **Archival:** move active milestone artifacts (`SPEC.md`, `BLUEPRINT.md`, `CHRONICLE.md`, and related active files) to `.goopspec/archive/<milestone-slug>/`
+   - **Retrospective:** generate `.goopspec/archive/<milestone-slug>/RETROSPECTIVE.md`
+   - **Memory extraction:** persist milestone learnings (patterns, decisions, gotchas) via memory tools
+   - **Tagging (optional):** create git tag if milestone flow requests it
+
+7. Display completion summary and archival artifacts:
+
 ```
----
+## 🔮 GoopSpec · Accepted and Archived
 
-### Next Step
-
-**Complete the milestone** — Archive and extract learnings
-
-→ `/goop-complete`
-
-Start a new session for clean archive.
+**Feature:** [Name]
+**Status:** Accepted and archived
+**Archive:** .goopspec/archive/[milestone-slug]/
+**Retrospective:** .goopspec/archive/[milestone-slug]/RETROSPECTIVE.md
+**Memory:** [N] learnings persisted
 
 ---
 ```
@@ -348,7 +355,7 @@ Then:
 
 1. Log that acceptance was with known issues
 2. Document issues in CHRONICLE.md
-3. Proceed to acceptance
+3. Re-open acceptance gate and require explicit `accept` before archival
 
 ```
 ## 🔮 GoopSpec · Accepted With Issues
@@ -359,7 +366,7 @@ Then:
 
 These will be documented in the retrospective.
 
-→ Next: `/goop-complete`
+Type **"accept"** to finalize and archive.
 ```
 
 ---
@@ -386,9 +393,9 @@ Type "accept" to complete.
 User: accept
 
 Orchestrator:
-## 🔮 GoopSpec · Accepted
+## 🔮 GoopSpec · Accepted and Archived
 
-→ Next: `/goop-complete`
+Archive created at `.goopspec/archive/<milestone-slug>/`
 ```
 
 ### Verification Failed
@@ -412,4 +419,4 @@ Orchestrator: Run `/goop-execute` to continue.
 
 ---
 
-*Acceptance Process v0.2.6*
+*Acceptance Process v0.2.7*
