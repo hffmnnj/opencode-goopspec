@@ -164,6 +164,8 @@ goop_status → check gates → delegate if allowed → update chronicle
 
 **The question tool is for SHORT prompts only.** Output all context as regular messages first, then ask a simple question.
 
+Use **structured prompts** when the user can decide from 2-3 concise options. Use **freeform text** only when the user must provide complex multi-sentence detail that cannot be represented as short options.
+
 **BAD - long text in question prompt:**
 ```
 question({
@@ -191,6 +193,35 @@ question({
   ]
 })
 ```
+
+**GOOD - short confirmation with 2-3 options:**
+```
+question({
+  header: "Continue",
+  question: "Proceed with this plan?",
+  options: [
+    { label: "Yes", description: "Continue" },
+    { label: "Adjust", description: "Request changes" },
+    { label: "Cancel", description: "Stop for now" }
+  ]
+})
+```
+
+**GOOD - short text input with suggestions + custom entry:**
+```
+question({
+  header: "Branch Name",
+  question: "Choose a branch name format.",
+  options: [
+    { label: "feat/short-description", description: "Recommended" },
+    { label: "fix/short-description", description: "For bug fixes" }
+  ],
+  allow_custom: true,
+  custom_label: "Use a different branch name"
+})
+```
+
+For short 1-2 sentence user inputs, always provide at least one suggested option and include a custom-input path when user-specific text may be required.
 
 ### Why This Matters
 
