@@ -16,9 +16,15 @@ import { analyzeQuality } from "./analyzers/quality.js";
 import { analyzeSecurity } from "./analyzers/security.js";
 import { analyzeSpecAlignment } from "./analyzers/spec.js";
 import { formatReviewReport, deriveVerdict, countFindings } from "./report.js";
-import { checkDirtyWorktree, buildFixOptionsPrompt, getAvailableFixOptions } from "./prompts.js";
+import {
+  checkDirtyWorktree,
+  buildFixOptionsPrompt,
+  getAvailableFixOptions,
+  parseFixSelection,
+} from "./prompts.js";
 import { createDefaultReport } from "./types.js";
 import { isSpecModeEnabled } from "./spec-context.js";
+import { orchestrateFixes } from "./fix-orchestrator.js";
 
 /**
  * Create the goop_pr_review tool
@@ -31,6 +37,7 @@ export function createGoopPrReviewTool(ctx: PluginContext): ToolDefinition {
       "Review a GitHub pull request: validates gh CLI, resolves PR metadata, runs analysis, displays report, and offers fix options",
     args: {
       pr: tool.schema.string().optional(),
+      fixSelection: tool.schema.string().optional(),
     },
     async execute(args, _context: ToolContext): Promise<string> {
       const lines: string[] = [];
@@ -102,6 +109,7 @@ export function createGoopPrReviewTool(ctx: PluginContext): ToolDefinition {
       // Step 8: Check dirty worktree and present fix options
       const worktreeResult = await checkDirtyWorktree();
       const fixPrompt = buildFixOptionsPrompt(report, worktreeResult);
+      const availableFixes = getAvailableFixOptions(report);
 
       if (fixPrompt) {
         lines.push(fixPrompt);
@@ -114,12 +122,39 @@ export function createGoopPrReviewTool(ctx: PluginContext): ToolDefinition {
         }
       }
 
+      // Step 9: Route selected fixes through orchestration dispatcher
+      if (availableFixes.length > 0) {
+        lines.push("");
+        lines.push("### Fix Execution");
+
+        if (!args.fixSelection) {
+          lines.push("No fix selection provided yet. Re-run with `fixSelection` (for example: `lint,tests`, `all`, or `none`).");
+        } else {
+          const selectedFixes = parseFixSelection(args.fixSelection, availableFixes);
+
+          if (selectedFixes.length === 0) {
+            lines.push("No fix categories selected. Skipping fix execution.");
+          } else {
+            const orchestration = await orchestrateFixes(selectedFixes, reviewContext);
+            lines.push(`Selected: ${orchestration.selected.join(", ")}`);
+
+            for (const result of orchestration.results) {
+              lines.push(`- ${result.category}: ${result.status} - ${result.message}`);
+            }
+
+            const appliedCount = orchestration.summary.applied.length;
+            const skippedCount = orchestration.summary.skipped.length;
+            const failedCount = orchestration.summary.failed.length;
+            lines.push(`Summary: applied=${appliedCount}, skipped=${skippedCount}, failed=${failedCount}`);
+          }
+        }
+      }
+
       lines.push("");
       lines.push("---");
       lines.push("");
 
-      // Step 9: Summary footer
-      const availableFixes = getAvailableFixOptions(report);
+      // Step 10: Summary footer
       if (availableFixes.length > 0) {
         lines.push(`**${availableFixes.length} fix option(s) available.** Select fixes to apply or proceed to merge.`);
       } else {

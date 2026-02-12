@@ -65,6 +65,7 @@ import {
   getAllFixCategoryOptions,
   type DirtyWorktreeResult,
 } from "./prompts.js";
+import { orchestrateFixes, type FixHandler } from "./fix-orchestrator.js";
 
 // ============================================================================
 // Fixtures
@@ -2090,5 +2091,183 @@ describe("dirty-worktree", () => {
       expect(result).toContain("Dirty Working Directory");
       expect(result).toContain("Uncommitted changes detected.");
     });
+  });
+});
+
+// ============================================================================
+// Fix Orchestration
+// ============================================================================
+
+describe("fix-orchestrator", () => {
+  function buildReviewContext(overrides: Partial<ReviewContext> = {}): ReviewContext {
+    return {
+      pr: validPrMetadata(),
+      files: [],
+      checks: [],
+      reviews: [],
+      comments: [],
+      specAvailability: {
+        specExists: false,
+        blueprintExists: false,
+        specPath: "",
+        blueprintPath: "",
+      },
+      workingDirectoryClean: true,
+      ...overrides,
+    };
+  }
+
+  it("routes each selected category exactly once", async () => {
+    const calls: string[] = [];
+    const handlers: Partial<Record<FixCategory, FixHandler>> = {
+      lint: async ({ category }) => {
+        calls.push(category);
+        return { status: "applied", message: "lint fixed" };
+      },
+      tests: async ({ category }) => {
+        calls.push(category);
+        return { status: "applied", message: "tests fixed" };
+      },
+    };
+
+    const result = await orchestrateFixes(["lint", "tests", "lint"], buildReviewContext(), {
+      handlers,
+    });
+
+    expect(calls).toEqual(["lint", "tests"]);
+    expect(result.selected).toEqual(["lint", "tests"]);
+    expect(result.results).toHaveLength(2);
+  });
+
+  it("tracks applied, skipped, and failed categories", async () => {
+    const handlers: Partial<Record<FixCategory, FixHandler>> = {
+      lint: async () => ({ status: "applied", message: "applied" }),
+      tests: async () => ({ status: "skipped", message: "skipped" }),
+      comments: async () => ({ status: "failed", message: "failed" }),
+    };
+
+    const result = await orchestrateFixes(
+      ["lint", "tests", "comments"],
+      buildReviewContext(),
+      { handlers },
+    );
+
+    expect(result.summary.applied).toEqual(["lint"]);
+    expect(result.summary.skipped).toEqual(["tests"]);
+    expect(result.summary.failed).toEqual(["comments"]);
+  });
+
+  it("supports delegation path for implementation-heavy categories", async () => {
+    const delegated: string[] = [];
+    const result = await orchestrateFixes(["tests", "requirements"], buildReviewContext(), {
+      delegateFix: async (request) => {
+        delegated.push(`${request.category}:${request.agent}`);
+        return {
+          status: "applied",
+          message: `delegated to ${request.agent}`,
+        };
+      },
+    });
+
+    expect(delegated).toEqual([
+      "tests:goop-executor-high",
+      "requirements:goop-executor-high",
+    ]);
+    expect(result.summary.applied).toEqual(["tests", "requirements"]);
+    expect(result.results[0].delegated?.agent).toBe("goop-executor-high");
+  });
+
+  it("handles empty selection without execution", async () => {
+    const result = await orchestrateFixes([], buildReviewContext());
+    expect(result.selected).toEqual([]);
+    expect(result.results).toEqual([]);
+    expect(result.summary.applied).toEqual([]);
+    expect(result.summary.skipped).toEqual([]);
+    expect(result.summary.failed).toEqual([]);
+  });
+
+  it("records failure when handler throws", async () => {
+    const handlers: Partial<Record<FixCategory, FixHandler>> = {
+      lint: async () => {
+        throw new Error("boom");
+      },
+    };
+
+    const result = await orchestrateFixes(["lint"], buildReviewContext(), { handlers });
+
+    expect(result.summary.failed).toEqual(["lint"]);
+    expect(result.results[0].status).toBe("failed");
+    expect(result.results[0].message).toContain("boom");
+  });
+});
+
+describe("selection-routing", () => {
+  function buildReviewContext(overrides: Partial<ReviewContext> = {}): ReviewContext {
+    return {
+      pr: validPrMetadata(),
+      files: [],
+      checks: [],
+      reviews: [],
+      comments: [],
+      specAvailability: {
+        specExists: true,
+        blueprintExists: true,
+        specPath: "/tmp/spec",
+        blueprintPath: "/tmp/blueprint",
+      },
+      workingDirectoryClean: true,
+      ...overrides,
+    };
+  }
+
+  it("routes multiple selected categories in deterministic order", async () => {
+    const calls: string[] = [];
+    const handlers: Partial<Record<FixCategory, FixHandler>> = {
+      lint: async ({ category }) => {
+        calls.push(category);
+        return { status: "applied", message: "done" };
+      },
+      comments: async ({ category }) => {
+        calls.push(category);
+        return { status: "applied", message: "done" };
+      },
+      requirements: async ({ category }) => {
+        calls.push(category);
+        return { status: "applied", message: "done" };
+      },
+    };
+
+    const result = await orchestrateFixes(
+      ["lint", "comments", "requirements"],
+      buildReviewContext(),
+      { handlers },
+    );
+
+    expect(calls).toEqual(["lint", "comments", "requirements"]);
+    expect(result.results.map((entry) => entry.category)).toEqual([
+      "lint",
+      "comments",
+      "requirements",
+    ]);
+  });
+
+  it("continues routing remaining selections when one category fails", async () => {
+    const calls: string[] = [];
+    const handlers: Partial<Record<FixCategory, FixHandler>> = {
+      lint: async ({ category }) => {
+        calls.push(category);
+        return { status: "failed", message: "lint failed" };
+      },
+      tests: async ({ category }) => {
+        calls.push(category);
+        return { status: "applied", message: "tests fixed" };
+      },
+    };
+
+    const result = await orchestrateFixes(["lint", "tests"], buildReviewContext(), { handlers });
+
+    expect(calls).toEqual(["lint", "tests"]);
+    expect(result.summary.failed).toEqual(["lint"]);
+    expect(result.summary.applied).toEqual(["tests"]);
   });
 });
