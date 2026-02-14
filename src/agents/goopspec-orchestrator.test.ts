@@ -124,8 +124,31 @@ describe("createGoopSpecOrchestrator", () => {
     expect(orchestrator.permission.goop_spec).toBe("allow");
     expect(orchestrator.permission.goop_checkpoint).toBe("allow");
     expect(orchestrator.permission.question).toBe("allow");
+    expect(orchestrator.permission.mcp_question).toBe("allow");
     expect(orchestrator.permission.todowrite).toBe("allow");
     expect(orchestrator.permission.todoread).toBe("allow");
+  });
+
+  it("enforces structured-question runtime policy in prompt assembly", () => {
+    const resolver = createMockResolver();
+    const orchestrator = createGoopSpecOrchestrator({ resolver });
+
+    expect(orchestrator.prompt).toContain("Structured Question Runtime Policy");
+    expect(orchestrator.prompt).toContain("question");
+    expect(orchestrator.prompt).toContain("2-5");
+    expect(orchestrator.prompt).toContain("Type your own answer");
+  });
+
+  it("keeps discovery category templates available in runtime prompt", () => {
+    const resolver = createMockResolver();
+    const orchestrator = createGoopSpecOrchestrator({ resolver });
+
+    expect(orchestrator.prompt).toContain("Vision");
+    expect(orchestrator.prompt).toContain("Must-Haves");
+    expect(orchestrator.prompt).toContain("Constraints");
+    expect(orchestrator.prompt).toContain("Out of Scope");
+    expect(orchestrator.prompt).toContain("Assumptions");
+    expect(orchestrator.prompt).toContain("Risks");
   });
 
   it("generates prompt with all workflow phases", () => {
