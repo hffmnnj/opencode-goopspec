@@ -727,6 +727,135 @@ describe("orchestrator-enforcement hooks", () => {
       expect(result.shouldEnforce).toBe(false);
       expect(result.reason).toBe("none");
     });
+
+    it("does not flag self-answered questions", () => {
+      const result = detectFreeFormQuestion("Should we proceed? Yes.");
+
+      expect(result.shouldEnforce).toBe(false);
+      expect(result.reason).toBe("self-answered");
+    });
+
+    it("does not flag self-answered with 'The answer is'", () => {
+      const result = detectFreeFormQuestion(
+        "Is this the right approach? The answer is to use the existing pattern."
+      );
+
+      expect(result.shouldEnforce).toBe(false);
+      expect(result.reason).toBe("self-answered");
+    });
+
+    it("does not flag heading-style questions in markdown", () => {
+      const result = detectFreeFormQuestion("## What should we build next?");
+
+      expect(result.shouldEnforce).toBe(false);
+      expect(result.reason).toBe("heading");
+    });
+
+    it("does not flag bold heading questions", () => {
+      const result = detectFreeFormQuestion("**What are the key risks?**");
+
+      expect(result.shouldEnforce).toBe(false);
+      expect(result.reason).toBe("heading");
+    });
+
+    it("does not flag embedded prose questions", () => {
+      const result = detectFreeFormQuestion(
+        "Here is what we need to decide about the architecture?"
+      );
+
+      expect(result.shouldEnforce).toBe(false);
+      expect(result.reason).toBe("embedded-prose");
+    });
+
+    it("does not flag 'let me explain' prose with question mark", () => {
+      const result = detectFreeFormQuestion(
+        "Let me explain why this approach works better?"
+      );
+
+      expect(result.shouldEnforce).toBe(false);
+      expect(result.reason).toBe("embedded-prose");
+    });
+
+    it("does not flag 'consider whether' contextual text", () => {
+      const result = detectFreeFormQuestion(
+        "We should consider whether this pattern fits the codebase?"
+      );
+
+      expect(result.shouldEnforce).toBe(false);
+      expect(result.reason).toBe("contextual");
+    });
+
+    it("does not flag 'depending on' contextual text", () => {
+      const result = detectFreeFormQuestion(
+        "Should we use Redis depending on the deployment target?"
+      );
+
+      expect(result.shouldEnforce).toBe(false);
+      expect(result.reason).toBe("contextual");
+    });
+
+    it("does not flag 'the question is' contextual text", () => {
+      const result = detectFreeFormQuestion(
+        "The question is whether we need a cache layer?"
+      );
+
+      expect(result.shouldEnforce).toBe(false);
+      expect(result.reason).toBe("contextual");
+    });
+
+    it("does not flag 'this means' contextual text", () => {
+      const result = detectFreeFormQuestion(
+        "This means we should restructure the module?"
+      );
+
+      expect(result.shouldEnforce).toBe(false);
+      expect(result.reason).toBe("contextual");
+    });
+
+    it("does not flag new rhetorical patterns", () => {
+      expect(detectFreeFormQuestion("Sound good?").shouldEnforce).toBe(false);
+      expect(detectFreeFormQuestion("Sound good?").reason).toBe("rhetorical");
+
+      expect(detectFreeFormQuestion("Makes sense?").shouldEnforce).toBe(false);
+      expect(detectFreeFormQuestion("Makes sense?").reason).toBe("rhetorical");
+
+      expect(detectFreeFormQuestion("Ready?").shouldEnforce).toBe(false);
+      expect(detectFreeFormQuestion("Ready?").reason).toBe("rhetorical");
+
+      expect(detectFreeFormQuestion("Agreed?").shouldEnforce).toBe(false);
+      expect(detectFreeFormQuestion("Agreed?").reason).toBe("rhetorical");
+    });
+
+    it("does not flag questions inside code blocks", () => {
+      const text = "Here is the implementation:\n```\n// Should we cache this?\nconst result = fetch(url);\n```";
+      const result = detectFreeFormQuestion(text);
+
+      expect(result.shouldEnforce).toBe(false);
+    });
+
+    it("still enforces genuine short questions", () => {
+      expect(detectFreeFormQuestion("Should we proceed with deployment?").shouldEnforce).toBe(true);
+      expect(detectFreeFormQuestion("Which database should we use?").shouldEnforce).toBe(true);
+      expect(detectFreeFormQuestion("Do you want to continue?").shouldEnforce).toBe(true);
+    });
+
+    it("does not flag empty or whitespace-only input", () => {
+      expect(detectFreeFormQuestion("").shouldEnforce).toBe(false);
+      expect(detectFreeFormQuestion("   ").shouldEnforce).toBe(false);
+    });
+
+    it("does not flag very short question fragments", () => {
+      const result = detectFreeFormQuestion("Why?");
+      // "Why?" is only 1 word, below the 3-word minimum
+      expect(result.shouldEnforce).toBe(false);
+    });
+
+    it("does not flag very long questions beyond word limit", () => {
+      const longQuestion = "Should we " + "really ".repeat(25) + "proceed with this plan?";
+      const result = detectFreeFormQuestion(longQuestion);
+      // Over 24 words, should be skipped
+      expect(result.shouldEnforce).toBe(false);
+    });
   });
 
   describe("tool.execute.after hook (question guidance injection)", () => {

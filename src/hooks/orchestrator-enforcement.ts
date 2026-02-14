@@ -93,6 +93,9 @@ export interface FreeFormQuestionDetection {
     | "already-structured"
     | "rhetorical"
     | "contextual"
+    | "self-answered"
+    | "heading"
+    | "embedded-prose"
     | "none";
 }
 
@@ -249,6 +252,22 @@ const RHETORICAL_QUESTION_PATTERNS = [
   /^who cares\??$/i,
   /^isn't it\??$/i,
   /^isnt it\??$/i,
+  /^right\??$/i,
+  /^you know\??$/i,
+  /^wouldn't you agree\??$/i,
+  /^isn't that (right|correct|true)\??$/i,
+  /^don't you think\??$/i,
+  /^what could go wrong\??$/i,
+  /^why not\??$/i,
+  /^how about that\??$/i,
+  /^what's (the point|next|new)\??$/i,
+  /^sound good\??$/i,
+  /^makes sense\??$/i,
+  /^fair enough\??$/i,
+  /^ready\??$/i,
+  /^got it\??$/i,
+  /^clear\??$/i,
+  /^agreed\??$/i,
 ] as const;
 const CONTEXTUAL_QUESTION_PATTERNS = [
   /for example/i,
@@ -258,6 +277,37 @@ const CONTEXTUAL_QUESTION_PATTERNS = [
   /in this section/i,
   /see (above|below)/i,
   /questions to consider/i,
+  /such as/i,
+  /note that/i,
+  /as described/i,
+  /as mentioned/i,
+  /refer(ring)? to/i,
+  /consider(ing)? (whether|how|what|if)/i,
+  /depending on/i,
+  /in (the )?(case|context|event) (of|that|where)/i,
+  /this (means|implies|suggests|indicates)/i,
+  /the (question|issue|problem|challenge) (is|here|being)/i,
+] as const;
+
+/** Patterns indicating a question that immediately answers itself */
+const SELF_ANSWERED_PATTERNS = [
+  /\?\s*(Yes|No|Correct|Exactly|Indeed|Absolutely)[.,!]?\s*$/i,
+  /\?\s*(The answer is|This means|That is|In other words)\b/i,
+] as const;
+
+/** Patterns for section headings phrased as questions */
+const HEADING_QUESTION_PATTERNS = [
+  /^#{1,6}\s+.*\?$/,
+  /^\*\*.*\?\*\*$/,
+  /^__.*\?__$/,
+] as const;
+
+/** Patterns for questions embedded in explanatory prose (not user-facing prompts) */
+const EMBEDDED_PROSE_PATTERNS = [
+  /\b(we|you) (need to|should|must|can) (decide|determine|figure out|consider)\b/i,
+  /\b(let me|let's|I'll) (explain|describe|outline|walk through)\b/i,
+  /\bhere('s| is) (what|how|why|the)\b/i,
+  /\b(the key|important|critical) (question|issue|decision)\b/i,
 ] as const;
 
 // Track blocked operations per session (for injection)
@@ -404,6 +454,31 @@ function extractQuestionCandidates(text: string): string[] {
     .filter(candidate => candidate.length > 0);
 }
 
+/**
+ * Extract full lines containing question marks for context-aware guards.
+ * Returns the raw line text (not just the candidate fragment).
+ */
+function extractQuestionLines(text: string): string[] {
+  const stripped = stripCodeBlocks(text);
+  return stripped.split("\n").filter(line => line.includes("?"));
+}
+
+/**
+ * Check if a question is followed by its own answer in the surrounding text.
+ * Looks at the text after the question mark for immediate answer patterns.
+ */
+function isSelfAnsweredInContext(text: string): boolean {
+  return SELF_ANSWERED_PATTERNS.some(pattern => pattern.test(text));
+}
+
+/**
+ * Check if a line is a markdown heading phrased as a question.
+ */
+function isHeadingQuestion(line: string): boolean {
+  const trimmed = line.trim();
+  return HEADING_QUESTION_PATTERNS.some(pattern => pattern.test(trimmed));
+}
+
 function isAlreadyStructuredQuestion(text: string): boolean {
   return /\bmcp_question\b|\bquestion\s*\(|\boptions\s*:/i.test(text);
 }
@@ -414,46 +489,125 @@ function isAlreadyStructuredQuestion(text: string): boolean {
  */
 export function detectFreeFormQuestion(text: string): FreeFormQuestionDetection {
   if (!text || text.trim().length === 0) {
+    log("question-detection: empty input, skipping", { length: 0 });
     return { shouldEnforce: false, question: null, reason: "none" };
   }
 
   if (isAlreadyStructuredQuestion(text)) {
+    log("question-detection: already structured, skipping", {
+      snippet: text.slice(0, 80),
+    });
     return { shouldEnforce: false, question: null, reason: "already-structured" };
   }
 
+  // --- Pre-candidate guards: check full text for structural patterns ---
+
+  // Guard: heading-style questions (## What should we do?)
+  const questionLines = extractQuestionLines(text);
+  for (const line of questionLines) {
+    if (isHeadingQuestion(line)) {
+      const trimmed = line.trim();
+      log("question-detection: guard:heading matched on line", {
+        line: trimmed.slice(0, 60),
+      });
+      return { shouldEnforce: false, question: trimmed, reason: "heading" };
+    }
+  }
+
+  // Guard: self-answered questions (Should we proceed? Yes.)
+  if (isSelfAnsweredInContext(text)) {
+    const candidates = extractQuestionCandidates(text);
+    const firstCandidate = candidates[0] ?? text.slice(0, 80);
+    log("question-detection: guard:self-answered matched in context", {
+      snippet: firstCandidate.slice(0, 60),
+    });
+    return { shouldEnforce: false, question: firstCandidate, reason: "self-answered" };
+  }
+
+  // --- Candidate-level evaluation ---
+
   const candidates = extractQuestionCandidates(text);
   if (candidates.length === 0) {
+    log("question-detection: no question candidates found", {
+      textLength: text.length,
+    });
     return { shouldEnforce: false, question: null, reason: "none" };
   }
+
+  log("question-detection: evaluating candidates", {
+    count: candidates.length,
+    candidates: candidates.map(c => c.slice(0, 60)),
+  });
 
   for (const candidate of candidates) {
     const wordCount = candidate.split(/\s+/).filter(Boolean).length;
 
-    if (wordCount < 3 || wordCount > 24 || candidate.length > 160) {
-      continue;
-    }
-
-    if (CONTEXTUAL_QUESTION_PATTERNS.some(pattern => pattern.test(candidate))) {
-      return { shouldEnforce: false, question: candidate, reason: "contextual" };
-    }
-
+    // Check rhetorical patterns before word-count filter (many are 1-2 words)
     if (RHETORICAL_QUESTION_PATTERNS.some(pattern => pattern.test(candidate))) {
+      log("question-detection: guard:rhetorical matched", {
+        candidate: candidate.slice(0, 60),
+      });
       return { shouldEnforce: false, question: candidate, reason: "rhetorical" };
     }
 
+    if (wordCount < 3 || wordCount > 24 || candidate.length > 160) {
+      log("question-detection: candidate outside word/length bounds", {
+        wordCount,
+        charLength: candidate.length,
+        snippet: candidate.slice(0, 60),
+      });
+      continue;
+    }
+
+    // --- False-positive guards (checked before enforcement) ---
+
+    // Guard: contextual/informational text
+    if (CONTEXTUAL_QUESTION_PATTERNS.some(pattern => pattern.test(candidate))) {
+      log("question-detection: guard:contextual matched", {
+        candidate: candidate.slice(0, 60),
+      });
+      return { shouldEnforce: false, question: candidate, reason: "contextual" };
+    }
+
+    // Guard: embedded prose (explanatory text containing a question)
+    if (EMBEDDED_PROSE_PATTERNS.some(pattern => pattern.test(candidate))) {
+      log("question-detection: guard:embedded-prose matched", {
+        candidate: candidate.slice(0, 60),
+      });
+      return { shouldEnforce: false, question: candidate, reason: "embedded-prose" };
+    }
+
+    // --- Enforcement triggers ---
+
     if (YES_NO_QUESTION_PATTERN.test(candidate)) {
+      log("question-detection: enforcing yes-no pattern", {
+        candidate: candidate.slice(0, 60),
+      });
       return { shouldEnforce: true, question: candidate, reason: "yes-no" };
     }
 
     if (MULTI_CHOICE_QUESTION_PATTERN.test(candidate)) {
+      log("question-detection: enforcing multi-choice pattern", {
+        candidate: candidate.slice(0, 60),
+      });
       return { shouldEnforce: true, question: candidate, reason: "multi-choice" };
     }
 
     if (WH_QUESTION_PATTERN.test(candidate)) {
+      log("question-detection: enforcing short-question pattern", {
+        candidate: candidate.slice(0, 60),
+      });
       return { shouldEnforce: true, question: candidate, reason: "short-question" };
     }
+
+    log("question-detection: candidate did not match any pattern", {
+      candidate: candidate.slice(0, 60),
+    });
   }
 
+  log("question-detection: no enforceable candidates found", {
+    totalCandidates: candidates.length,
+  });
   return { shouldEnforce: false, question: null, reason: "none" };
 }
 
