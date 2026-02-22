@@ -65,11 +65,45 @@ export function buildWorkflowStateBlock(ctx: PluginContext): string {
       );
     }
 
+    // Lazy Autopilot directive — stronger rules for zero-question mode
+    const lazyAutopilot = workflow?.lazyAutopilot;
+    if (lazyAutopilot) {
+      lines.push("");
+      lines.push("LAZY AUTOPILOT ACTIVE. Rules:");
+      lines.push("- Do NOT ask the user any questions.");
+      lines.push("- Do NOT pause for phase confirmations or reviews.");
+      lines.push("- Do NOT request clarifications — infer from context.");
+      lines.push(
+        "- ONLY stop for: (1) Rule 4 architectural decisions (schema changes, framework switches), " +
+        "(2) missing credentials or secrets you cannot infer, " +
+        "(3) ambiguous destructive operations (deletes, force pushes, irreversible changes), " +
+        "(4) external blockers (unavailable dependencies, broken CI, unresolvable test failures)."
+      );
+      lines.push("- For ALL other situations: make your best inference and continue.");
+    }
+
+    // Autopilot session rules — suppress compaction/session reminders in any autopilot mode
+    if (autopilot || lazyAutopilot) {
+      lines.push("");
+      lines.push(
+        "AUTOPILOT SESSION RULES: Do NOT warn about context length or token limits. " +
+        "Do NOT suggest starting a new session. " +
+        "Do NOT mention compaction or memory constraints. " +
+        "Continue working until the task is complete or a permitted stop condition is reached."
+      );
+    }
+
     lines.push("");
 
     // Closing directive paragraph
     const phaseDirective = buildPhaseDirective(phase, currentWave, specLocked);
     lines.push(phaseDirective);
+
+    // Question tool enforcement — always injected regardless of phase or autopilot
+    lines.push("");
+    lines.push(
+      "QUESTION TOOL REQUIRED: Every user-facing question, offer, or yes/no prompt MUST use the question tool. Never present plain-text questions to the user without a corresponding question() call."
+    );
 
     return lines.join("\n");
   } catch (error) {

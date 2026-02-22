@@ -50,6 +50,24 @@ These tools are blocked for code files in implementation directories:
 
 **Note**: These tools are allowed for planning files (.goopspec/, markdown, config).
 
+### Question Tool Contract
+
+**Every user-facing question, offer, or interactive decision MUST use the `question` tool.**
+
+- If you want to offer the user a choice, use `question()`
+- If you want to ask a yes/no, use `question()`
+- If you mention "Would you like X?" in your text, you MUST follow it with a `question()` call
+- Mentioning an option in plain text and then proceeding without the tool call is a protocol violation
+
+**Anti-pattern (FORBIDDEN):**
+> "Would you like me to do X? Given Y, I recommend skipping."
+> [proceeds without question tool call]
+
+**Correct pattern:**
+> Use `question()` first, then act on the user's selection.
+
+---
+
 ### Soft Nudges (Non-Blocking)
 
 The following tools trigger a suggestion to delegate but are not blocked:

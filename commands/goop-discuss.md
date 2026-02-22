@@ -41,18 +41,18 @@ If the command includes a session name (example: `/goop-discuss feat-auth`), cre
 Use the `question` tool with category-specific options for each discovery question. Always include a "Type your own answer" option. Adapt labels to the user's project context.
 
 1. **Vision** — What are you building? What problem? Who for?
-   - Options: "New feature for an existing app", "Bug fix or improvement", "New standalone project", "Refactor or migration", custom
+   - Options: "New feature for an existing app (Recommended)", "Bug fix or improvement", "New standalone project", "Refactor or migration", custom
 2. **Must-Haves** — Non-negotiable requirements and acceptance criteria
-   - Options: "Add a new must-have requirement", "Review what we have so far", "That covers the must-haves", custom
+   - Options: "Add a new must-have requirement (Recommended)", "Review what we have so far", "That covers the must-haves", custom
    - Loop until the user selects "That covers the must-haves"
 3. **Constraints** — Stack, frameworks, performance, timeline
-   - Options: "Stack or framework requirements", "Performance or scalability targets", "Timeline or resource limits", "Must integrate with existing code", "No specific constraints", custom
+   - Options: "Stack or framework requirements (Recommended)", "Performance or scalability targets", "Timeline or resource limits", "Must integrate with existing code", "No specific constraints", custom
 4. **Out of Scope** — What we're NOT building
-   - Options: "Features deferred to a future phase", "Alternative approaches we're not pursuing", "Edge cases we'll handle later", "Infrastructure or deployment changes", custom
+   - Options: "Features deferred to a future phase (Recommended)", "Alternative approaches we're not pursuing", "Edge cases we'll handle later", "Infrastructure or deployment changes", custom
 5. **Assumptions** — What we're relying on being true
-   - Options: "Existing infrastructure or services are available", "Certain code or APIs already work", "External dependencies are stable", "Team or user behavior follows a known pattern", custom
+   - Options: "Existing infrastructure or services are available (Recommended)", "Certain code or APIs already work", "External dependencies are stable", "Team or user behavior follows a known pattern", custom
 6. **Risks** — What could go wrong? Mitigations?
-   - Options: "Technical complexity or unknowns", "Dependency on external systems or teams", "Breaking changes to existing behavior", "Timeline or scope pressure", custom
+   - Options: "Technical complexity or unknowns (Recommended)", "Dependency on external systems or teams", "Breaking changes to existing behavior", "Timeline or scope pressure", custom
 
 ### Tools Used
 
@@ -76,21 +76,30 @@ Use the `question` tool with category-specific options for each discovery questi
 ## Success Criteria
 
 - [ ] Existing project documents archived (if present)
-- [ ] Git branch check offered (create new branch or stay on current)
+- [ ] Git branch INTENT offered (yes/no only — no name asked at this stage)
+- [ ] Branch name INFERRED from vision description after user describes what they're building
+- [ ] Inferred branch name CONFIRMED before creation (or created silently in Lazy Autopilot mode)
 - [ ] Research depth selected (Light/Standard/Deep) before interview begins
 - [ ] Depth persisted via `goop_state({ action: "set-depth", depth: "[shallow|standard|deep]" })`
-- [ ] Autopilot opt-in offered after depth selection, before the vision question
+- [ ] Autopilot opt-in offered after depth selection, before the vision question; three options presented: Manual, Autopilot, and Lazy Autopilot
 - [ ] Autopilot choice persisted via `goop_state({ action: "set-autopilot", autopilot: true|false })`
+- [ ] In Lazy Autopilot mode: branch created silently with inferred name (no confirmation prompt)
+- [ ] Lazy Autopilot option offered; if selected, all six questions skipped and REQUIREMENTS.md generated directly from initial prompt
+- [ ] When Lazy Autopilot selected, state persisted with autopilot: true AND lazyAutopilot: true
 - [ ] Creative agent opt-in offered after vision question (accepted or declined)
 - [ ] All six questions answered with specifics
 - [ ] At least 1 must-have, 1 out-of-scope, 1 risk defined
 - [ ] Discovery summary confirmed via structured `question` tool with explicit outcomes
 - [ ] REQUIREMENTS.md created
 - [ ] State updated via `goop_state({ action: "complete-interview" })`
+- [ ] All question tool calls include (Recommended) on exactly one option
 
 ## Anti-Patterns
 
 **DON'T:** Accept vague answers, skip risks, rush, auto-trigger creative agent
+**DON'T:** Ask any questions when Lazy Autopilot mode is active
+**DON'T:** Pause for confirmations, branch name confirmation, or creative opt-in in Lazy Autopilot mode
+**DON'T:** Present question options without marking one as (Recommended)
 **DO:** Probe for specifics, challenge "no risks", conduct interview yourself, offer creative input as opt-in choice
 
 ---

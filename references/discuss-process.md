@@ -17,7 +17,7 @@ goop_state({ action: "get" })        # NEVER read state.json directly
 
 ### 1.2 Git branch check (Session Start)
 
-Check current branch and offer to create a new one for this work:
+Check current branch:
 
 ```bash
 git branch --show-current
@@ -26,28 +26,17 @@ git status
 
 Use `question` tool:
 - header: "Git Branch"
-- question: "You're on branch `[current-branch]`. How would you like to proceed?"
+- question: "You're on branch `[current-branch]`. Would you like to create a new branch for this work?"
 - options:
-  - "Create new feature branch (Recommended)" — Create a clean branch for this work
-  - "Stay on current branch" — Continue on [current-branch]
+  - "Yes, create a branch" — A new branch will be created after you describe your vision
+  - "No, stay on current branch" — Continue on [current-branch]
 
-**On "Create new feature branch":**
+**On "Yes, create a branch":**
+Record the intent. Do NOT ask for a branch name. Do NOT run `git checkout` yet.
+Branch creation is deferred until after the vision question — see section 2.1.1.
 
-Ask for branch name context (or infer from topic):
-```
-Branch name will be: feat/[short-description]
-```
-
-Then create branch:
-```bash
-git checkout -b feat/[short-description]
-```
-
-**Branch naming rules:**
-- Format: `type/short-description`
-- Types: `feat/`, `fix/`, `refactor/`, `chore/`
-- Keep descriptions short and kebab-case
-- Check existing branches first: `git branch --list`
+**On "No, stay on current branch":**
+Continue the flow normally.
 
 ### 1.3 Gitignore preference for `.goopspec/`
 
@@ -169,7 +158,7 @@ Use `question` tool:
 - question: "How thorough should planning and research be for this work?"
 - options:
   - "Light" — Fastest path with minimal agents and focused coverage (~1x baseline token/cost)
-  - "Standard" — Balanced depth with moderate exploration (~2x baseline token/cost)
+  - "Standard (Recommended)" — Balanced depth with moderate exploration (~2x baseline token/cost)
   - "Deep" — Most thorough with multiple parallel agents and expanded analysis (~3-5x baseline token/cost)
 
 Map the selected label to workflow depth:
@@ -189,36 +178,53 @@ Research depth selected: [Light|Standard|Deep] ([shallow|standard|deep], [~1x|~2
 
 ### 1.10 Autopilot Opt-In
 
-After depth selection, offer the user autopilot mode. This determines whether the full pipeline (discuss → plan → execute) runs unattended or pauses for confirmation between phases.
+After depth selection, offer the user autopilot mode.
 
 Use `question` tool:
 - header: "Autopilot Mode"
-- question: "Would you like to enable autopilot? This will run the full pipeline (discuss → plan → execute) unattended at **[Light|Standard|Deep]** depth (~[1x|2x|3-5x] baseline cost). The workflow will only pause at final acceptance for your review."
+- question: "How much should I drive? Running at **[Light|Standard|Deep]** depth (~[1x|2x|3-5x] baseline cost)."
 - options:
-  - "Enable autopilot — run full pipeline unattended" — Discuss, plan, and execute will chain automatically without stopping. Pauses only at final acceptance.
-  - "Manual mode — confirm between phases (default)" — You'll review and approve at each phase transition.
-
-**Substitute the depth label and cost multiplier** from the selection made in section 1.9.
-
-**On "Enable autopilot":**
-```
-goop_state({ action: "set-autopilot", autopilot: true })
-```
-
-Confirm to the user:
-```
-✓ Autopilot enabled. The full pipeline will run unattended at [depth] depth. You'll only be asked to review at final acceptance.
-```
+  - "Manual mode — confirm between phases (default) (Recommended)" — Review and approve at each phase transition.
+  - "Autopilot — run pipeline unattended" — Discuss, plan, and execute chain runs automatically. Pauses only at final acceptance.
+  - "Lazy Autopilot — infer everything, zero questions" — No clarifying questions. Agent reads your initial prompt and infers all decisions. Full pipeline runs unattended. Pauses only at final acceptance.
 
 **On "Manual mode":**
 ```
 goop_state({ action: "set-autopilot", autopilot: false })
 ```
+Confirm to the user: "✓ Manual mode. You'll confirm at each phase transition."
 
-Confirm to the user:
+**On "Autopilot":**
 ```
-✓ Manual mode. You'll confirm at each phase transition.
+goop_state({ action: "set-autopilot", autopilot: true })
 ```
+Confirm to the user: "✓ Autopilot enabled. The full pipeline will run unattended at [depth] depth. You'll only be asked to review at final acceptance."
+
+**On "Lazy Autopilot":**
+```
+goop_state({ action: "set-autopilot", autopilot: true, lazy: true })
+```
+Confirm to the user: "✓ Lazy Autopilot enabled. I'll infer everything from your prompt — no questions asked. Full pipeline runs unattended. Pauses only at final acceptance."
+
+### 1.11 Lazy Autopilot Interview Behavior
+
+When `workflow.lazyAutopilot === true`, skip the entire six-question discovery interview. Instead:
+
+1. **Read the initial prompt** — extract all context from what the user has provided.
+2. **Infer all six discovery categories** directly from the prompt:
+   - **Vision:** what the user wants to build and why
+   - **Must-haves:** derive from stated goals, tasks, and implied requirements
+   - **Constraints:** infer from tech context, existing codebase, and stack references
+   - **Out of scope:** note obvious exclusions or deferred work mentioned
+   - **Assumptions:** what must be true for this work to succeed
+   - **Risks:** obvious risks given the stated scope
+3. **Do NOT use the `question` tool** at any point during the interview.
+4. **Skip** the creative agent opt-in (section 2.1).
+5. **Branch creation:** Infer a `feat/kebab-case` name from the prompt topic. Create it silently with `git checkout -b` — no confirmation question.
+6. **Generate REQUIREMENTS.md directly** from the inferred answers using the same template as the standard interview.
+7. **Proceed to `/goop-plan` immediately** — no confirmation gate between phases.
+
+The compaction hook automatically injects the LAZY AUTOPILOT ACTIVE directive when this state flag is set, ensuring all subagents also avoid asking questions or pausing.
 
 ---
 
@@ -255,7 +261,7 @@ question({
   header: "Discovery Check",
   question: "Does this capture your requirements?",
   options: [
-    { label: "Approve and proceed", description: "Generate REQUIREMENTS.md" },
+    { label: "Approve and proceed (Recommended)", description: "Generate REQUIREMENTS.md" },
     { label: "Add more requirements", description: "Continue discussion" }
   ]
 })
@@ -268,7 +274,7 @@ question({
   question: "How thorough should planning and research be?",
   options: [
     { label: "Light", description: "Fastest path (~1x baseline)" },
-    { label: "Standard", description: "Balanced depth (~2x baseline)" },
+    { label: "Standard (Recommended)", description: "Balanced depth (~2x baseline)" },
     { label: "Deep", description: "Most thorough (~3-5x baseline)" }
   ]
 })
@@ -296,6 +302,44 @@ If `$ARGUMENTS` provided:
 Otherwise:
 > "What do you want to build?"
 
+### 2.1.1 Branch Name Inference (if branch creation requested)
+
+**Only execute this section if the user selected "Yes, create a branch" in section 1.2.**
+
+After the user has described their vision (section 2.1), infer a branch name from what they described:
+
+1. **Infer a branch name** from the vision content:
+   - Construct a short `type/kebab-case` slug from the topic or goal
+   - Default type prefix: `feat/` unless the work is clearly a fix, refactor, or chore
+   - Keep slugs short: 3–5 words max, kebab-case
+   - Examples: `feat/lazy-autopilot-wiring`, `fix/branch-name-timing`, `refactor/discuss-flow`
+
+2. **Confirm with the user** using the `question` tool:
+
+```ts
+question({
+  header: "Branch Name",
+  question: "Based on what you're building, I'd suggest: `feat/[inferred-slug]`. Create this branch?",
+  options: [
+    { label: "Yes, create `feat/[inferred-slug]` (Recommended)", description: "Approve the inferred name" },
+    { label: "Use a different name", description: "Type a custom branch name" }
+  ]
+})
+```
+
+3. **On approval:** Run `git checkout -b feat/[inferred-slug]`
+4. **On "Use a different name":** Accept the user's input, then run `git checkout -b [custom-name]`
+
+**In Lazy Autopilot mode:** Skip the confirmation question entirely — infer the name from the vision and create the branch silently.
+
+**Branch naming rules:**
+- Format: `type/short-description`
+- Types: `feat/`, `fix/`, `refactor/`, `chore/`
+- Keep descriptions short and kebab-case
+- Check existing branches first: `git branch --list`
+
+---
+
 ### 2.2 Work through the six questions
 
 Ask naturally, not as a checklist. Weave questions based on their responses.
@@ -305,6 +349,68 @@ Before asking ANYTHING:
 1. Check memory: `memory_search({ query: "[topic] preference" })`
 2. If found: "I recall you prefer X for this. Still true? [Y/n]"
 3. If not found: Ask, then SAVE the answer with `memory_note`
+
+**List-collection questions use `multiple: true`:**
+
+When collecting must-haves, use a multi-select question:
+
+```ts
+question({
+  header: "Must-Haves",
+  question: "Which of these are must-have requirements?",
+  multiple: true,
+  options: [
+    { label: "[Requirement A] (Recommended)", description: "[Brief description]" },
+    { label: "[Requirement B]", description: "[Brief description]" },
+    { label: "[Requirement C]", description: "[Brief description]" }
+  ]
+})
+```
+
+When collecting out-of-scope items, use a multi-select question:
+
+```ts
+question({
+  header: "Out of Scope",
+  question: "Which of these are out of scope for this work?",
+  multiple: true,
+  options: [
+    { label: "[Item A] (Recommended)", description: "[Reason]" },
+    { label: "[Item B]", description: "[Reason]" },
+    { label: "[Item C]", description: "[Reason]" }
+  ]
+})
+```
+
+When collecting risks, use a multi-select question:
+
+```ts
+question({
+  header: "Risks",
+  question: "Which of these risks apply to this work?",
+  multiple: true,
+  options: [
+    { label: "[Risk A] (Recommended)", description: "[Impact and mitigation]" },
+    { label: "[Risk B]", description: "[Impact and mitigation]" },
+    { label: "[Risk C]", description: "[Impact and mitigation]" }
+  ]
+})
+```
+
+When collecting constraints, use a multi-select question:
+
+```ts
+question({
+  header: "Constraints",
+  question: "Which of these constraints apply?",
+  multiple: true,
+  options: [
+    { label: "[Constraint A] (Recommended)", description: "[Details]" },
+    { label: "[Constraint B]", description: "[Details]" },
+    { label: "[Constraint C]", description: "[Details]" }
+  ]
+})
+```
 
 ### 2.3 Probe for specifics
 
@@ -338,7 +444,7 @@ question({
   header: "Discovery Check",
   question: "Does this capture your requirements?",
   options: [
-    { value: "proceed", label: "Approve and proceed" },
+    { value: "proceed", label: "Approve and proceed (Recommended)" },
     { value: "add", label: "Add more requirements" },
     { value: "restart", label: "Start over" }
   ]
@@ -534,12 +640,12 @@ question({
   header: "Discovery Check",
   question: "Does this capture your requirements?",
   options: [
-    { value: "proceed", label: "Approve and proceed" },
+    { value: "proceed", label: "Approve and proceed (Recommended)" },
     { value: "add", label: "Add more requirements" }
   ]
 })
 
-User: [Clicks "Approve and proceed"]
+User: [Clicks "Approve and proceed (Recommended)"]
 
 Orchestrator: "Creating REQUIREMENTS.md..."
 ```
@@ -582,7 +688,7 @@ question({
   header: "Discovery Check",
   question: "Does this capture your requirements?",
   options: [
-    { value: "proceed", label: "Approve and proceed" },
+    { value: "proceed", label: "Approve and proceed (Recommended)" },
     { value: "add", label: "Add more requirements" },
     { value: "research", label: "Research unknowns first" }
   ]
@@ -593,6 +699,31 @@ User: [Clicks "Research unknowns first"]
 Orchestrator: "I'll launch research on Stripe v2 migration before planning.
 Run `/goop-research stripe v2 migration` to investigate."
 ```
+
+---
+
+## Anti-Patterns
+
+**DON'T:** Mention an offer or question in plain text without using the `question` tool
+
+Bad (anti-pattern):
+> "Would you like creative brainstorming from The Visionary? I'd recommend skipping..."
+> [Continues without calling question tool]
+
+**DO:** Use the `question` tool for EVERY interactive offer, decision, or yes/no prompt to the user:
+
+```ts
+question({
+  header: "Creative Brainstorming",
+  question: "Would you like creative brainstorming from The Visionary before the interview?",
+  options: [
+    { label: "Skip — proceed directly (Recommended)", description: "Requirements are already well-defined" },
+    { label: "Yes, bring in The Visionary", description: "Adds broad ideation around your topic" }
+  ]
+})
+```
+
+**Rule:** Every user-facing question or offer MUST have a corresponding `question` tool call. Plain-text questions without a `question()` call are forbidden.
 
 ---
 
