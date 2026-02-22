@@ -235,6 +235,10 @@ question({
 
 For short 1-2 sentence user inputs, always provide at least one suggested option and include a custom-input path when user-specific text may be required.
 
+#### Option Limit (Hard Cap)
+
+**Option limit:** Never exceed 10 options in a single `question` call. This applies to both single-select and multi-select (`multiple: true`). If a domain requires more than 10 options, split into sequential calls with batch context in the header (e.g., "(1 of 2)"). See `references/interactive-questioning.md` § 7 for the full chunking pattern.
+
 ### Why This Matters
 
 Your context window is **PRECIOUS**. It's the command center for orchestrating potentially dozens of subagent tasks.

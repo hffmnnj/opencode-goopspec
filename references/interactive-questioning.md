@@ -223,6 +223,92 @@ question({
 
 ---
 
+## 7. Option Limit (Max 10)
+
+**Every `question` tool call MUST present 10 or fewer options.** This applies to both single-select and multi-select (`multiple: true`) calls. The OpenCode TUI viewport cannot comfortably display more than 10 items — exceeding this limit causes overflow and degrades readability.
+
+### Rule
+
+- **Hard limit:** 10 options maximum per `question` call
+- **Applies to:** Single-select AND multi-select (`multiple: true`)
+- **When exceeded:** Split into sequential `question` calls with batch context in the header
+
+### Anti-Pattern (DON'T)
+
+```ts
+// WRONG: 12 options in a single call — overflows the TUI
+question({
+  header: "Select Risks",
+  multiple: true,
+  question: "Which risks apply to this project?",
+  options: [
+    { label: "Risk A", description: "..." },
+    { label: "Risk B", description: "..." },
+    { label: "Risk C", description: "..." },
+    { label: "Risk D", description: "..." },
+    { label: "Risk E", description: "..." },
+    { label: "Risk F", description: "..." },
+    { label: "Risk G", description: "..." },
+    { label: "Risk H", description: "..." },
+    { label: "Risk I", description: "..." },
+    { label: "Risk J", description: "..." },
+    { label: "Risk K", description: "..." },
+    { label: "Risk L", description: "..." }
+  ]
+})
+```
+
+### Chunking Pattern for Large Lists
+
+When a domain has more than 10 valid options, split them into sequential `question` calls. Each call's header MUST include batch context (e.g., "(1 of 2)") so the user knows more options follow.
+
+**Correct Pattern (DO):**
+
+```ts
+// Batch 1: first 10 items
+const batch1 = await question({
+  header: "Select Risks (1 of 2)",
+  multiple: true,
+  question: "Which of these risks apply?",
+  options: [
+    { label: "Risk A", description: "..." },
+    { label: "Risk B", description: "..." },
+    { label: "Risk C", description: "..." },
+    { label: "Risk D", description: "..." },
+    { label: "Risk E", description: "..." },
+    { label: "Risk F", description: "..." },
+    { label: "Risk G", description: "..." },
+    { label: "Risk H", description: "..." },
+    { label: "Risk I", description: "..." },
+    { label: "Risk J", description: "..." }
+  ]
+})
+
+// Batch 2: remaining items
+const batch2 = await question({
+  header: "Select Risks (2 of 2)",
+  multiple: true,
+  question: "Any additional risks from this set?",
+  options: [
+    { label: "Risk K", description: "..." },
+    { label: "Risk L", description: "..." }
+  ]
+})
+
+// Combine selections
+const allSelections = [...batch1, ...batch2];
+```
+
+### Quick Reference
+
+| Scenario | Max Options | Action if Exceeded |
+|---|---|---|
+| Single-select question | 10 | Split into sequential calls with batch headers |
+| Multi-select question (`multiple: true`) | 10 | Split into sequential calls with batch headers |
+| Binary yes/no | 2 | N/A — always under limit |
+
+---
+
 ## Checklist: Before You Ask
 
 - [ ] **Did I search memory?** (Don't be amnesic)
@@ -230,6 +316,7 @@ question({
 - [ ] **Can I propose a default instead?** (Bias for action)
 - [ ] **Is the question binary or multiple choice?** (Reduce cognitive load)
 - [ ] **Am I ready to save the answer?** (Build the knowledge base)
+- [ ] **Are there 10 or fewer options?** (Split into batches if more)
 
 ---
 
