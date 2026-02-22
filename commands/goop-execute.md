@@ -53,7 +53,7 @@ goop_state({ action: "get" })
 2. **Load Context** — Read SPEC, BLUEPRINT, CHRONICLE, PROJECT_KNOWLEDGE_BASE
 3. **Wave Loop** — Execute tasks, delegate to goop-executor-{tier}
 4. **Deviation Handling** — Apply rules (auto-fix or use `question` tool for architectural decisions)
-5. **Wave Completion** — Use `question` tool for continuation choice, save checkpoint, generate HANDOFF.md
+5. **Wave Completion** — Use `question` tool for continuation choice (Continue to next wave (Recommended) / Pause and save checkpoint / Review changes), save checkpoint, generate HANDOFF.md
 6. **Execution Complete** — Transition to accept phase
 
 ### Deviation Rules
@@ -81,10 +81,12 @@ goop_state({ action: "get" })
 - [ ] CHRONICLE.md updated after each task
 - [ ] Checkpoints saved at wave boundaries
 - [ ] HANDOFF.md generated at natural pauses
+- [ ] All question tool calls include (Recommended) on exactly one option
 
 ## Anti-Patterns
 
 **DON'T:** Skip gate, delegate without context, ignore XML status, skip checkpoints
+**DON'T:** Present question options without marking one as (Recommended)
 **DO:** Enforce gate, include PROJECT_KNOWLEDGE_BASE, save checkpoints, suggest new sessions
 
 ---

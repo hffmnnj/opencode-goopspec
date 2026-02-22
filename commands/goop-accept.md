@@ -57,7 +57,7 @@ Completion behavior in Step 6 preserves the prior `/goop-complete` lifecycle, no
 
 | Keyword | Action |
 |---------|--------|
-| `accept` | Confirm acceptance and immediately run completion/archival |
+| `accept` **(Recommended)** | Confirm acceptance and immediately run completion/archival |
 | `issues` | Log issues, return to execution |
 | `accept-with-issues` | Record known issues, then require explicit `accept` before archival |
 | `cancel` | Return to execution |
@@ -81,10 +81,12 @@ Completion behavior in Step 6 preserves the prior `/goop-complete` lifecycle, no
 - [ ] Archival only starts after explicit "accept"
 - [ ] Completion artifacts generated (archive + retrospective + memory extraction)
 - [ ] HANDOFF.md generated
+- [ ] All question tool calls include (Recommended) on exactly one option
 
 ## Anti-Patterns
 
 **DON'T:** Skip execution check, accept without verification, auto-accept
+**DON'T:** Present question options without marking one as (Recommended)
 **DO:** Verify every must-have has evidence, require explicit "accept" keyword
 
 ---
