@@ -35,6 +35,7 @@ Actions:
 - 'reset-acceptance': Reset acceptance status
 - 'set-mode': Set task mode (quick/standard/comprehensive/milestone)
 - 'set-depth': Set workflow depth (shallow/standard/deep)
+- 'set-autopilot': Enable or disable autopilot mode (unattended pipeline execution)
 - 'update-wave': Update wave progress
 - 'reset': Reset entire workflow to idle state
 
@@ -51,12 +52,14 @@ IMPORTANT: Always use this tool instead of Read/Edit on state.json to avoid conf
         "reset-acceptance",
         "set-mode",
         "set-depth",
+        "set-autopilot",
         "update-wave",
         "reset",
       ]),
       phase: tool.schema.string().optional(),
       mode: tool.schema.string().optional(),
       depth: tool.schema.string().optional(),
+      autopilot: tool.schema.boolean().optional(),
       currentWave: tool.schema.number().optional(),
       totalWaves: tool.schema.number().optional(),
       force: tool.schema.boolean().optional(),
@@ -204,6 +207,18 @@ Work needs to be re-verified.`;
           return `✓ Workflow depth set to: ${depth}`;
         }
 
+        case "set-autopilot": {
+          if (args.autopilot === undefined) {
+            return "✗ Error: 'autopilot' (boolean) is required for set-autopilot action.";
+          }
+          
+          ctx.stateManager.updateWorkflow({ autopilot: args.autopilot });
+          if (args.autopilot) {
+            return `✓ Autopilot enabled. The full pipeline (discuss → plan → execute) will run unattended, pausing only at final acceptance.`;
+          }
+          return `✓ Autopilot disabled. Manual confirmation will be required between phases.`;
+        }
+
         case "update-wave": {
           if (args.currentWave === undefined || args.totalWaves === undefined) {
             return "✗ Error: Both 'currentWave' and 'totalWaves' are required for update-wave action.";
@@ -231,7 +246,7 @@ All workflow flags cleared. Ready for a new task.
         }
 
         default:
-          return "Unknown action. Valid actions: get, transition, complete-interview, reset-interview, lock-spec, unlock-spec, confirm-acceptance, reset-acceptance, set-mode, set-depth, update-wave, reset";
+          return "Unknown action. Valid actions: get, transition, complete-interview, reset-interview, lock-spec, unlock-spec, confirm-acceptance, reset-acceptance, set-mode, set-depth, set-autopilot, update-wave, reset";
       }
     },
   });

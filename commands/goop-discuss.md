@@ -79,6 +79,8 @@ Use the `question` tool with category-specific options for each discovery questi
 - [ ] Git branch check offered (create new branch or stay on current)
 - [ ] Research depth selected (Light/Standard/Deep) before interview begins
 - [ ] Depth persisted via `goop_state({ action: "set-depth", depth: "[shallow|standard|deep]" })`
+- [ ] Autopilot opt-in offered after depth selection, before the vision question
+- [ ] Autopilot choice persisted via `goop_state({ action: "set-autopilot", autopilot: true|false })`
 - [ ] Creative agent opt-in offered after vision question (accepted or declined)
 - [ ] All six questions answered with specifics
 - [ ] At least 1 must-have, 1 out-of-scope, 1 risk defined

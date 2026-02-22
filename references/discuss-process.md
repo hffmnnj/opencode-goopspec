@@ -59,7 +59,27 @@ goop_state({ action: "get" })
 
 Inspect `workflow.gitignoreGoopspec`:
 - If `true` or `false`: preference already captured, skip this prompt entirely.
-- If `undefined`/`null`: ask once during discuss setup.
+- If `undefined`/`null`: proceed to the file check below.
+
+**Smart detection — check `.gitignore` before asking:**
+
+Run the following bash check:
+
+```bash
+if [ -f .gitignore ] && grep -qE '^\.goopspec/?$' .gitignore; then
+  echo "found"
+else
+  echo "not_found"
+fi
+```
+
+- If **`found`**: `.goopspec/` is already in `.gitignore`. Skip the question entirely. Silently persist the preference:
+  ```
+  goop_state({ action: "set-gitignore", gitignoreGoopspec: true })
+  ```
+  Then continue to section 1.4 — do not show the question below.
+
+- If **`not_found`** (`.gitignore` doesn't exist, or exists but doesn't contain `.goopspec/`): Ask the question as normal (existing behavior below).
 
 Use `question` tool:
 - header: "Gitignore Preference"
@@ -166,6 +186,41 @@ Confirm selection to the user before moving on:
 ```
 Research depth selected: [Light|Standard|Deep] ([shallow|standard|deep], [~1x|~2x|~3-5x] baseline)
 ```
+
+### 1.10 Autopilot Opt-In
+
+After depth selection, offer the user autopilot mode. This determines whether the full pipeline (discuss → plan → execute) runs unattended or pauses for confirmation between phases.
+
+Use `question` tool:
+- header: "Autopilot Mode"
+- question: "Would you like to enable autopilot? This will run the full pipeline (discuss → plan → execute) unattended at **[Light|Standard|Deep]** depth (~[1x|2x|3-5x] baseline cost). The workflow will only pause at final acceptance for your review."
+- options:
+  - "Enable autopilot — run full pipeline unattended" — Discuss, plan, and execute will chain automatically without stopping. Pauses only at final acceptance.
+  - "Manual mode — confirm between phases (default)" — You'll review and approve at each phase transition.
+
+**Substitute the depth label and cost multiplier** from the selection made in section 1.9.
+
+**On "Enable autopilot":**
+```
+goop_state({ action: "set-autopilot", autopilot: true })
+```
+
+Confirm to the user:
+```
+✓ Autopilot enabled. The full pipeline will run unattended at [depth] depth. You'll only be asked to review at final acceptance.
+```
+
+**On "Manual mode":**
+```
+goop_state({ action: "set-autopilot", autopilot: false })
+```
+
+Confirm to the user:
+```
+✓ Manual mode. You'll confirm at each phase transition.
+```
+
+---
 
 ### Depth Tier Behavior Reference
 
@@ -424,6 +479,8 @@ memory_save({
 **Create the blueprint** — Transform requirements into an execution plan
 
 → `/goop-plan`
+
+> **Autopilot:** If `workflow.autopilot === true`, skip the confirmation question above and immediately invoke `/goop-plan` without stopping. Do not ask "Ready to proceed?" or any equivalent gate question.
 
 ---
 
