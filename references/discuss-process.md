@@ -360,7 +360,7 @@ question({
   question: "Which of these are must-have requirements?",
   multiple: true,
   options: [
-    { label: "[Requirement A]", description: "[Brief description]" },
+    { label: "[Requirement A] (Recommended)", description: "[Brief description]" },
     { label: "[Requirement B]", description: "[Brief description]" },
     { label: "[Requirement C]", description: "[Brief description]" }
   ]
@@ -375,7 +375,7 @@ question({
   question: "Which of these are out of scope for this work?",
   multiple: true,
   options: [
-    { label: "[Item A]", description: "[Reason]" },
+    { label: "[Item A] (Recommended)", description: "[Reason]" },
     { label: "[Item B]", description: "[Reason]" },
     { label: "[Item C]", description: "[Reason]" }
   ]
@@ -390,7 +390,7 @@ question({
   question: "Which of these risks apply to this work?",
   multiple: true,
   options: [
-    { label: "[Risk A]", description: "[Impact and mitigation]" },
+    { label: "[Risk A] (Recommended)", description: "[Impact and mitigation]" },
     { label: "[Risk B]", description: "[Impact and mitigation]" },
     { label: "[Risk C]", description: "[Impact and mitigation]" }
   ]
@@ -405,7 +405,7 @@ question({
   question: "Which of these constraints apply?",
   multiple: true,
   options: [
-    { label: "[Constraint A]", description: "[Details]" },
+    { label: "[Constraint A] (Recommended)", description: "[Details]" },
     { label: "[Constraint B]", description: "[Details]" },
     { label: "[Constraint C]", description: "[Details]" }
   ]

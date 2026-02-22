@@ -265,15 +265,21 @@ Resume execution with the selected option.
 
 **Rule:** `update-wave(N, total)` means "N waves are now complete." Call it only after wave N's tasks are done and verified.
 
-**Correct pattern:**
+**Correct two-step convention:**
 ```
-# Starting Wave 3 of 5 — DO NOT call update-wave yet
+# === Starting Wave 3 of 5 ===
+# Step 1: Record Wave 2 complete BEFORE starting Wave 3 tasks
+goop_state({ action: "update-wave", currentWave: 2, totalWaves: 5 })
+
 [Execute all Wave 3 tasks...]
 [Verify Wave 3...]
-# Wave 3 tasks complete — NOW call update-wave
+
+# Step 2: Wave 3 tasks done — record Wave 3 complete
 goop_state({ action: "update-wave", currentWave: 3, totalWaves: 5 })
 goop_checkpoint({ action: "save", id: "wave-3-complete" })
 ```
+
+**Rule:** When *starting* Wave N, call `update-wave(N-1, totalWaves)` to record the previous wave complete. When Wave N *finishes*, call `update-wave(N, totalWaves)` to record Wave N complete. Exception: Wave 1 has no previous wave — skip the start-of-wave call and only call `update-wave(1, totalWaves)` after Wave 1 completes.
 
 **Anti-pattern (causes premature accept):**
 ```

@@ -342,7 +342,7 @@ question({
     header: "Wave 2: Auth Migration",
     question: "Wave 2 updates src/auth/middleware.ts for token parsing. Should we preserve compatibility with existing JWT claims during rollout?",
     options: [
-      { label: "Preserve", description: "Support old and new claims during migration" },
+      { label: "Preserve (Recommended)", description: "Support old and new claims during migration" },
       { label: "Cutover", description: "Switch to new claims immediately" },
       { label: "Unsure", description: "Need impact analysis before choosing" }
     ],
