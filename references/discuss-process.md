@@ -17,7 +17,7 @@ goop_state({ action: "get" })        # NEVER read state.json directly
 
 ### 1.2 Git branch check (Session Start)
 
-Check current branch and offer to create a new one for this work:
+Check current branch:
 
 ```bash
 git branch --show-current
@@ -26,28 +26,17 @@ git status
 
 Use `question` tool:
 - header: "Git Branch"
-- question: "You're on branch `[current-branch]`. How would you like to proceed?"
+- question: "You're on branch `[current-branch]`. Would you like to create a new branch for this work?"
 - options:
-  - "Create new feature branch (Recommended)" — Create a clean branch for this work
-  - "Stay on current branch" — Continue on [current-branch]
+  - "Yes, create a branch" — A new branch will be created after you describe your vision
+  - "No, stay on current branch" — Continue on [current-branch]
 
-**On "Create new feature branch":**
+**On "Yes, create a branch":**
+Record the intent. Do NOT ask for a branch name. Do NOT run `git checkout` yet.
+Branch creation is deferred until after the vision question — see section 2.1.1.
 
-Ask for branch name context (or infer from topic):
-```
-Branch name will be: feat/[short-description]
-```
-
-Then create branch:
-```bash
-git checkout -b feat/[short-description]
-```
-
-**Branch naming rules:**
-- Format: `type/short-description`
-- Types: `feat/`, `fix/`, `refactor/`, `chore/`
-- Keep descriptions short and kebab-case
-- Check existing branches first: `git branch --list`
+**On "No, stay on current branch":**
+Continue the flow normally.
 
 ### 1.3 Gitignore preference for `.goopspec/`
 
@@ -295,6 +284,44 @@ If `$ARGUMENTS` provided:
 
 Otherwise:
 > "What do you want to build?"
+
+### 2.1.1 Branch Name Inference (if branch creation requested)
+
+**Only execute this section if the user selected "Yes, create a branch" in section 1.2.**
+
+After the user has described their vision (section 2.1), infer a branch name from what they described:
+
+1. **Infer a branch name** from the vision content:
+   - Construct a short `type/kebab-case` slug from the topic or goal
+   - Default type prefix: `feat/` unless the work is clearly a fix, refactor, or chore
+   - Keep slugs short: 3–5 words max, kebab-case
+   - Examples: `feat/lazy-autopilot-wiring`, `fix/branch-name-timing`, `refactor/discuss-flow`
+
+2. **Confirm with the user** using the `question` tool:
+
+```ts
+question({
+  header: "Branch Name",
+  question: "Based on what you're building, I'd suggest: `feat/[inferred-slug]`. Create this branch?",
+  options: [
+    { label: "Yes, create `feat/[inferred-slug]`", description: "Approve the inferred name" },
+    { label: "Use a different name", description: "Type a custom branch name" }
+  ]
+})
+```
+
+3. **On approval:** Run `git checkout -b feat/[inferred-slug]`
+4. **On "Use a different name":** Accept the user's input, then run `git checkout -b [custom-name]`
+
+**In Lazy Autopilot mode:** Skip the confirmation question entirely — infer the name from the vision and create the branch silently.
+
+**Branch naming rules:**
+- Format: `type/short-description`
+- Types: `feat/`, `fix/`, `refactor/`, `chore/`
+- Keep descriptions short and kebab-case
+- Check existing branches first: `git branch --list`
+
+---
 
 ### 2.2 Work through the six questions
 
