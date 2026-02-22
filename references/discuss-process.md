@@ -244,6 +244,8 @@ Use this table as the authoritative behavior contract across discuss, plan, and 
 
 All short-answer interactions during discovery MUST use the `question` tool. Output explanatory context as regular messages first, then ask a concise question with 2-5 options.
 
+**Option limit:** Never exceed 10 options in a single `question` call (applies to both single-select and multi-select). If a domain requires more than 10 options, split into sequential calls with batch context in the header (e.g., "(1 of 2)"). See `references/interactive-questioning.md` § 7 for the full chunking pattern.
+
 **When to use structured prompts:**
 - Setup choices (branch, gitignore, existing docs)
 - Discovery completion confirmation
