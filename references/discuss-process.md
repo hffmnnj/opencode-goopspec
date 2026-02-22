@@ -460,6 +460,8 @@ memory_save({
 
 → `/goop-plan`
 
+> **Autopilot:** If `workflow.autopilot === true`, skip the confirmation question above and immediately invoke `/goop-plan` without stopping. Do not ask "Ready to proceed?" or any equivalent gate question.
+
 ---
 
 **Also available:**
