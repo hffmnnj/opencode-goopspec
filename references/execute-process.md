@@ -423,20 +423,15 @@ gh pr create --base $TARGET_BRANCH --title "type(scope): Title" --body "..." [--
 ### 6.2 Display next steps
 
 ```
-### Next Step
+### ✅ Execution Complete
 
-**Verify and accept** — Final verification against spec
+All waves finished. The implementation is ready for acceptance review.
 
-→ `/goop-accept`
+**🚨 Start a new session, then run `/goop-accept`**
+
+Why a new session? Execution sessions accumulate significant context from planning and wave-by-wave delegation. Starting fresh gives the acceptance phase a clean, accurate view of the finished work.
 
 ---
-
-Start a new session for fresh context.
-```
-
-Update state using goop_state:
-```
-goop_state({ action: "transition", phase: "accept" })
 ```
 
 ---

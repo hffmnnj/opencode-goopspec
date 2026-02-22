@@ -3,7 +3,7 @@ name: goop-execute
 description: Begin wave-based execution
 phase: execute
 requires: spec_locked
-next-step: "When all waves are complete, verify the work and request acceptance"
+next-step: "When all waves are complete, start a new session and run /goop-accept"
 next-command: /goop-accept
 alternatives:
   - command: /goop-status
@@ -54,7 +54,7 @@ goop_state({ action: "get" })
 3. **Wave Loop** — Execute tasks, delegate to goop-executor-{tier}
 4. **Deviation Handling** — Apply rules (auto-fix or use `question` tool for architectural decisions)
 5. **Wave Completion** — Use `question` tool for continuation choice (Continue to next wave (Recommended) / Pause and save checkpoint / Review changes), save checkpoint, generate HANDOFF.md
-6. **Execution Complete** — Transition to accept phase
+6. **Execution Complete** — Display completion message with instruction to start a new session and run `/goop-accept`
 
 ### Deviation Rules
 
