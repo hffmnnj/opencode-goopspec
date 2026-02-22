@@ -59,7 +59,27 @@ goop_state({ action: "get" })
 
 Inspect `workflow.gitignoreGoopspec`:
 - If `true` or `false`: preference already captured, skip this prompt entirely.
-- If `undefined`/`null`: ask once during discuss setup.
+- If `undefined`/`null`: proceed to the file check below.
+
+**Smart detection — check `.gitignore` before asking:**
+
+Run the following bash check:
+
+```bash
+if [ -f .gitignore ] && grep -qE '^\.goopspec/?$' .gitignore; then
+  echo "found"
+else
+  echo "not_found"
+fi
+```
+
+- If **`found`**: `.goopspec/` is already in `.gitignore`. Skip the question entirely. Silently persist the preference:
+  ```
+  goop_state({ action: "set-gitignore", gitignoreGoopspec: true })
+  ```
+  Then continue to section 1.4 — do not show the question below.
+
+- If **`not_found`** (`.gitignore` doesn't exist, or exists but doesn't contain `.goopspec/`): Ask the question as normal (existing behavior below).
 
 Use `question` tool:
 - header: "Gitignore Preference"
