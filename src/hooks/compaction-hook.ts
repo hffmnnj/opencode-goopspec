@@ -166,8 +166,32 @@ export function buildSpecBlock(projectDir: string): string {
 }
 
 /** Last 3-5 ADL entries with imperative framing. */
-export function buildADLBlock(_ctx: PluginContext): string {
-  return "";
+export function buildADLBlock(ctx: PluginContext): string {
+  try {
+    const raw = ctx.stateManager.getADL();
+    if (!raw || !raw.trim()) return "";
+
+    // Split on H3 boundaries — each entry starts with "### "
+    const parts = raw.split(/^(?=### )/m).filter((p) => p.trim().length > 0);
+    if (parts.length === 0) return "";
+
+    // Take the last 5 entries (or fewer if less exist)
+    const recent = parts.slice(-5);
+
+    const lines: string[] = [];
+    lines.push("## Recent Architectural Decisions");
+    lines.push("");
+    lines.push(
+      "These architectural decisions have already been made. Honour them. Do not re-debate."
+    );
+    lines.push("");
+    lines.push(recent.map((entry) => entry.trimEnd()).join("\n\n"));
+
+    return lines.join("\n");
+  } catch (error) {
+    logError("Failed to build ADL block", error);
+    return "";
+  }
 }
 
 /** Static tool re-hydration instructions — always injected last. */
