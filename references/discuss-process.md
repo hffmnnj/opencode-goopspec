@@ -702,4 +702,29 @@ Run `/goop-research stripe v2 migration` to investigate."
 
 ---
 
+## Anti-Patterns
+
+**DON'T:** Mention an offer or question in plain text without using the `question` tool
+
+Bad (anti-pattern):
+> "Would you like creative brainstorming from The Visionary? I'd recommend skipping..."
+> [Continues without calling question tool]
+
+**DO:** Use the `question` tool for EVERY interactive offer, decision, or yes/no prompt to the user:
+
+```ts
+question({
+  header: "Creative Brainstorming",
+  question: "Would you like creative brainstorming from The Visionary before the interview?",
+  options: [
+    { label: "Skip — proceed directly (Recommended)", description: "Requirements are already well-defined" },
+    { label: "Yes, bring in The Visionary", description: "Adds broad ideation around your topic" }
+  ]
+})
+```
+
+**Rule:** Every user-facing question or offer MUST have a corresponding `question` tool call. Plain-text questions without a `question()` call are forbidden.
+
+---
+
 *Discovery Interview Process v0.2.8*
