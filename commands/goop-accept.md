@@ -49,7 +49,7 @@ goop_state({ action: "get" })
 3. **Present Report** — Requirement matrix, test results, security check
 4. **Request Acceptance** — User must type "accept"
 5. **Handle Response** — Process acceptance keywords, record decision
-6. **Finalize Milestone** — Archive artifacts, generate retrospective, extract learnings, optional git tag
+6. **Finalize Milestone** — Copy-verify-delete archive artifacts, generate retrospective, extract learnings, optional git tag
 
 Completion behavior in Step 6 preserves the prior `/goop-complete` lifecycle, now executed only after explicit acceptance.
 
@@ -57,7 +57,7 @@ Completion behavior in Step 6 preserves the prior `/goop-complete` lifecycle, no
 
 | Keyword | Action |
 |---------|--------|
-| `accept` | Confirm acceptance and immediately run completion/archival |
+| `accept` **(Recommended)** | Confirm acceptance and immediately run completion/archival |
 | `issues` | Log issues, return to execution |
 | `accept-with-issues` | Record known issues, then require explicit `accept` before archival |
 | `cancel` | Return to execution |
@@ -80,11 +80,16 @@ Completion behavior in Step 6 preserves the prior `/goop-complete` lifecycle, no
 - [ ] User explicitly typed "accept"
 - [ ] Archival only starts after explicit "accept"
 - [ ] Completion artifacts generated (archive + retrospective + memory extraction)
+- [ ] Archive prompt always fires at acceptance completion
+- [ ] Original files deleted ONLY after verifying all files exist at archive destination
+- [ ] Each deleted file logged to CHRONICLE.md at archive location
 - [ ] HANDOFF.md generated
+- [ ] All question tool calls include (Recommended) on exactly one option
 
 ## Anti-Patterns
 
 **DON'T:** Skip execution check, accept without verification, auto-accept
+**DON'T:** Present question options without marking one as (Recommended)
 **DO:** Verify every must-have has evidence, require explicit "accept" keyword
 
 ---

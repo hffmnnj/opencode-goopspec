@@ -36,7 +36,7 @@ Actions:
 - 'set-mode': Set task mode (quick/standard/comprehensive/milestone)
 - 'set-depth': Set workflow depth (shallow/standard/deep)
 - 'set-autopilot': Enable or disable autopilot mode (supports optional lazy mode)
-- 'update-wave': Update wave progress
+- 'update-wave': Update wave progress (call ONLY after wave completes — setting currentWave=totalWaves triggers auto-progression to accept)
 - 'reset': Reset entire workflow to idle state
 
 IMPORTANT: Always use this tool instead of Read/Edit on state.json to avoid conflicts.`,
@@ -245,7 +245,11 @@ Work needs to be re-verified.`;
           }
           
           ctx.stateManager.updateWaveProgress(args.currentWave, args.totalWaves);
-          return `✓ Wave progress: ${args.currentWave}/${args.totalWaves}`;
+          const progressMsg = `✓ Wave progress: ${args.currentWave}/${args.totalWaves}`;
+          if (args.currentWave === args.totalWaves) {
+            return progressMsg + `\n\n⚠️ currentWave = totalWaves: auto-progression to accept will fire after this tool call. Only call update-wave(${args.currentWave}, ${args.totalWaves}) after Wave ${args.currentWave} tasks have fully completed.`;
+          }
+          return progressMsg;
         }
 
         case "reset": {

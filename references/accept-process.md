@@ -84,7 +84,7 @@ question({
   header: "Acceptance Gate",
   question: "Verification passed. How would you like to proceed?",
   options: [
-    { label: "Accept", description: "Finalize and archive milestone" },
+    { label: "Accept (Recommended)", description: "Finalize and archive milestone" },
     { label: "Report Issues", description: "Document problems found" },
     { label: "Return to Execution", description: "Fix issues first" }
   ]
@@ -247,7 +247,7 @@ question({
   header: "Acceptance Gate",
   question: "Verification passed. How would you like to proceed?",
   options: [
-    { label: "Accept", description: "Finalize and archive milestone" },
+    { label: "Accept (Recommended)", description: "Finalize and archive milestone" },
     { label: "Report Issues", description: "Document problems found" },
     { label: "Accept with Issues", description: "Record known issues, then finalize" },
     { label: "Return to Execution", description: "Go back and fix issues" }
@@ -372,7 +372,31 @@ Display PR URL to user.
 
 6. Start completion lifecycle (merged from previous `/goop-complete`):
 
-   - **Archival:** move active milestone artifacts (`SPEC.md`, `BLUEPRINT.md`, `CHRONICLE.md`, and related active files) to `.goopspec/archive/<milestone-slug>/`
+   - **Archival:** Archive active milestone artifacts with a copy-verify-delete pattern:
+
+     **Step 1 — Copy:** Copy the following files to `.goopspec/archive/<milestone-slug>/`:
+     - `REQUIREMENTS.md`
+     - `SPEC.md`
+     - `BLUEPRINT.md`
+     - `CHRONICLE.md`
+     - `HANDOFF.md`
+     - Any other active planning files in `.goopspec/` root (not `state.json`, `ADL.md`, `PROJECT_KNOWLEDGE_BASE.md`)
+
+     **Step 2 — Verify:** Confirm each file exists at the archive destination before proceeding.
+     - If any file is missing at destination: abort the delete step and report the failure.
+
+     **Step 3 — Delete:** Only after verifying all files exist at archive destination, delete the originals from `.goopspec/` root.
+
+     **Step 4 — Log:** Add an audit entry to CHRONICLE.md at the archive destination:
+     ```
+     ## Archive Audit
+     Deleted from .goopspec/ root after successful archive:
+     - REQUIREMENTS.md → archived [date]
+     - SPEC.md → archived [date]
+     [...etc for each file deleted]
+     ```
+
+     ⚠️ **CRITICAL:** Never delete originals before verifying copy success. Data loss is unrecoverable.
    - **Retrospective:** generate `.goopspec/archive/<milestone-slug>/RETROSPECTIVE.md`
    - **Memory extraction:** persist milestone learnings (patterns, decisions, gotchas) via memory tools
    - **Tagging (optional):** create git tag if milestone flow requests it
@@ -429,7 +453,7 @@ question({
   header: "Finalize with Issues",
   question: "Confirm acceptance with the known issues above?",
   options: [
-    { label: "Finalize", description: "Archive milestone with documented issues" },
+    { label: "Finalize (Recommended)", description: "Archive milestone with documented issues" },
     { label: "Cancel", description: "Return to fix issues first" }
   ]
 })

@@ -81,7 +81,7 @@ question({
   header: "Contract Gate",
   question: "How would you like to proceed with this contract?",
   options: [
-    { label: "Confirm and Lock", description: "Accept contract and lock spec" },
+    { label: "Confirm and Lock (Recommended)", description: "Accept contract and lock spec" },
     { label: "Amend", description: "Revise contract before locking" },
     { label: "Cancel", description: "Stop now and keep spec unlocked" }
   ]
@@ -94,7 +94,7 @@ question({
   header: "Wave 2 Review",
   question: "Review Wave 2: Auth Migration. How would you like to proceed?",
   options: [
-    { label: "Approve Wave", description: "Wave looks good, proceed" },
+    { label: "Approve Wave (Recommended)", description: "Wave looks good, proceed" },
     { label: "Request More Research", description: "Need deeper investigation" },
     { label: "Clarify Scope", description: "Adjust what this wave covers" }
   ]
@@ -342,7 +342,7 @@ question({
     header: "Wave 2: Auth Migration",
     question: "Wave 2 updates src/auth/middleware.ts for token parsing. Should we preserve compatibility with existing JWT claims during rollout?",
     options: [
-      { label: "Preserve", description: "Support old and new claims during migration" },
+      { label: "Preserve (Recommended)", description: "Support old and new claims during migration" },
       { label: "Cutover", description: "Switch to new claims immediately" },
       { label: "Unsure", description: "Need impact analysis before choosing" }
     ],
@@ -435,7 +435,7 @@ question({
     header: "Wave [N] Review",
     question: "Review Wave [N]: [Name]. How would you like to proceed?",
     options: [
-      { label: "Approve Wave", description: "Wave looks good, proceed" },
+      { label: "Approve Wave (Recommended)", description: "Wave looks good, proceed" },
       { label: "Request More Research", description: "Need deeper investigation on this wave's scope" },
       { label: "Clarify Scope", description: "Want to adjust or clarify what this wave covers" }
     ],
@@ -562,7 +562,7 @@ question({
     header: "Planning Blocked",
     question: "How would you like to resolve this blocker?",
     options: [
-      { label: "Provide more context", description: "Return to discovery via /goop-discuss" },
+      { label: "Provide more context (Recommended)", description: "Return to discovery via /goop-discuss" },
       { label: "Research the unknown", description: "Investigate via /goop-research" }
     ],
     multiple: false
@@ -622,7 +622,7 @@ question({
     header: "Contract Gate",
     question: "How would you like to proceed with this contract?",
     options: [
-      { label: "Confirm and Lock", description: "Accept contract and lock spec" },
+      { label: "Confirm and Lock (Recommended)", description: "Accept contract and lock spec" },
       { label: "Amend", description: "Revise contract before locking" },
       { label: "Cancel", description: "Stop now and keep spec unlocked" }
     ],

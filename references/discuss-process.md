@@ -158,7 +158,7 @@ Use `question` tool:
 - question: "How thorough should planning and research be for this work?"
 - options:
   - "Light" — Fastest path with minimal agents and focused coverage (~1x baseline token/cost)
-  - "Standard" — Balanced depth with moderate exploration (~2x baseline token/cost)
+  - "Standard (Recommended)" — Balanced depth with moderate exploration (~2x baseline token/cost)
   - "Deep" — Most thorough with multiple parallel agents and expanded analysis (~3-5x baseline token/cost)
 
 Map the selected label to workflow depth:
@@ -184,7 +184,7 @@ Use `question` tool:
 - header: "Autopilot Mode"
 - question: "How much should I drive? Running at **[Light|Standard|Deep]** depth (~[1x|2x|3-5x] baseline cost)."
 - options:
-  - "Manual mode — confirm between phases (default)" — Review and approve at each phase transition.
+  - "Manual mode — confirm between phases (default) (Recommended)" — Review and approve at each phase transition.
   - "Autopilot — run pipeline unattended" — Discuss, plan, and execute chain runs automatically. Pauses only at final acceptance.
   - "Lazy Autopilot — infer everything, zero questions" — No clarifying questions. Agent reads your initial prompt and infers all decisions. Full pipeline runs unattended. Pauses only at final acceptance.
 
@@ -261,7 +261,7 @@ question({
   header: "Discovery Check",
   question: "Does this capture your requirements?",
   options: [
-    { label: "Approve and proceed", description: "Generate REQUIREMENTS.md" },
+    { label: "Approve and proceed (Recommended)", description: "Generate REQUIREMENTS.md" },
     { label: "Add more requirements", description: "Continue discussion" }
   ]
 })
@@ -274,7 +274,7 @@ question({
   question: "How thorough should planning and research be?",
   options: [
     { label: "Light", description: "Fastest path (~1x baseline)" },
-    { label: "Standard", description: "Balanced depth (~2x baseline)" },
+    { label: "Standard (Recommended)", description: "Balanced depth (~2x baseline)" },
     { label: "Deep", description: "Most thorough (~3-5x baseline)" }
   ]
 })
@@ -321,7 +321,7 @@ question({
   header: "Branch Name",
   question: "Based on what you're building, I'd suggest: `feat/[inferred-slug]`. Create this branch?",
   options: [
-    { label: "Yes, create `feat/[inferred-slug]`", description: "Approve the inferred name" },
+    { label: "Yes, create `feat/[inferred-slug]` (Recommended)", description: "Approve the inferred name" },
     { label: "Use a different name", description: "Type a custom branch name" }
   ]
 })
@@ -349,6 +349,68 @@ Before asking ANYTHING:
 1. Check memory: `memory_search({ query: "[topic] preference" })`
 2. If found: "I recall you prefer X for this. Still true? [Y/n]"
 3. If not found: Ask, then SAVE the answer with `memory_note`
+
+**List-collection questions use `multiple: true`:**
+
+When collecting must-haves, use a multi-select question:
+
+```ts
+question({
+  header: "Must-Haves",
+  question: "Which of these are must-have requirements?",
+  multiple: true,
+  options: [
+    { label: "[Requirement A] (Recommended)", description: "[Brief description]" },
+    { label: "[Requirement B]", description: "[Brief description]" },
+    { label: "[Requirement C]", description: "[Brief description]" }
+  ]
+})
+```
+
+When collecting out-of-scope items, use a multi-select question:
+
+```ts
+question({
+  header: "Out of Scope",
+  question: "Which of these are out of scope for this work?",
+  multiple: true,
+  options: [
+    { label: "[Item A] (Recommended)", description: "[Reason]" },
+    { label: "[Item B]", description: "[Reason]" },
+    { label: "[Item C]", description: "[Reason]" }
+  ]
+})
+```
+
+When collecting risks, use a multi-select question:
+
+```ts
+question({
+  header: "Risks",
+  question: "Which of these risks apply to this work?",
+  multiple: true,
+  options: [
+    { label: "[Risk A] (Recommended)", description: "[Impact and mitigation]" },
+    { label: "[Risk B]", description: "[Impact and mitigation]" },
+    { label: "[Risk C]", description: "[Impact and mitigation]" }
+  ]
+})
+```
+
+When collecting constraints, use a multi-select question:
+
+```ts
+question({
+  header: "Constraints",
+  question: "Which of these constraints apply?",
+  multiple: true,
+  options: [
+    { label: "[Constraint A] (Recommended)", description: "[Details]" },
+    { label: "[Constraint B]", description: "[Details]" },
+    { label: "[Constraint C]", description: "[Details]" }
+  ]
+})
+```
 
 ### 2.3 Probe for specifics
 
@@ -382,7 +444,7 @@ question({
   header: "Discovery Check",
   question: "Does this capture your requirements?",
   options: [
-    { value: "proceed", label: "Approve and proceed" },
+    { value: "proceed", label: "Approve and proceed (Recommended)" },
     { value: "add", label: "Add more requirements" },
     { value: "restart", label: "Start over" }
   ]
@@ -578,12 +640,12 @@ question({
   header: "Discovery Check",
   question: "Does this capture your requirements?",
   options: [
-    { value: "proceed", label: "Approve and proceed" },
+    { value: "proceed", label: "Approve and proceed (Recommended)" },
     { value: "add", label: "Add more requirements" }
   ]
 })
 
-User: [Clicks "Approve and proceed"]
+User: [Clicks "Approve and proceed (Recommended)"]
 
 Orchestrator: "Creating REQUIREMENTS.md..."
 ```
@@ -626,7 +688,7 @@ question({
   header: "Discovery Check",
   question: "Does this capture your requirements?",
   options: [
-    { value: "proceed", label: "Approve and proceed" },
+    { value: "proceed", label: "Approve and proceed (Recommended)" },
     { value: "add", label: "Add more requirements" },
     { value: "research", label: "Research unknowns first" }
   ]
@@ -637,6 +699,31 @@ User: [Clicks "Research unknowns first"]
 Orchestrator: "I'll launch research on Stripe v2 migration before planning.
 Run `/goop-research stripe v2 migration` to investigate."
 ```
+
+---
+
+## Anti-Patterns
+
+**DON'T:** Mention an offer or question in plain text without using the `question` tool
+
+Bad (anti-pattern):
+> "Would you like creative brainstorming from The Visionary? I'd recommend skipping..."
+> [Continues without calling question tool]
+
+**DO:** Use the `question` tool for EVERY interactive offer, decision, or yes/no prompt to the user:
+
+```ts
+question({
+  header: "Creative Brainstorming",
+  question: "Would you like creative brainstorming from The Visionary before the interview?",
+  options: [
+    { label: "Skip — proceed directly (Recommended)", description: "Requirements are already well-defined" },
+    { label: "Yes, bring in The Visionary", description: "Adds broad ideation around your topic" }
+  ]
+})
+```
+
+**Rule:** Every user-facing question or offer MUST have a corresponding `question` tool call. Plain-text questions without a `question()` call are forbidden.
 
 ---
 

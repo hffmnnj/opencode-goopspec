@@ -109,6 +109,120 @@ Only if requested, show full tradeoffs.
 
 ---
 
+## 5. Multi-Select vs Single-Select
+
+Choosing the right selection mode is critical for UX. Using single-select when multi-select is appropriate forces the user through a tedious loop; using multi-select for a binary decision adds unnecessary noise.
+
+### When to Use `multiple: true`
+
+Use multi-select any time the user may legitimately want to pick **more than one item** from a list:
+
+- Collecting must-have requirements
+- Selecting risks or constraints
+- Marking out-of-scope items
+- Choosing feature flags or capabilities
+- Picking labels, tags, or categories
+
+### When NOT to Use `multiple: true`
+
+Use single-select (omit `multiple` or set it to `false`) for:
+
+- **Confirmation gates** — approve / amend / cancel
+- **Binary decisions** — yes / no
+- **Exclusive path choices** — "which approach to take" where only one option can be active
+
+### Anti-Pattern (DON'T)
+
+```ts
+// WRONG: One-by-one loop forces the user to answer repeatedly
+question({ header: "Must-Haves", question: "Add a must-have?", options: ["Add requirement", "Done"] })
+// ... repeat for each item — tedious and error-prone
+```
+
+This pattern requires multiple round-trips, loses context between calls, and makes it easy for the user to miss items.
+
+### Correct Pattern (DO)
+
+```ts
+// CORRECT: Multi-select collects the full list in one call
+question({
+  header: "Must-Haves",
+  multiple: true,
+  question: "Which of these are must-have requirements?",
+  options: [
+    { label: "Option A", description: "Core feature needed on day one" },
+    { label: "Option B", description: "Required for compliance" },
+    { label: "Option C", description: "Nice-to-have, can defer" }
+  ]
+})
+```
+
+The user sees all options at once, can select any combination, and the agent receives the complete list in a single response.
+
+### Quick Reference
+
+| Scenario | Mode |
+|---|---|
+| Collecting must-haves / risks / constraints | `multiple: true` |
+| Selecting feature flags or tags | `multiple: true` |
+| Approve / amend / cancel gate | single-select |
+| Yes / no confirmation | single-select |
+| Exclusive path choice (A or B, not both) | single-select |
+
+---
+
+## 6. Mandatory `(Recommended)` Suffix
+
+**Every `question` tool call MUST mark exactly one option with `(Recommended)` appended to its label.** This helps users identify the suggested path at a glance and reduces decision fatigue.
+
+### Rules
+
+- Add ` (Recommended)` to **exactly one** option per `question` call — no more, no fewer.
+- **Never** add it to multiple options in the same question.
+- **Never** omit it entirely from a `question` call (multi-select list-collection questions are exempt — see below).
+
+### Which Option to Mark
+
+| Question Type | Mark as Recommended |
+|---|---|
+| Approve / confirm / accept gates | The confirm/approve option |
+| Continue / pause choices | The continue option (usually first) |
+| Wave review (approve / research / clarify) | "Approve Wave" or the first option |
+| Architectural decisions with a clear best practice | The safer/faster/standard choice |
+| All options are roughly equal | The first option |
+
+### Exemption
+
+Multi-select questions (`multiple: true`) used for **list collection** (must-haves, risks, constraints, out-of-scope items) are exempt — they have no single "recommended" path because the user is selecting a set.
+
+### Example
+
+```ts
+// CORRECT — exactly one option marked
+question({
+  header: "Contract Gate",
+  question: "How would you like to proceed?",
+  options: [
+    { label: "Confirm and Lock (Recommended)", description: "Accept contract and lock spec" },
+    { label: "Amend", description: "Revise contract before locking" },
+    { label: "Cancel", description: "Stop now and keep spec unlocked" }
+  ]
+})
+
+// WRONG — no recommended option
+question({
+  header: "Contract Gate",
+  question: "How would you like to proceed?",
+  options: [
+    { label: "Confirm and Lock", description: "Accept contract and lock spec" },
+    { label: "Amend", description: "Revise contract before locking" },
+    { label: "Cancel", description: "Stop now and keep spec unlocked" }
+  ]
+})
+```
+
+---
+
 ## Checklist: Before You Ask
 
 - [ ] **Did I search memory?** (Don't be amnesic)

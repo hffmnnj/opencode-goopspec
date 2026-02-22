@@ -100,7 +100,7 @@ question({
   header: "Wave 1 Complete",
   question: "How would you like to continue?",
   options: [
-    { label: "Continue to Wave 2", description: "Proceed in current session" },
+    { label: "Continue to Wave 2 (Recommended)", description: "Proceed in current session" },
     { label: "Pause and resume later", description: "Save checkpoint, start fresh" }
   ]
 })
@@ -112,7 +112,7 @@ question({
   header: "Architectural Decision",
   question: "Database schema change needed. Add index on users.email?",
   options: [
-    { label: "Add index", description: "Better query performance, minor migration" },
+    { label: "Add index (Recommended)", description: "Better query performance, minor migration" },
     { label: "Skip index", description: "Simpler migration, optimize later" }
   ]
 })
@@ -243,7 +243,7 @@ question({
     header: "Architectural Decision",
     question: "[Concise description of the decision needed]",
     options: [
-      { label: "[Option A]", description: "[Impact of option A]" },
+      { label: "[Option A] (Recommended)", description: "[Impact of option A]" },
       { label: "[Option B]", description: "[Impact of option B]" }
     ],
     multiple: false
@@ -259,6 +259,38 @@ Resume execution with the selected option.
 
 **At end of each wave:**
 
+### ⚠️ update-wave Calling Convention
+
+**CRITICAL:** `goop_state({ action: "update-wave" })` MUST only be called AFTER a wave's tasks have fully completed and been verified. Calling it before a wave runs triggers premature auto-progression to the accept phase.
+
+**Rule:** `update-wave(N, total)` means "N waves are now complete." Call it only after wave N's tasks are done and verified.
+
+**Correct two-step convention:**
+```
+# === Starting Wave 3 of 5 ===
+# Step 1: Record Wave 2 complete BEFORE starting Wave 3 tasks
+goop_state({ action: "update-wave", currentWave: 2, totalWaves: 5 })
+
+[Execute all Wave 3 tasks...]
+[Verify Wave 3...]
+
+# Step 2: Wave 3 tasks done — record Wave 3 complete
+goop_state({ action: "update-wave", currentWave: 3, totalWaves: 5 })
+goop_checkpoint({ action: "save", id: "wave-3-complete" })
+```
+
+**Rule:** When *starting* Wave N, call `update-wave(N-1, totalWaves)` to record the previous wave complete. When Wave N *finishes*, call `update-wave(N, totalWaves)` to record Wave N complete. Exception: Wave 1 has no previous wave — skip the start-of-wave call and only call `update-wave(1, totalWaves)` after Wave 1 completes.
+
+**Anti-pattern (causes premature accept):**
+```
+# About to start Wave 5 of 5 — WRONG, this fires auto-progression immediately
+goop_state({ action: "update-wave", currentWave: 5, totalWaves: 5 })
+# ❌ Auto-progression triggers here → accept phase starts before Wave 5 runs!
+[Wave 5 tasks never execute]
+```
+
+**Why this matters:** The auto-progression hook checks `currentWave >= totalWaves` after every tool call. If you call `update-wave(5, 5)` to "announce" you're starting Wave 5, the hook sees all waves as complete and transitions to the accept phase immediately — before any Wave 5 tasks run.
+
 ### 5.1 Run wave verification
 ```
 Spawn goop-verifier for wave-level checks
@@ -273,10 +305,14 @@ Spawn goop-verifier for wave-level checks
 - Time: [timestamp]
 ```
 
-### 5.3 Save checkpoint
+### 5.3 Record wave completion and save checkpoint
 ```
+# Wave N verified — NOW mark it complete (see update-wave convention above)
+goop_state({ action: "update-wave", currentWave: N, totalWaves: M })
+
 goop_checkpoint({ 
   action: "save",
+  id: "wave-N-complete",
   context: { wave: N, phase: "execute" }
 })
 ```
@@ -321,7 +357,7 @@ question({
     header: "Wave [N] Complete",
     question: "How would you like to continue?",
     options: [
-      { label: "Continue to Wave [N+1]", description: "Proceed in the current session" },
+      { label: "Continue to Wave [N+1] (Recommended)", description: "Proceed in the current session" },
       { label: "Pause and resume later", description: "Save checkpoint, start fresh next time" }
     ],
     multiple: false
@@ -423,20 +459,15 @@ gh pr create --base $TARGET_BRANCH --title "type(scope): Title" --body "..." [--
 ### 6.2 Display next steps
 
 ```
-### Next Step
+### ✅ Execution Complete
 
-**Verify and accept** — Final verification against spec
+All waves finished. The implementation is ready for acceptance review.
 
-→ `/goop-accept`
+**🚨 Start a new session, then run `/goop-accept`**
+
+Why a new session? Execution sessions accumulate significant context from planning and wave-by-wave delegation. Starting fresh gives the acceptance phase a clean, accurate view of the finished work.
 
 ---
-
-Start a new session for fresh context.
-```
-
-Update state using goop_state:
-```
-goop_state({ action: "transition", phase: "accept" })
 ```
 
 ---
