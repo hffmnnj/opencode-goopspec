@@ -35,7 +35,7 @@ Actions:
 - 'reset-acceptance': Reset acceptance status
 - 'set-mode': Set task mode (quick/standard/comprehensive/milestone)
 - 'set-depth': Set workflow depth (shallow/standard/deep)
-- 'set-autopilot': Enable or disable autopilot mode (unattended pipeline execution)
+- 'set-autopilot': Enable or disable autopilot mode (supports optional lazy mode)
 - 'update-wave': Update wave progress
 - 'reset': Reset entire workflow to idle state
 
@@ -60,6 +60,7 @@ IMPORTANT: Always use this tool instead of Read/Edit on state.json to avoid conf
       mode: tool.schema.string().optional(),
       depth: tool.schema.string().optional(),
       autopilot: tool.schema.boolean().optional(),
+      lazy: tool.schema.boolean().optional(),
       currentWave: tool.schema.number().optional(),
       totalWaves: tool.schema.number().optional(),
       force: tool.schema.boolean().optional(),
@@ -215,12 +216,19 @@ Work needs to be re-verified.`;
           if (args.autopilot === undefined) {
             return "✗ Error: 'autopilot' (boolean) is required for set-autopilot action.";
           }
-          
-          ctx.stateManager.updateWorkflow({ autopilot: args.autopilot });
-          if (args.autopilot) {
-            return `✓ Autopilot enabled. The full pipeline (discuss → plan → execute) will run unattended, pausing only at final acceptance.`;
+
+          if (!args.autopilot) {
+            ctx.stateManager.updateWorkflow({ autopilot: false, lazyAutopilot: false });
+            return `✓ Autopilot disabled. Manual confirmation will be required between phases.`;
           }
-          return `✓ Autopilot disabled. Manual confirmation will be required between phases.`;
+
+          if (args.lazy) {
+            ctx.stateManager.updateWorkflow({ autopilot: true, lazyAutopilot: true });
+            return `✓ Lazy Autopilot enabled. The full pipeline will run with zero questions — all decisions inferred from your initial prompt. Pauses only at final acceptance.`;
+          }
+
+          ctx.stateManager.updateWorkflow({ autopilot: true, lazyAutopilot: false });
+          return `✓ Autopilot enabled. The full pipeline (discuss → plan → execute) will run unattended, pausing only at final acceptance.`;
         }
 
         case "update-wave": {
@@ -250,7 +258,7 @@ All workflow flags cleared. Ready for a new task.
         }
 
         default:
-          return "Unknown action. Valid actions: get, transition, complete-interview, reset-interview, lock-spec, unlock-spec, confirm-acceptance, reset-acceptance, set-mode, set-depth, set-autopilot, update-wave, reset";
+          return "Unknown action. Valid actions: get, transition, complete-interview, reset-interview, lock-spec, unlock-spec, confirm-acceptance, reset-acceptance, set-mode, set-depth, set-autopilot (supports optional lazy), update-wave, reset";
       }
     },
   });
