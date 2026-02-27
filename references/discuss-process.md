@@ -244,6 +244,8 @@ Use this table as the authoritative behavior contract across discuss, plan, and 
 
 All short-answer interactions during discovery MUST use the `question` tool. Output explanatory context as regular messages first, then ask a concise question with 2-5 options.
 
+**Option limit:** Never exceed 10 options in a single `question` call (applies to both single-select and multi-select). If a domain requires more than 10 options, split into sequential calls with batch context in the header (e.g., "(1 of 2)"). See `references/interactive-questioning.md` § 7 for the full chunking pattern.
+
 **When to use structured prompts:**
 - Setup choices (branch, gitignore, existing docs)
 - Discovery completion confirmation
@@ -586,7 +588,11 @@ memory_save({
 
 → `/goop-plan`
 
-> **Autopilot:** If `workflow.autopilot === true`, skip the confirmation question above and immediately invoke `/goop-plan` without stopping. Do not ask "Ready to proceed?" or any equivalent gate question.
+> **Autopilot:** If `workflow.autopilot === true`, skip the confirmation question above and immediately execute this tool call:
+> ```
+> mcp_slashcommand({ command: "/goop-plan" })
+> ```
+> **DO NOT** write "Autopilot is enabled — proceeding directly to /goop-plan" and then stop. Announcing intent in text without calling the tool is a **hard failure** — the next phase never starts. The transition only happens when `mcp_slashcommand` is actually invoked.
 
 ---
 
