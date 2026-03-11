@@ -28,6 +28,12 @@ import { createMemoryForgetTool } from "./memory-forget/index.js";
 // Session tools
 import { createSessionSearchTool } from "./session-search/index.js";
 
+// Daemon tools
+import { createGoopDaemonStatusTool } from "./goop-daemon-status/index.js";
+import { createGoopDaemonProjectsTool } from "./goop-daemon-projects/index.js";
+import { createGoopDaemonWorkflowTool } from "./goop-daemon-workflow/index.js";
+import { createGoopDaemonItemsTool } from "./goop-daemon-items/index.js";
+
 /**
  * Map of tool name to tool definition
  * Uses the SDK's ToolDefinition type for proper type checking
@@ -66,6 +72,12 @@ export function createTools(ctx: PluginContext): ToolsMap {
     
     // Session tools
     session_search: createSessionSearchTool(ctx),
+
+    // Daemon tools
+    goop_daemon_status: createGoopDaemonStatusTool(ctx),
+    goop_daemon_projects: createGoopDaemonProjectsTool(ctx),
+    goop_daemon_workflow: createGoopDaemonWorkflowTool(ctx),
+    goop_daemon_items: createGoopDaemonItemsTool(ctx),
   };
 }
 
@@ -91,3 +103,9 @@ export { createMemoryForgetTool } from "./memory-forget/index.js";
 
 // Session tool exports
 export { createSessionSearchTool } from "./session-search/index.js";
+
+// Daemon tool exports
+export { createGoopDaemonStatusTool } from "./goop-daemon-status/index.js";
+export { createGoopDaemonProjectsTool } from "./goop-daemon-projects/index.js";
+export { createGoopDaemonWorkflowTool } from "./goop-daemon-workflow/index.js";
+export { createGoopDaemonItemsTool } from "./goop-daemon-items/index.js";
