@@ -68,10 +68,20 @@ Use the `question` tool with category-specific options for each discovery questi
 | `memory_save` | Persist interview results |
 | `goop_reference` | Load detailed process |
 
+## Workflow Creation
+
+During `/goop-discuss`, a `workflowId` is inferred from the user's vision and created in state:
+
+1. Infer `workflowId` from vision text (kebab-case slug, e.g., `feat-auth`)
+2. Call `goop_state({ action: "create-workflow", workflowId: "<inferred-id>" })` to register it
+3. All subsequent workflow docs are written to `.goopspec/<workflowId>/`
+
+If no explicit workflow is inferred, `workflowId` defaults to `"default"` (backward-compatible root layout).
+
 ## Output
 
-- `.goopspec/REQUIREMENTS.md` — Discovery interview output
-- State updated with `interviewComplete: true`
+- `.goopspec/<workflowId>/REQUIREMENTS.md` — Discovery interview output
+- State updated with `interviewComplete: true` and active `workflowId`
 
 ## Success Criteria
 

@@ -91,9 +91,11 @@ Use `question` tool:
 
 ### 1.4 Check for existing project documents
 
+Resolve the active `workflowId` from `goop_state({ action: "get" })` first, then check:
+
 ```
-Read(".goopspec/SPEC.md")
-Read(".goopspec/BLUEPRINT.md")
+Read(".goopspec/<workflowId>/SPEC.md")
+Read(".goopspec/<workflowId>/BLUEPRINT.md")
 ```
 
 **If SPEC.md or BLUEPRINT.md exist**, the user may have completed work that needs archiving.
@@ -111,7 +113,7 @@ Use `question` tool:
 task({
   subagent_type: "goop-writer",
   description: "Archive milestone",
-  prompt: "Archive the current milestone. Move SPEC.md, BLUEPRINT.md, CHRONICLE.md to .goopspec/archive/[milestone-slug]/"
+  prompt: "Archive the current milestone. Move SPEC.md, BLUEPRINT.md, CHRONICLE.md from .goopspec/<workflowId>/ to .goopspec/archive/<workflowId>-<timestamp>/"
 })
 ```
 Then continue with discovery.
@@ -122,7 +124,7 @@ Then continue with discovery.
 ### 1.5 Check for existing REQUIREMENTS.md
 
 ```
-Read(".goopspec/REQUIREMENTS.md")    # If exists, interview was done
+Read(".goopspec/<workflowId>/REQUIREMENTS.md")    # If exists, interview was done
 ```
 
 ### 1.6 If REQUIREMENTS.md exists
@@ -281,6 +283,32 @@ question({
   ]
 })
 ```
+
+---
+
+### 1.12 Pre-Discovery: Worktree Detection
+
+Before starting the interview, detect if we're in a git worktree:
+
+1. Call `detectWorktree(ctx)` from `src/features/worktree/detector.ts`
+   - **Primary signal:** `ctx.input.worktree` is non-empty → we ARE in a worktree
+   - **Fallback:** compare `git rev-parse --git-dir` vs `--git-common-dir`
+2. If detected (`isWorktree: true`):
+   - Pre-populate `workflowId` from `inferredWorkflowId` (derived from branch name)
+   - Present to user using `question` tool:
+     ```ts
+     question({
+       header: "Worktree Detected",
+       question: "You're in worktree branch `<branchName>`. Suggested workflow ID: `<inferredWorkflowId>`. Use this ID?",
+       options: [
+         { label: "Yes, use `<inferredWorkflowId>` (Recommended)", description: "Workflow scoped to this worktree branch" },
+         { label: "Use a different workflow ID", description: "Enter a custom workflow ID" }
+       ]
+     })
+     ```
+   - On approval: set `workflowId` to the inferred value
+   - On custom: accept user input as `workflowId`
+3. If not detected: proceed normally without workflow ID pre-population
 
 ---
 
@@ -473,7 +501,7 @@ question({
 
 ### 3.1 Create REQUIREMENTS.md
 
-Write directly (orchestrator can write planning docs):
+Write directly (orchestrator can write planning docs) to `.goopspec/<workflowId>/REQUIREMENTS.md`:
 
 ```markdown
 # REQUIREMENTS: [Feature Name]
@@ -597,7 +625,7 @@ memory_save({
 ---
 
 **Also available:**
-- `cat .goopspec/REQUIREMENTS.md` — Review discovery output
+- `cat .goopspec/<workflowId>/REQUIREMENTS.md` — Review discovery output
 - `/goop-research [topic]` — Investigate unknowns first
 ```
 

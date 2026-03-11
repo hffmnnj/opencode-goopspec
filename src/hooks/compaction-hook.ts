@@ -25,6 +25,14 @@ export function buildWorkflowStateBlock(ctx: PluginContext): string {
     const specLocked = workflow?.specLocked ?? false;
     const acceptanceConfirmed = workflow?.acceptanceConfirmed ?? false;
 
+    // Resolve active workflowId for path directives
+    const workflowId =
+      (ctx as { workflowId?: string }).workflowId ??
+      ctx.stateManager.getActiveWorkflowId?.() ??
+      "default";
+    const workflowDocPrefix =
+      workflowId === "default" ? ".goopspec/" : `.goopspec/${workflowId}/`;
+
     const lines: string[] = [];
 
     lines.push("## GoopSpec Workflow State");
@@ -32,6 +40,11 @@ export function buildWorkflowStateBlock(ctx: PluginContext): string {
     lines.push(`RESUME FROM THIS POINT. You are in the ${phase} phase.`);
     lines.push("");
     lines.push("Current Status:");
+    lines.push(`- **Active Workflow:** ${workflowId}`);
+    lines.push(`- **Workflow Doc Path:** ${workflowDocPrefix}SPEC.md`);
+    lines.push(
+      `- **DIRECTIVE:** Write all workflow files to \`${workflowDocPrefix}\` — NOT to \`.goopspec/\` root`
+    );
 
     // Omit wave line when both are 0
     if (currentWave !== 0 || totalWaves !== 0) {

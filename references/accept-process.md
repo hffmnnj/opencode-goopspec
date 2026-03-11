@@ -8,9 +8,11 @@ Detailed process for `/goop-accept` - verification, explicit acceptance, and aut
 
 ```
 goop_status()
-Read(".goopspec/CHRONICLE.md")
-Read(".goopspec/SPEC.md")
-Read(".goopspec/BLUEPRINT.md")
+goop_state({ action: "get" })        # Resolve workflowId
+# Then read workflow-scoped docs:
+Read(".goopspec/<workflowId>/CHRONICLE.md")
+Read(".goopspec/<workflowId>/SPEC.md")
+Read(".goopspec/<workflowId>/BLUEPRINT.md")
 ```
 
 ### 1.1 Check execution complete
@@ -374,30 +376,32 @@ Display PR URL to user.
 
    - **Archival:** Archive active milestone artifacts with a copy-verify-delete pattern:
 
-     **Step 1 — Copy:** Copy the following files to `.goopspec/archive/<milestone-slug>/`:
+     **Step 1 — Copy:** Copy the following files from `.goopspec/<workflowId>/` to `.goopspec/archive/<workflowId>-<timestamp>/`:
      - `REQUIREMENTS.md`
      - `SPEC.md`
      - `BLUEPRINT.md`
      - `CHRONICLE.md`
      - `HANDOFF.md`
-     - Any other active planning files in `.goopspec/` root (not `state.json`, `ADL.md`, `PROJECT_KNOWLEDGE_BASE.md`)
+     - Any other active planning files in `.goopspec/<workflowId>/` (not `state.json`, `PROJECT_KNOWLEDGE_BASE.md`)
 
      **Step 2 — Verify:** Confirm each file exists at the archive destination before proceeding.
      - If any file is missing at destination: abort the delete step and report the failure.
 
-     **Step 3 — Delete:** Only after verifying all files exist at archive destination, delete the originals from `.goopspec/` root.
+     **Step 3 — Delete:** Only after verifying all files exist at archive destination, delete the originals from `.goopspec/<workflowId>/` and remove the workflow directory.
 
      **Step 4 — Log:** Add an audit entry to CHRONICLE.md at the archive destination:
      ```
      ## Archive Audit
-     Deleted from .goopspec/ root after successful archive:
+     Deleted from .goopspec/<workflowId>/ after successful archive:
      - REQUIREMENTS.md → archived [date]
      - SPEC.md → archived [date]
      [...etc for each file deleted]
      ```
 
+     **Step 5 — State cleanup:** Remove the workflow entry from `state.json` `workflows` map via `goop_state`.
+
      ⚠️ **CRITICAL:** Never delete originals before verifying copy success. Data loss is unrecoverable.
-   - **Retrospective:** generate `.goopspec/archive/<milestone-slug>/RETROSPECTIVE.md`
+   - **Retrospective:** generate `.goopspec/archive/<workflowId>-<timestamp>/RETROSPECTIVE.md`
    - **Memory extraction:** persist milestone learnings (patterns, decisions, gotchas) via memory tools
 
    - **AGENTS.md Update:** Update the project's AGENTS.md to reflect the completed milestone:
@@ -409,7 +413,7 @@ Display PR URL to user.
      3. **Gather milestone context** to identify what changed:
         - Read `.goopspec/archive/<milestone-slug>/CHRONICLE.md` — tasks completed, commands verified
         - Read `.goopspec/archive/<milestone-slug>/BLUEPRINT.md` — files modified, patterns used
-        - Read `.goopspec/ADL.md` — architectural decisions made
+         - Read `.goopspec/<workflowId>/ADL.md` — architectural decisions made
          - Run `git log --oneline -20` to see recent commits
          - Run `git diff <base>...HEAD --stat` to see files changed during this milestone
 
@@ -432,8 +436,8 @@ Display PR URL to user.
 
 **Feature:** [Name]
 **Status:** Accepted and archived
-**Archive:** .goopspec/archive/[milestone-slug]/
-**Retrospective:** .goopspec/archive/[milestone-slug]/RETROSPECTIVE.md
+**Archive:** .goopspec/archive/<workflowId>-<timestamp>/
+**Retrospective:** .goopspec/archive/<workflowId>-<timestamp>/RETROSPECTIVE.md
 **Memory:** [N] learnings persisted
 
 ---
@@ -509,7 +513,7 @@ User: [Selects "Accept"]
 Orchestrator:
 ## 🔮 GoopSpec · Accepted and Archived
 
-Archive created at `.goopspec/archive/<milestone-slug>/`
+Archive created at `.goopspec/archive/<workflowId>-<timestamp>/`
 ```
 
 ### Verification Failed

@@ -66,11 +66,11 @@ Completion behavior in Step 6 preserves the prior `/goop-complete` lifecycle, no
 
 | File | Purpose |
 |------|---------|
-| State (via goop_state) | Updated with acceptance |
-| `.goopspec/CHRONICLE.md` | Verification results |
-| `.goopspec/archive/<milestone-slug>/` | Archived active milestone artifacts |
-| `.goopspec/archive/<milestone-slug>/RETROSPECTIVE.md` | Generated retrospective |
-| `.goopspec/HANDOFF.md` | Session handoff |
+| State (via goop_state) | Updated with acceptance; workflow entry removed |
+| `.goopspec/<workflowId>/CHRONICLE.md` | Verification results |
+| `.goopspec/archive/<workflowId>-<timestamp>/` | Archived active milestone artifacts |
+| `.goopspec/archive/<workflowId>-<timestamp>/RETROSPECTIVE.md` | Generated retrospective |
+| `.goopspec/<workflowId>/HANDOFF.md` | Session handoff |
 
 ## Success Criteria
 

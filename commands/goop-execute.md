@@ -79,8 +79,8 @@ mcp_slashcommand({ command: "/goop-accept" })
 |------|---------|
 | Source files | Implementation |
 | Commits | Atomic changes |
-| `.goopspec/CHRONICLE.md` | Progress log |
-| `.goopspec/HANDOFF.md` | Session handoff |
+| `.goopspec/<workflowId>/CHRONICLE.md` | Progress log |
+| `.goopspec/<workflowId>/HANDOFF.md` | Session handoff |
 
 ## Success Criteria
 

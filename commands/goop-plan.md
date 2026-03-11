@@ -72,11 +72,11 @@ mcp_slashcommand({ command: "/goop-execute" })
 
 | File | Purpose |
 |------|---------|
-| `.goopspec/SPEC.md` | Specification (Draft) |
-| `.goopspec/BLUEPRINT.md` | Wave-based execution plan |
-| `.goopspec/CHRONICLE.md` | Progress tracking |
-| `.goopspec/HANDOFF.md` | Session handoff |
-| `.goopspec/PROJECT_KNOWLEDGE_BASE.md` | Stack and conventions |
+| `.goopspec/<workflowId>/SPEC.md` | Specification (Draft) |
+| `.goopspec/<workflowId>/BLUEPRINT.md` | Wave-based execution plan |
+| `.goopspec/<workflowId>/CHRONICLE.md` | Progress tracking |
+| `.goopspec/<workflowId>/HANDOFF.md` | Session handoff |
+| `.goopspec/PROJECT_KNOWLEDGE_BASE.md` | Stack and conventions (global) |
 
 ## Success Criteria
 

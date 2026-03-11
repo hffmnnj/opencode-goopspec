@@ -9,7 +9,8 @@ Detailed process for `/goop-execute` - wave-based implementation of the blueprin
 ```
 goop_status()
 goop_state({ action: "get" })        # NEVER read state.json directly
-Read(".goopspec/BLUEPRINT.md")
+# Resolve workflowId from state, then read:
+Read(".goopspec/<workflowId>/BLUEPRINT.md")
 ```
 
 ### 1.1 Check specLocked
@@ -53,7 +54,7 @@ If `currentBranch` is in that set, use `question` tool:
   - "Stay on current branch" — Continue on `[currentBranch]`
 
 Suggested branch name:
-- Derive from SPEC title in `.goopspec/SPEC.md`
+- Derive from SPEC title in `.goopspec/<workflowId>/SPEC.md`
 - Pattern: `feat/<spec-title-kebab-case>`
 - Example: `# SPEC: Git Workflow Improvements` -> `feat/git-workflow-improvements`
 
@@ -123,10 +124,10 @@ question({
 ## Phase 2: Load Context
 
 ```
-Read(".goopspec/SPEC.md")           # Must-haves
-Read(".goopspec/BLUEPRINT.md")      # Waves and tasks
-Read(".goopspec/CHRONICLE.md")      # Progress (if resuming)
-Read(".goopspec/PROJECT_KNOWLEDGE_BASE.md")  # Conventions
+Read(".goopspec/<workflowId>/SPEC.md")           # Must-haves
+Read(".goopspec/<workflowId>/BLUEPRINT.md")      # Waves and tasks
+Read(".goopspec/<workflowId>/CHRONICLE.md")      # Progress (if resuming)
+Read(".goopspec/PROJECT_KNOWLEDGE_BASE.md")      # Conventions (global)
 
 memory_search({ query: "[feature] implementation patterns" })
 ```
