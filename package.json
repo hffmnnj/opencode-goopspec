@@ -1,6 +1,7 @@
 {
   "name": "goopspec",
   "version": "0.2.9",
+  "private": true,
   "description": "A spec-driven development plugin for OpenCode with user-guided planning, wave execution, and verification",
   "type": "module",
   "main": "dist/index.js",
@@ -24,17 +25,29 @@
     "README.md"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun && bun build ./src/features/memory/worker/index.ts --outdir ./dist/worker --target bun && bun build ./src/cli/index.ts --outfile ./dist/cli.js --target node --format esm",
-    "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
+    "build": "bun run build:root",
+    "build:root": "bun build ./src/index.ts --outdir ./dist --target bun && bun build ./src/features/memory/worker/index.ts --outdir ./dist/worker --target bun && bun build ./src/cli/index.ts --outfile ./dist/cli.js --target node --format esm",
+    "build:workspaces": "bun --workspaces --if-present run build",
+    "dev": "bun run dev:root",
+    "dev:root": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
+    "dev:workspaces": "bun --workspaces --if-present run dev",
     "build:cli": "bun build ./src/cli/index.ts --outfile ./dist/cli.js --target node --format esm",
     "build:worker": "bun build ./src/features/memory/worker/index.ts --outdir ./dist/worker --target bun",
     "lint": "eslint src/",
-    "typecheck": "bunx tsc --noEmit",
+    "typecheck": "bun run typecheck:root && bun run typecheck:workspaces",
+    "typecheck:root": "bunx tsc --noEmit",
+    "typecheck:workspaces": "bun --workspaces --if-present run typecheck",
     "clean": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true})\"",
-    "test": "bun test",
+    "test": "bun run test:root && bun run test:workspaces",
+    "test:root": "bun test",
+    "test:workspaces": "bun --workspaces --if-present run test",
+    "packages": "bun pm pkg get workspaces",
     "version:bump": "bun scripts/version-bump.ts",
     "prepublishOnly": "bun run build"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "keywords": [
     "opencode",
     "plugin",
