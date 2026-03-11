@@ -4,8 +4,12 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { timing } from "hono/timing";
+import { CliLauncher } from "./orchestration/cli-launcher.js";
+import { WorkflowLifecycleManager } from "./orchestration/lifecycle.js";
+import type { WorkflowLauncher } from "./orchestration/launcher.js";
 import { createItemRoutes } from "./routes/items.js";
 import { createProjectRoutes } from "./routes/projects.js";
+import { createWorkflowRoutes } from "./routes/workflows.js";
 import { ProjectService } from "./services/project-service.js";
 
 const VERSION = "0.1.0";
@@ -13,12 +17,17 @@ const VERSION = "0.1.0";
 export interface ServerDeps {
   config: DaemonConfig;
   db: Database;
+  launcher?: WorkflowLauncher;
+  lifecycle?: WorkflowLifecycleManager;
 }
 
 export function createServer(deps: ServerDeps): Hono {
   const app = new Hono();
   const startTime = Date.now();
   const projectService = new ProjectService(deps.db);
+  const lifecycle =
+    deps.lifecycle ??
+    new WorkflowLifecycleManager(deps.db, deps.launcher ?? new CliLauncher());
 
   app.use("*", logger());
   app.use("*", timing());
@@ -46,6 +55,7 @@ export function createServer(deps: ServerDeps): Hono {
 
   app.route("/api/projects", createProjectRoutes(deps.db));
   app.route("/api/projects", createItemRoutes(deps.db));
+  app.route("/api/workflows", createWorkflowRoutes(deps.db, lifecycle));
 
   app.notFound((c) => {
     return c.json({ error: "Not Found", path: c.req.path }, 404);
