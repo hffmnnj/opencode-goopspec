@@ -1,0 +1,19 @@
+{
+  "name": "@goopspec/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build",
+    "dev": "astro dev",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@goopspec/core": "workspace:*",
+    "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
