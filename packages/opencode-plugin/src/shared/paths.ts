@@ -67,6 +67,10 @@ export function isDistDirectory(currentDir: string, pathImpl: PathLike = { basen
  * Works in both development (src/) and production (dist/) modes
  */
 export function getPackageRoot(): string {
+  if (process.env.GOOPSPEC_PACKAGE_ROOT) {
+    return process.env.GOOPSPEC_PACKAGE_ROOT;
+  }
+
   // In ESM, we need to derive __dirname
   const currentFile = fileURLToPath(import.meta.url);
   const currentDir = dirname(currentFile);
