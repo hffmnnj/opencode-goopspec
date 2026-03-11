@@ -49,7 +49,7 @@ goop_state({ action: "get" })
 3. **Present Report** — Requirement matrix, test results, security check
 4. **Request Acceptance** — User must type "accept"
 5. **Handle Response** — Process acceptance keywords, record decision
-6. **Finalize Milestone** — Copy-verify-delete archive artifacts, generate retrospective, extract learnings, optional git tag
+6. **Finalize Milestone** — Copy-verify-delete archive artifacts, generate retrospective, extract learnings, update AGENTS.md with verified milestone patterns, optional git tag
 
 Completion behavior in Step 6 preserves the prior `/goop-complete` lifecycle, now executed only after explicit acceptance.
 
@@ -66,11 +66,11 @@ Completion behavior in Step 6 preserves the prior `/goop-complete` lifecycle, no
 
 | File | Purpose |
 |------|---------|
-| State (via goop_state) | Updated with acceptance |
-| `.goopspec/CHRONICLE.md` | Verification results |
-| `.goopspec/archive/<milestone-slug>/` | Archived active milestone artifacts |
-| `.goopspec/archive/<milestone-slug>/RETROSPECTIVE.md` | Generated retrospective |
-| `.goopspec/HANDOFF.md` | Session handoff |
+| State (via goop_state) | Updated with acceptance; workflow entry removed |
+| `.goopspec/<workflowId>/CHRONICLE.md` | Verification results |
+| `.goopspec/archive/<workflowId>-<timestamp>/` | Archived active milestone artifacts |
+| `.goopspec/archive/<workflowId>-<timestamp>/RETROSPECTIVE.md` | Generated retrospective |
+| `.goopspec/<workflowId>/HANDOFF.md` | Session handoff |
 
 ## Success Criteria
 
@@ -85,6 +85,7 @@ Completion behavior in Step 6 preserves the prior `/goop-complete` lifecycle, no
 - [ ] Each deleted file logged to CHRONICLE.md at archive location
 - [ ] HANDOFF.md generated
 - [ ] All question tool calls include (Recommended) on exactly one option
+- [ ] AGENTS.md updated with verified milestone learnings (section ownership respected)
 
 ## Anti-Patterns
 

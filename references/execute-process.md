@@ -9,7 +9,8 @@ Detailed process for `/goop-execute` - wave-based implementation of the blueprin
 ```
 goop_status()
 goop_state({ action: "get" })        # NEVER read state.json directly
-Read(".goopspec/BLUEPRINT.md")
+# Resolve workflowId from state, then read:
+Read(".goopspec/<workflowId>/BLUEPRINT.md")
 ```
 
 ### 1.1 Check specLocked
@@ -53,7 +54,7 @@ If `currentBranch` is in that set, use `question` tool:
   - "Stay on current branch" — Continue on `[currentBranch]`
 
 Suggested branch name:
-- Derive from SPEC title in `.goopspec/SPEC.md`
+- Derive from SPEC title in `.goopspec/<workflowId>/SPEC.md`
 - Pattern: `feat/<spec-title-kebab-case>`
 - Example: `# SPEC: Git Workflow Improvements` -> `feat/git-workflow-improvements`
 
@@ -123,10 +124,10 @@ question({
 ## Phase 2: Load Context
 
 ```
-Read(".goopspec/SPEC.md")           # Must-haves
-Read(".goopspec/BLUEPRINT.md")      # Waves and tasks
-Read(".goopspec/CHRONICLE.md")      # Progress (if resuming)
-Read(".goopspec/PROJECT_KNOWLEDGE_BASE.md")  # Conventions
+Read(".goopspec/<workflowId>/SPEC.md")           # Must-haves
+Read(".goopspec/<workflowId>/BLUEPRINT.md")      # Waves and tasks
+Read(".goopspec/<workflowId>/CHRONICLE.md")      # Progress (if resuming)
+Read(".goopspec/PROJECT_KNOWLEDGE_BASE.md")      # Conventions (global)
 
 memory_search({ query: "[feature] implementation patterns" })
 ```
@@ -154,6 +155,13 @@ Identify:
 
 ### 3.1 Delegate to executor
 
+Before delegating, resolve the active workflowId and doc prefix:
+```
+goop_state({ action: "get" })
+# Extract: activeWorkflowId and workflowDocPrefix from the response
+# workflowDocPrefix = ".goopspec/<activeWorkflowId>/" (or ".goopspec/" for "default")
+```
+
 ```
 task({
   subagent_type: "goop-executor-{tier}",
@@ -162,14 +170,21 @@ task({
 ## TASK
 Wave [N], Task [M]: [Task Name]
 
+## WORKFLOW ISOLATION (CRITICAL)
+- Active Workflow ID: <activeWorkflowId>
+- Workflow doc directory: <workflowDocPrefix>
+- Write ALL workflow files (CHRONICLE.md, HANDOFF.md, RESEARCH.md, etc.) to <workflowDocPrefix>
+- NEVER write workflow docs to .goopspec/ root (unless workflowId is "default")
+- state.json, config.json, memory.db remain at .goopspec/ root always
+
 ## PROJECT CONTEXT
 [From PROJECT_KNOWLEDGE_BASE.md]
 
 ## SPEC REQUIREMENTS
-[Relevant must-have from SPEC.md]
+[Relevant must-have from .goopspec/<activeWorkflowId>/SPEC.md]
 
 ## TASK DETAILS
-[From BLUEPRINT.md]
+[From .goopspec/<activeWorkflowId>/BLUEPRINT.md]
 
 Intent: [intent]
 Deliverables: [list]
@@ -193,6 +208,8 @@ Acceptance: [criteria]
 - Extract handoff instructions
 
 ### 3.3 Update CHRONICLE.md
+
+Write to `.goopspec/<activeWorkflowId>/CHRONICLE.md` (resolved from active workflow):
 
 ```markdown
 ### Task [N.M]: [Name]
@@ -469,6 +486,14 @@ Why a new session? Execution sessions accumulate significant context from planni
 
 ---
 ```
+
+**Autopilot continuation:** If `workflow.autopilot === true`, immediately call:
+
+```
+mcp_slashcommand({ command: "/goop-accept" })
+```
+
+**DO NOT** display "Start a new session, then run `/goop-accept`" and stop in autopilot mode. Announcing intent in text without calling the tool is a **hard failure** — the accept phase never starts. The transition only happens when `mcp_slashcommand` is actually executed. The accept phase will pause for mandatory user review regardless of autopilot state.
 
 ---
 

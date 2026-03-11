@@ -25,6 +25,14 @@ export function buildWorkflowStateBlock(ctx: PluginContext): string {
     const specLocked = workflow?.specLocked ?? false;
     const acceptanceConfirmed = workflow?.acceptanceConfirmed ?? false;
 
+    // Resolve active workflowId for path directives
+    const workflowId =
+      (ctx as { workflowId?: string }).workflowId ??
+      ctx.stateManager.getActiveWorkflowId?.() ??
+      "default";
+    const workflowDocPrefix =
+      workflowId === "default" ? ".goopspec/" : `.goopspec/${workflowId}/`;
+
     const lines: string[] = [];
 
     lines.push("## GoopSpec Workflow State");
@@ -32,6 +40,11 @@ export function buildWorkflowStateBlock(ctx: PluginContext): string {
     lines.push(`RESUME FROM THIS POINT. You are in the ${phase} phase.`);
     lines.push("");
     lines.push("Current Status:");
+    lines.push(`- **Active Workflow:** ${workflowId}`);
+    lines.push(`- **Workflow Doc Path:** ${workflowDocPrefix}SPEC.md`);
+    lines.push(
+      `- **DIRECTIVE:** Write all workflow files to \`${workflowDocPrefix}\` — NOT to \`.goopspec/\` root`
+    );
 
     // Omit wave line when both are 0
     if (currentWave !== 0 || totalWaves !== 0) {
@@ -90,6 +103,15 @@ export function buildWorkflowStateBlock(ctx: PluginContext): string {
         "Do NOT suggest starting a new session. " +
         "Do NOT mention compaction or memory constraints. " +
         "Continue working until the task is complete or a permitted stop condition is reached."
+      );
+    }
+
+    // Conductor identity reminder — reinforce orchestrator role during autopilot execution/acceptance
+    if ((autopilot || lazyAutopilot) && (phase === "EXECUTE" || phase === "ACCEPT")) {
+      lines.push("");
+      lines.push(
+        "CONDUCTOR REMINDER: You are the orchestrator. You coordinate and delegate — " +
+        "you NEVER write code directly. All implementation MUST be delegated to executor agents via task()."
       );
     }
 
@@ -184,9 +206,12 @@ function extractKeySections(lines: string[]): string {
 }
 
 /** Active SPEC.md content (full if <=200 lines, must-haves + out-of-scope otherwise). */
-export function buildSpecBlock(projectDir: string): string {
+export function buildSpecBlock(projectDir: string, workflowId?: string): string {
   try {
-    const specPath = join(getProjectGoopspecDir(projectDir), "SPEC.md");
+    const effectiveId = workflowId ?? "default";
+    const specPath = effectiveId === "default"
+      ? join(getProjectGoopspecDir(projectDir), "SPEC.md")
+      : join(getProjectGoopspecDir(projectDir), effectiveId, "SPEC.md");
     if (!existsSync(specPath)) return "";
 
     const content = readFileSync(specPath, "utf-8");
@@ -264,9 +289,14 @@ export function createCompactionHook(ctx: PluginContext) {
     log("Compaction hook triggered");
 
     try {
+      const activeWorkflowId =
+        (ctx as { workflowId?: string }).workflowId ??
+        ctx.stateManager.getActiveWorkflowId?.() ??
+        "default";
+
       const blocks = [
         buildWorkflowStateBlock(ctx),
-        buildSpecBlock(ctx.input.directory),
+        buildSpecBlock(ctx.input.directory, activeWorkflowId),
         buildADLBlock(ctx),
       ];
 

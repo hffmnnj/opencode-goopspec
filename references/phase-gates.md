@@ -51,7 +51,7 @@ Ensure the six discovery questions are answered before any planning begins.
 
 ### File Check
 ```
-.goopspec/REQUIREMENTS.md exists
+.goopspec/<workflowId>/REQUIREMENTS.md exists
 ```
 
 ### Enforcement

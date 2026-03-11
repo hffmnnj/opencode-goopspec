@@ -68,10 +68,25 @@ Use the `question` tool with category-specific options for each discovery questi
 | `memory_save` | Persist interview results |
 | `goop_reference` | Load detailed process |
 
+## Workflow Creation (CRITICAL — must happen before any file writes)
+
+During `/goop-discuss`, workflow isolation is established immediately after the vision question. This is **not optional** — without it, every concurrent session writes to the same `default` slot and files collide.
+
+**Sequence (section 2.1.1 of discuss-process):**
+1. Infer `workflowId` from vision text (kebab-case slug, e.g., `feat-auth`, `payment-rebuild`)
+   - If in a git worktree: use branch-derived ID from section 1.12
+   - Otherwise: derive from the feature/topic the user described
+2. Call `goop_state({ action: "create-workflow", workflowId: "<inferred-id>" })` — registers the slot in state.json
+3. Call `goop_state({ action: "set-active-workflow", workflowId: "<inferred-id>" })` — binds this session to it
+4. Confirm binding with `goop_state({ action: "get" })` — active workflowId must appear in response
+5. All subsequent file writes target `.goopspec/<inferred-id>/`
+
+**Both `create-workflow` AND `set-active-workflow` must be called.** Creating without binding leaves the session writing to `default`.
+
 ## Output
 
-- `.goopspec/REQUIREMENTS.md` — Discovery interview output
-- State updated with `interviewComplete: true`
+- `.goopspec/<workflowId>/REQUIREMENTS.md` — Discovery interview output
+- State updated with `interviewComplete: true` and active `workflowId`
 
 ## Success Criteria
 
@@ -94,12 +109,23 @@ Use the `question` tool with category-specific options for each discovery questi
 - [ ] State updated via `goop_state({ action: "complete-interview" })`
 - [ ] All question tool calls include (Recommended) on exactly one option
 
+## Autopilot Phase Transition
+
+**If `workflow.autopilot` is `true`** (standard or lazy): after writing REQUIREMENTS.md and calling `goop_state({ action: "complete-interview" })`, the next step is to call:
+
+```
+mcp_slashcommand({ command: "/goop-plan" })
+```
+
+**Hard rule:** Do NOT write a message like *"Autopilot is enabled — proceeding directly to /goop-plan"* and then stop. That is the failure mode. Announcing intent in text without calling the tool means `/goop-plan` never runs. The transition only happens when `mcp_slashcommand` is actually executed.
+
 ## Anti-Patterns
 
 **DON'T:** Accept vague answers, skip risks, rush, auto-trigger creative agent
 **DON'T:** Ask any questions when Lazy Autopilot mode is active
 **DON'T:** Pause for confirmations, branch name confirmation, or creative opt-in in Lazy Autopilot mode
 **DON'T:** Present question options without marking one as (Recommended)
+**DON'T:** Announce phase transitions in text without calling `mcp_slashcommand` — this is a hard failure
 **DO:** Probe for specifics, challenge "no risks", conduct interview yourself, offer creative input as opt-in choice
 
 ---

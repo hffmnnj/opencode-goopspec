@@ -9,7 +9,8 @@ Detailed process for `/goop-plan` - creating SPEC.md and BLUEPRINT.md from disco
 ```
 goop_status()
 goop_state({ action: "get" })          # NEVER read state.json directly
-Read(".goopspec/REQUIREMENTS.md")
+# Resolve workflowId from state, then read:
+Read(".goopspec/<workflowId>/REQUIREMENTS.md")
 ```
 
 ### 1.1 Check interviewComplete
@@ -32,7 +33,7 @@ IF state.interviewComplete != true:
 ### 1.2 Check REQUIREMENTS.md exists
 
 ```
-IF .goopspec/REQUIREMENTS.md does not exist:
+IF .goopspec/<workflowId>/REQUIREMENTS.md does not exist:
   REFUSE with:
   
   ## 🔮 GoopSpec · Gate Blocked
@@ -111,7 +112,7 @@ By this point, any prior milestone has already been archived or the user chose t
 ### 2.1 Load discovery interview
 
 ```
-Read(".goopspec/REQUIREMENTS.md")
+Read(".goopspec/<workflowId>/REQUIREMENTS.md")
 ```
 
 Extract:
@@ -252,13 +253,13 @@ Create specification and blueprint from discovery interview.
    - Keep `depth` visible in planning context so downstream tasks and summaries can explain why detail level changed.
    - If `depth` is missing, default to `standard`.
 
-3. **Create .goopspec/SPEC.md:**
+3. **Create `.goopspec/<workflowId>/SPEC.md`:**
    - Transform must-haves into formal requirements (MH1, MH2, etc.)
    - Include acceptance criteria for each
    - Add traceability section (will be filled after blueprint)
    - Mark status as "Draft"
 
-4. **Create .goopspec/BLUEPRINT.md:**
+4. **Create `.goopspec/<workflowId>/BLUEPRINT.md`:**
    - Design wave architecture
    - Create tasks that cover ALL must-haves
    - Add spec coverage to each task
@@ -267,11 +268,11 @@ Create specification and blueprint from discovery interview.
    - Include depth-aligned questioning expectations per wave
    - In deep mode, include explicit parallel research dispatch instructions (`goop-researcher` + `goop-explorer`) per wave domain
 
-5. **Update .goopspec/SPEC.md:**
+5. **Update `.goopspec/<workflowId>/SPEC.md`:**
    - Fill traceability matrix (must-have → tasks)
    - Verify 100% coverage
 
-6. **Initialize .goopspec/CHRONICLE.md:**
+6. **Initialize `.goopspec/<workflowId>/CHRONICLE.md`:**
    - Phase: plan → ready for specify
    - Documents created with timestamps
 
@@ -474,8 +475,8 @@ Only finalize the blueprint when every reviewed wave is approved or the user sel
 
 Read created documents:
 ```
-Read(".goopspec/SPEC.md")
-Read(".goopspec/BLUEPRINT.md")
+Read(".goopspec/<workflowId>/SPEC.md")
+Read(".goopspec/<workflowId>/BLUEPRINT.md")
 ```
 
 Display completion:
@@ -488,9 +489,9 @@ Display completion:
 
 | Document | Status | Location |
 |----------|--------|----------|
-| Spec | ✓ Created | .goopspec/SPEC.md |
-| Blueprint | ✓ Created | .goopspec/BLUEPRINT.md |
-| Chronicle | ✓ Created | .goopspec/CHRONICLE.md |
+| Spec | ✓ Created | .goopspec/<workflowId>/SPEC.md |
+| Blueprint | ✓ Created | .goopspec/<workflowId>/BLUEPRINT.md |
+| Chronicle | ✓ Created | .goopspec/<workflowId>/CHRONICLE.md |
 
 **[N] must-haves** | **[M] waves** | **[P] tasks**
 
@@ -536,8 +537,8 @@ Continue to **Phase 5: Contract Gate** in the same session when possible.
 Run: /goop-execute
 
 ## Files to Read
-1. .goopspec/SPEC.md — Requirements
-2. .goopspec/BLUEPRINT.md — Execution plan
+1. .goopspec/<workflowId>/SPEC.md — Requirements
+2. .goopspec/<workflowId>/BLUEPRINT.md — Execution plan
 
 ## Context Summary
 Planning complete for [feature]. [N] must-haves mapped to [P] tasks
@@ -574,7 +575,7 @@ question({
 
 ## Phase 5: Contract Gate
 
-Run this gate immediately after Phase 4 completes and both `.goopspec/SPEC.md` and `.goopspec/BLUEPRINT.md` are available.
+Run this gate immediately after Phase 4 completes and both `.goopspec/<workflowId>/SPEC.md` and `.goopspec/<workflowId>/BLUEPRINT.md` are available.
 
 ### 5.1 Present Contract Summary
 
@@ -651,6 +652,14 @@ Then display confirmation:
 → `/goop-execute`
 ```
 
+**Autopilot continuation:** If `workflow.autopilot === true`, immediately call:
+
+```
+mcp_slashcommand({ command: "/goop-execute" })
+```
+
+**DO NOT** write "Proceeding to /goop-execute" in a text message and stop. Announcing intent without calling the tool is a **hard failure** — `/goop-execute` never starts. The transition only happens when `mcp_slashcommand` is actually executed.
+
 Generate/update `HANDOFF.md`:
 
 ```markdown
@@ -675,8 +684,8 @@ Generate/update `HANDOFF.md`:
 Run: /goop-execute
 
 ## Files to Read
-1. .goopspec/SPEC.md — Locked contract
-2. .goopspec/BLUEPRINT.md — Execution plan
+1. .goopspec/<workflowId>/SPEC.md — Locked contract
+2. .goopspec/<workflowId>/BLUEPRINT.md — Execution plan
 
 ## Context Summary
 Planning complete for [feature]. Contract confirmed and locked.
@@ -688,7 +697,7 @@ Begin execution using the approved wave plan.
 Enter amendment mode (same behavior as current specify-process amend flow):
 
 1. Ask what to change (must-have wording, scope boundary, traceability, wave decomposition).
-2. Apply updates to `.goopspec/SPEC.md` and/or `.goopspec/BLUEPRINT.md`.
+2. Apply updates to `.goopspec/<workflowId>/SPEC.md` and/or `.goopspec/<workflowId>/BLUEPRINT.md`.
 3. Re-validate traceability coverage.
 4. Re-present the full contract summary.
 5. Return to decision prompt (Confirm / Amend / Cancel).

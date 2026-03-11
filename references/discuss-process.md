@@ -91,9 +91,11 @@ Use `question` tool:
 
 ### 1.4 Check for existing project documents
 
+Resolve the active `workflowId` from `goop_state({ action: "get" })` first, then check:
+
 ```
-Read(".goopspec/SPEC.md")
-Read(".goopspec/BLUEPRINT.md")
+Read(".goopspec/<workflowId>/SPEC.md")
+Read(".goopspec/<workflowId>/BLUEPRINT.md")
 ```
 
 **If SPEC.md or BLUEPRINT.md exist**, the user may have completed work that needs archiving.
@@ -111,7 +113,7 @@ Use `question` tool:
 task({
   subagent_type: "goop-writer",
   description: "Archive milestone",
-  prompt: "Archive the current milestone. Move SPEC.md, BLUEPRINT.md, CHRONICLE.md to .goopspec/archive/[milestone-slug]/"
+  prompt: "Archive the current milestone. Move SPEC.md, BLUEPRINT.md, CHRONICLE.md from .goopspec/<workflowId>/ to .goopspec/archive/<workflowId>-<timestamp>/"
 })
 ```
 Then continue with discovery.
@@ -122,7 +124,7 @@ Then continue with discovery.
 ### 1.5 Check for existing REQUIREMENTS.md
 
 ```
-Read(".goopspec/REQUIREMENTS.md")    # If exists, interview was done
+Read(".goopspec/<workflowId>/REQUIREMENTS.md")    # If exists, interview was done
 ```
 
 ### 1.6 If REQUIREMENTS.md exists
@@ -244,6 +246,8 @@ Use this table as the authoritative behavior contract across discuss, plan, and 
 
 All short-answer interactions during discovery MUST use the `question` tool. Output explanatory context as regular messages first, then ask a concise question with 2-5 options.
 
+**Option limit:** Never exceed 10 options in a single `question` call (applies to both single-select and multi-select). If a domain requires more than 10 options, split into sequential calls with batch context in the header (e.g., "(1 of 2)"). See `references/interactive-questioning.md` § 7 for the full chunking pattern.
+
 **When to use structured prompts:**
 - Setup choices (branch, gitignore, existing docs)
 - Discovery completion confirmation
@@ -282,6 +286,32 @@ question({
 
 ---
 
+### 1.12 Pre-Discovery: Worktree Detection
+
+Before starting the interview, detect if we're in a git worktree:
+
+1. Call `detectWorktree(ctx)` from `src/features/worktree/detector.ts`
+   - **Primary signal:** `ctx.input.worktree` is non-empty → we ARE in a worktree
+   - **Fallback:** compare `git rev-parse --git-dir` vs `--git-common-dir`
+2. If detected (`isWorktree: true`):
+   - Pre-populate `workflowId` from `inferredWorkflowId` (derived from branch name)
+   - Present to user using `question` tool:
+     ```ts
+     question({
+       header: "Worktree Detected",
+       question: "You're in worktree branch `<branchName>`. Suggested workflow ID: `<inferredWorkflowId>`. Use this ID?",
+       options: [
+         { label: "Yes, use `<inferredWorkflowId>` (Recommended)", description: "Workflow scoped to this worktree branch" },
+         { label: "Use a different workflow ID", description: "Enter a custom workflow ID" }
+       ]
+     })
+     ```
+   - On approval: set `workflowId` to the inferred value
+   - On custom: accept user input as `workflowId`
+3. If not detected: proceed normally without workflow ID pre-population
+
+---
+
 ## Phase 2: Discovery Interview
 
 **Display stage banner:**
@@ -302,11 +332,61 @@ If `$ARGUMENTS` provided:
 Otherwise:
 > "What do you want to build?"
 
-### 2.1.1 Branch Name Inference (if branch creation requested)
+### 2.1.1 Workflow ID Creation (REQUIRED — always run this)
+
+**This step is mandatory regardless of whether a branch was requested or a worktree was detected.** Every discuss session must be bound to an isolated workflowId before any files are written.
+
+**Step 1 — Infer workflowId from the user's vision:**
+
+If worktree detection (section 1.12) already produced an `inferredWorkflowId`, use it. Otherwise infer from the vision text:
+- Extract the topic or goal the user described
+- Normalise to a short kebab-case slug: 3–6 words max
+- Strip common prefixes if they came from a branch name: `feat/`, `fix/`, `feature/`, `bugfix/`, `chore/`
+- Examples: `dark-mode-toggle`, `payment-system-rebuild`, `auth-jwt-refresh`, `user-profile-page`
+- Default if nothing can be inferred: `default`
+
+**Step 2 — Create and bind the workflow:**
+
+```
+goop_state({ action: "create-workflow", workflowId: "<inferredId>" })
+goop_state({ action: "set-active-workflow", workflowId: "<inferredId>" })
+```
+
+These two calls are **non-negotiable**. They must happen before writing ANY workflow document (REQUIREMENTS.md, SPEC.md, BLUEPRINT.md, etc.). Until these calls are made, all file writes will fall into the `default` workflow slot and collide with other sessions.
+
+**In Lazy Autopilot mode:** Infer the workflowId silently from the user's initial prompt and execute both calls without any confirmation question.
+
+**In standard/autopilot mode** — confirm with the user using the `question` tool:
+
+```ts
+question({
+  header: "Workflow ID",
+  question: "I'll scope this work to workflow `<inferredId>`. All documents will be saved under `.goopspec/<inferredId>/`.",
+  options: [
+    { label: "Use `<inferredId>` (Recommended)", description: "Isolates this session from other concurrent work" },
+    { label: "Use a different name", description: "Enter a custom workflow ID (kebab-case)" }
+  ]
+})
+```
+
+On approval (or in Lazy Autopilot): execute both `create-workflow` and `set-active-workflow` calls.
+On custom: accept user input, validate it is kebab-case, then execute both calls with the custom value.
+
+**Verification — after both calls, confirm the binding:**
+
+```
+goop_state({ action: "get" })
+```
+
+The returned state should show `workflowId: "<inferredId>"` as the active workflow. All subsequent file writes in this session target `.goopspec/<inferredId>/`.
+
+---
+
+### 2.1.2 Branch Name Inference (if branch creation requested)
 
 **Only execute this section if the user selected "Yes, create a branch" in section 1.2.**
 
-After the user has described their vision (section 2.1), infer a branch name from what they described:
+After the user has described their vision (section 2.1) and the workflowId has been created and bound (section 2.1.1), infer a branch name from what they described:
 
 1. **Infer a branch name** from the vision content:
    - Construct a short `type/kebab-case` slug from the topic or goal
@@ -471,7 +551,7 @@ question({
 
 ### 3.1 Create REQUIREMENTS.md
 
-Write directly (orchestrator can write planning docs):
+Write directly (orchestrator can write planning docs) to `.goopspec/<workflowId>/REQUIREMENTS.md`:
 
 ```markdown
 # REQUIREMENTS: [Feature Name]
@@ -586,12 +666,16 @@ memory_save({
 
 → `/goop-plan`
 
-> **Autopilot:** If `workflow.autopilot === true`, skip the confirmation question above and immediately invoke `/goop-plan` without stopping. Do not ask "Ready to proceed?" or any equivalent gate question.
+> **Autopilot:** If `workflow.autopilot === true`, skip the confirmation question above and immediately execute this tool call:
+> ```
+> mcp_slashcommand({ command: "/goop-plan" })
+> ```
+> **DO NOT** write "Autopilot is enabled — proceeding directly to /goop-plan" and then stop. Announcing intent in text without calling the tool is a **hard failure** — the next phase never starts. The transition only happens when `mcp_slashcommand` is actually invoked.
 
 ---
 
 **Also available:**
-- `cat .goopspec/REQUIREMENTS.md` — Review discovery output
+- `cat .goopspec/<workflowId>/REQUIREMENTS.md` — Review discovery output
 - `/goop-research [topic]` — Investigate unknowns first
 ```
 

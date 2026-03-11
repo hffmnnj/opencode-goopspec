@@ -48,7 +48,13 @@ goop_state({ action: "get" })
 
 ### Autopilot
 
-**If `workflow.autopilot` is `true`** (check via `goop_state({ action: "get" })`): skip the Contract Gate confirmation `question` at the end of this phase and auto-proceed to `/goop-execute` immediately after locking the spec. Do not ask "Ready to proceed?" or any equivalent confirmation between phases.
+**If `workflow.autopilot` is `true`** (check via `goop_state({ action: "get" })`): skip the Contract Gate confirmation `question`, call `goop_state({ action: "lock-spec" })` immediately after planning completes, then immediately execute:
+
+```
+mcp_slashcommand({ command: "/goop-execute" })
+```
+
+**Hard rule:** Do NOT write "Autopilot enabled — proceeding to /goop-execute" and then stop. Announcing intent in text without calling the tool is a **hard failure** — `/goop-execute` never runs. Do not ask "Ready to proceed?" or any equivalent confirmation. The transition only happens when `mcp_slashcommand` is actually called.
 
 ### Process Overview
 
@@ -66,11 +72,11 @@ goop_state({ action: "get" })
 
 | File | Purpose |
 |------|---------|
-| `.goopspec/SPEC.md` | Specification (Draft) |
-| `.goopspec/BLUEPRINT.md` | Wave-based execution plan |
-| `.goopspec/CHRONICLE.md` | Progress tracking |
-| `.goopspec/HANDOFF.md` | Session handoff |
-| `.goopspec/PROJECT_KNOWLEDGE_BASE.md` | Stack and conventions |
+| `.goopspec/<workflowId>/SPEC.md` | Specification (Draft) |
+| `.goopspec/<workflowId>/BLUEPRINT.md` | Wave-based execution plan |
+| `.goopspec/<workflowId>/CHRONICLE.md` | Progress tracking |
+| `.goopspec/<workflowId>/HANDOFF.md` | Session handoff |
+| `.goopspec/PROJECT_KNOWLEDGE_BASE.md` | Stack and conventions (global) |
 
 ## Success Criteria
 
