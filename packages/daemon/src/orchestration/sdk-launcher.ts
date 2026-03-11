@@ -20,9 +20,14 @@ interface SdkModuleShape {
 export class SdkLauncher implements WorkflowLauncher {
   readonly name = "sdk";
 
+  /** Import the SDK module. Extracted for testability (spyOn-friendly). */
+  async importSdk(): Promise<SdkModuleShape> {
+    return (await import("@opencode-ai/sdk")) as SdkModuleShape;
+  }
+
   async isAvailable(): Promise<boolean> {
     try {
-      await import("@opencode-ai/sdk");
+      await this.importSdk();
       return true;
     } catch {
       return false;
@@ -33,7 +38,7 @@ export class SdkLauncher implements WorkflowLauncher {
     const fallbackSessionId = `sdk-${generateId()}`;
 
     try {
-      const sdkModule = (await import("@opencode-ai/sdk")) as SdkModuleShape;
+      const sdkModule = await this.importSdk();
       const createSession = sdkModule.createSession ?? sdkModule.default?.createSession;
 
       if (!createSession) {

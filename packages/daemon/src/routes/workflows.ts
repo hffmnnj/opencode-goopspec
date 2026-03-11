@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { ProjectService } from "../services/project-service.js";
 import {
   WorkflowLifecycleError,
@@ -20,7 +20,7 @@ export function createWorkflowRoutes(
   const router = new Hono();
   const projectService = new ProjectService(db);
 
-  router.post("/spawn", async (c) => {
+  const handleSpawn = async (c: Context) => {
     let body: SpawnBody;
     try {
       body = (await c.req.json()) as SpawnBody;
@@ -53,7 +53,10 @@ export function createWorkflowRoutes(
       }
       throw error;
     }
-  });
+  };
+
+  router.post("/", handleSpawn);
+  router.post("/spawn", handleSpawn);
 
   router.get("/", (c) => {
     const projectId = c.req.query("projectId");

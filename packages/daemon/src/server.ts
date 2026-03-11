@@ -67,6 +67,19 @@ export function createServer(deps: ServerDeps): Hono {
     app.route("/api", deps.sseManager.createHandler());
   }
 
+  if (deps.wsServer) {
+    app.get("/api/ws", (c) => {
+      if (c.req.header("upgrade")?.toLowerCase() === "websocket") {
+        return c.body(null, 101);
+      }
+
+      return c.json(
+        { error: "WebSocket endpoint. Use Upgrade: websocket" },
+        426,
+      );
+    });
+  }
+
   app.notFound((c) => {
     return c.json({ error: "Not Found", path: c.req.path }, 404);
   });

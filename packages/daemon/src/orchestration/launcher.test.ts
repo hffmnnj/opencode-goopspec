@@ -79,11 +79,11 @@ describe("sdk launcher", () => {
   });
 
   it("returns started with session id when SDK createSession succeeds", async () => {
-    mock.module("@opencode-ai/sdk", () => ({
-      createSession: async () => ({ id: "sdk-session-1" }),
-    }));
-
     const launcher = new SdkLauncher();
+    spyOn(launcher, "importSdk").mockResolvedValue({
+      createSession: async () => ({ id: "sdk-session-1" }),
+    });
+
     const result = await launcher.launch({ projectPath: "/tmp/project" });
 
     expect(result).toEqual({
@@ -93,13 +93,13 @@ describe("sdk launcher", () => {
   });
 
   it("returns failed result with error when SDK launch fails", async () => {
-    mock.module("@opencode-ai/sdk", () => ({
+    const launcher = new SdkLauncher();
+    spyOn(launcher, "importSdk").mockResolvedValue({
       createSession: async () => {
         throw new Error("sdk failed to create session");
       },
-    }));
+    });
 
-    const launcher = new SdkLauncher();
     const result = await launcher.launch({ projectPath: "/tmp/project" });
 
     expect(result.status).toBe("failed");
