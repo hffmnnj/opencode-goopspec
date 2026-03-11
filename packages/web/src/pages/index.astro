@@ -1,0 +1,29 @@
+---
+import AppLayout from "../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Dashboard — GoopSpec">
+  <div class="space-y-6">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight">Dashboard</h1>
+      <p class="text-muted-foreground mt-1">
+        Welcome to GoopSpec. Manage your projects and workflows.
+      </p>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div class="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+        <h3 class="text-sm font-medium text-muted-foreground">Projects</h3>
+        <p class="mt-2 text-2xl font-bold">—</p>
+      </div>
+      <div class="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+        <h3 class="text-sm font-medium text-muted-foreground">Active Workflows</h3>
+        <p class="mt-2 text-2xl font-bold">—</p>
+      </div>
+      <div class="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+        <h3 class="text-sm font-medium text-muted-foreground">Work Items</h3>
+        <p class="mt-2 text-2xl font-bold">—</p>
+      </div>
+    </div>
+  </div>
+</AppLayout>
