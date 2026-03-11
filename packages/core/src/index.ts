@@ -1,2 +1,3 @@
-// @goopspec/core - shared types and contracts
+// @goopspec/core - shared types, contracts, and utilities
 export * from "./types/index.js";
+export * from "./utils/index.js";
