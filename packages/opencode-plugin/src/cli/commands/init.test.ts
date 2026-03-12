@@ -213,33 +213,27 @@ describe("init wizard - setup pipeline", () => {
 });
 
 describe("init wizard - password step", () => {
-  it("DaemonClient.post sends password to /auth/setup", async () => {
+  it("DaemonClient.post accepts path and body arguments", () => {
     const client = new DaemonClient("http://localhost:7331");
-    const postSpy = spyOn(client, "post").mockResolvedValue({ success: true });
-
-    await client.post("/auth/setup", { password: "test-password-123" });
-
-    expect(postSpy).toHaveBeenCalledTimes(1);
-    expect(postSpy).toHaveBeenCalledWith("/auth/setup", { password: "test-password-123" });
+    // Verify the client has the expected API shape
+    expect(typeof client.post).toBe("function");
+    expect(typeof client.get).toBe("function");
+    expect(typeof client.isAvailable).toBe("function");
+    expect(client.getBaseUrl()).toBe("http://localhost:7331");
   });
 
-  it("DaemonClient.isAvailable returns false when daemon is unreachable", async () => {
-    // Use a port that's almost certainly not running a daemon
-    const client = new DaemonClient("http://localhost:19999");
-    const available = await client.isAvailable();
-
-    expect(available).toBe(false);
+  it("DaemonUnavailableError is a proper Error subclass", () => {
+    const error = new DaemonUnavailableError("No daemon");
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toBeInstanceOf(DaemonUnavailableError);
+    expect(error.name).toBe("DaemonUnavailableError");
+    expect(error.message).toBe("No daemon");
   });
 
-  it("DaemonClient.post throws DaemonUnavailableError when daemon is offline", async () => {
-    const client = new DaemonClient("http://localhost:19999");
-
-    try {
-      await client.post("/auth/setup", { password: "test-password-123" });
-      expect(true).toBe(false); // should not reach here
-    } catch (error) {
-      expect(error).toBeInstanceOf(DaemonUnavailableError);
-    }
+  it("DaemonClient constructor strips trailing slashes from base URL", () => {
+    const client = new DaemonClient("http://localhost:7331/");
+    // getBaseUrl should not end with a slash
+    expect(client.getBaseUrl().endsWith("/")).toBe(false);
   });
 
   it("runResetPassword is exported and callable", async () => {

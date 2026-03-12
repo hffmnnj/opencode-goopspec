@@ -4,7 +4,6 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
-import { createGoopDaemonProjectsTool } from "./index.js";
 import {
   createMockPluginContext,
   createMockToolContext,
@@ -12,22 +11,58 @@ import {
   type PluginContext,
 } from "../../test-utils.js";
 
+// Mock response holders — set per test
+let mockGetResponse: ((_path: string) => Promise<unknown>) | undefined;
+let mockPostResponse: ((_path: string, _body: unknown) => Promise<unknown>) | undefined;
+let mockDeleteResponse: ((_path: string) => Promise<void>) | undefined;
+
+const realModule = await import("../../features/daemon/client.js");
+mock.module("../../features/daemon/client.js", () => ({
+  ...realModule,
+  DaemonClient: class MockDaemonClient {
+    getBaseUrl() { return "http://localhost:7331"; }
+    async isAvailable() {
+      try { await this.get("/health"); return true; } catch { return false; }
+    }
+    async get<T>(path: string): Promise<T> {
+      if (!mockGetResponse) throw new realModule.DaemonUnavailableError("No mock set");
+      return mockGetResponse(path) as Promise<T>;
+    }
+    async post<T>(path: string, body: unknown): Promise<T> {
+      if (!mockPostResponse) throw new realModule.DaemonUnavailableError("No mock set");
+      return mockPostResponse(path, body) as Promise<T>;
+    }
+    async put<T>(_path: string, _body: unknown): Promise<T> {
+      return {} as T;
+    }
+    async delete(path: string): Promise<void> {
+      if (!mockDeleteResponse) throw new realModule.DaemonUnavailableError("No mock set");
+      return mockDeleteResponse(path);
+    }
+  },
+}));
+
+const { createGoopDaemonProjectsTool } = await import("./index.js");
+
 describe("goop_daemon_projects tool", () => {
   let ctx: PluginContext;
   let toolContext: ReturnType<typeof createMockToolContext>;
   let cleanup: () => void;
-  let originalFetch: typeof globalThis.fetch;
 
   beforeEach(() => {
     const env = setupTestEnvironment("daemon-projects-test");
     cleanup = env.cleanup;
     ctx = createMockPluginContext({ testDir: env.testDir });
     toolContext = createMockToolContext({ directory: env.testDir });
-    originalFetch = globalThis.fetch;
+    mockGetResponse = undefined;
+    mockPostResponse = undefined;
+    mockDeleteResponse = undefined;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    mockGetResponse = undefined;
+    mockPostResponse = undefined;
+    mockDeleteResponse = undefined;
     cleanup();
   });
 
@@ -45,29 +80,24 @@ describe("goop_daemon_projects tool", () => {
 
   describe("list action", () => {
     it("returns formatted project list", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({
-            projects: [
-              {
-                id: "proj-1",
-                name: "my-app",
-                path: "/home/user/my-app",
-                createdAt: "2026-03-11T12:00:00Z",
-                updatedAt: "2026-03-11T12:00:00Z",
-              },
-              {
-                id: "proj-2",
-                name: "other-app",
-                path: "/home/user/other-app",
-                createdAt: "2026-03-11T12:00:00Z",
-                updatedAt: "2026-03-11T12:00:00Z",
-              },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => ({
+        projects: [
+          {
+            id: "proj-1",
+            name: "my-app",
+            path: "/home/user/my-app",
+            createdAt: "2026-03-11T12:00:00Z",
+            updatedAt: "2026-03-11T12:00:00Z",
+          },
+          {
+            id: "proj-2",
+            name: "other-app",
+            path: "/home/user/other-app",
+            createdAt: "2026-03-11T12:00:00Z",
+            updatedAt: "2026-03-11T12:00:00Z",
+          },
+        ],
+      });
 
       const tool = createGoopDaemonProjectsTool(ctx);
       const result = await tool.execute({ action: "list" }, toolContext);
@@ -78,12 +108,7 @@ describe("goop_daemon_projects tool", () => {
     });
 
     it("returns message when no projects", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({ projects: [] }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => ({ projects: [] });
 
       const tool = createGoopDaemonProjectsTool(ctx);
       const result = await tool.execute({ action: "list" }, toolContext);
@@ -94,20 +119,15 @@ describe("goop_daemon_projects tool", () => {
 
   describe("register action", () => {
     it("registers project with daemon", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({
-            project: {
-              id: "proj-new",
-              name: "test-project",
-              path: ctx.input.directory,
-              createdAt: "2026-03-11T12:00:00Z",
-              updatedAt: "2026-03-11T12:00:00Z",
-            },
-          }),
-          { status: 201, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockPostResponse = async () => ({
+        project: {
+          id: "proj-new",
+          name: "test-project",
+          path: ctx.input.directory,
+          createdAt: "2026-03-11T12:00:00Z",
+          updatedAt: "2026-03-11T12:00:00Z",
+        },
+      });
 
       const tool = createGoopDaemonProjectsTool(ctx);
       const result = await tool.execute(
@@ -121,37 +141,32 @@ describe("goop_daemon_projects tool", () => {
     });
 
     it("uses project name from state when not provided", async () => {
-      let capturedBody: string | undefined;
-      globalThis.fetch = mock(async (_url: string, init?: RequestInit) => {
-        capturedBody = init?.body as string;
-        return new Response(
-          JSON.stringify({
-            project: {
-              id: "proj-auto",
-              name: "test-project",
-              path: ctx.input.directory,
-              createdAt: "2026-03-11T12:00:00Z",
-              updatedAt: "2026-03-11T12:00:00Z",
-            },
-          }),
-          { status: 201, headers: { "Content-Type": "application/json" } },
-        );
-      }) as unknown as typeof globalThis.fetch;
+      let capturedBody: unknown;
+      mockPostResponse = async (_path: string, body: unknown) => {
+        capturedBody = body;
+        return {
+          project: {
+            id: "proj-auto",
+            name: "test-project",
+            path: ctx.input.directory,
+            createdAt: "2026-03-11T12:00:00Z",
+            updatedAt: "2026-03-11T12:00:00Z",
+          },
+        };
+      };
 
       const tool = createGoopDaemonProjectsTool(ctx);
       await tool.execute({ action: "register" }, toolContext);
 
       expect(capturedBody).toBeDefined();
-      const parsed = JSON.parse(capturedBody!);
+      const parsed = capturedBody as Record<string, unknown>;
       expect(parsed.name).toBe("test-project");
     });
   });
 
   describe("deregister action", () => {
     it("deregisters project by id", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(null, { status: 204 }),
-      ) as unknown as typeof globalThis.fetch;
+      mockDeleteResponse = async () => {};
 
       const tool = createGoopDaemonProjectsTool(ctx);
       const result = await tool.execute(
@@ -177,9 +192,7 @@ describe("goop_daemon_projects tool", () => {
 
   describe("daemon unavailable", () => {
     it("returns helpful message for all actions", async () => {
-      globalThis.fetch = mock(async () => {
-        throw new Error("Connection refused");
-      }) as unknown as typeof globalThis.fetch;
+      // All mock responses are undefined, so DaemonUnavailableError is thrown
 
       const tool = createGoopDaemonProjectsTool(ctx);
 

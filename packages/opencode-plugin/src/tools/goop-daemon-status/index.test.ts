@@ -4,7 +4,6 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
-import { createGoopDaemonStatusTool } from "./index.js";
 import {
   createMockPluginContext,
   createMockToolContext,
@@ -12,22 +11,50 @@ import {
   type PluginContext,
 } from "../../test-utils.js";
 
+// Mock response holder — set per test
+let mockGetResponse: (() => Promise<unknown>) | undefined;
+
+// Mock the DaemonClient module so each test controls the client behavior
+const realModule = await import("../../features/daemon/client.js");
+mock.module("../../features/daemon/client.js", () => ({
+  ...realModule,
+  DaemonClient: class MockDaemonClient {
+    getBaseUrl() { return "http://localhost:7331"; }
+    async isAvailable() {
+      try { await this.get("/health"); return true; } catch { return false; }
+    }
+    async get<T>(_path: string): Promise<T> {
+      if (!mockGetResponse) throw new realModule.DaemonUnavailableError("No mock set");
+      return mockGetResponse() as Promise<T>;
+    }
+    async post<T>(_path: string, _body: unknown): Promise<T> {
+      return {} as T;
+    }
+    async put<T>(_path: string, _body: unknown): Promise<T> {
+      return {} as T;
+    }
+    async delete(_path: string): Promise<void> {}
+  },
+}));
+
+// Import AFTER mock.module so we get the mocked version
+const { createGoopDaemonStatusTool } = await import("./index.js");
+
 describe("goop_daemon_status tool", () => {
   let ctx: PluginContext;
   let toolContext: ReturnType<typeof createMockToolContext>;
   let cleanup: () => void;
-  let originalFetch: typeof globalThis.fetch;
 
   beforeEach(() => {
     const env = setupTestEnvironment("daemon-status-test");
     cleanup = env.cleanup;
     ctx = createMockPluginContext({ testDir: env.testDir });
     toolContext = createMockToolContext({ directory: env.testDir });
-    originalFetch = globalThis.fetch;
+    mockGetResponse = undefined;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    mockGetResponse = undefined;
     cleanup();
   });
 
@@ -40,19 +67,14 @@ describe("goop_daemon_status tool", () => {
 
   describe("daemon available", () => {
     it("returns formatted health when daemon is running", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({
-            status: "ok",
-            uptime: 3661,
-            version: "0.1.0",
-            projectCount: 3,
-            activeWorkflows: 1,
-            timestamp: "2026-03-11T12:00:00Z",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => ({
+        status: "ok",
+        uptime: 3661,
+        version: "0.1.0",
+        projectCount: 3,
+        activeWorkflows: 1,
+        timestamp: "2026-03-11T12:00:00Z",
+      });
 
       const tool = createGoopDaemonStatusTool(ctx);
       const result = await tool.execute({}, toolContext);
@@ -66,19 +88,14 @@ describe("goop_daemon_status tool", () => {
     });
 
     it("shows degraded status with warning icon", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({
-            status: "degraded",
-            uptime: 60,
-            version: "0.1.0",
-            projectCount: 0,
-            activeWorkflows: 0,
-            timestamp: "2026-03-11T12:00:00Z",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => ({
+        status: "degraded",
+        uptime: 60,
+        version: "0.1.0",
+        projectCount: 0,
+        activeWorkflows: 0,
+        timestamp: "2026-03-11T12:00:00Z",
+      });
 
       const tool = createGoopDaemonStatusTool(ctx);
       const result = await tool.execute({}, toolContext);
@@ -89,9 +106,9 @@ describe("goop_daemon_status tool", () => {
 
   describe("daemon unavailable", () => {
     it("returns helpful message when daemon is not running", async () => {
-      globalThis.fetch = mock(async () => {
-        throw new Error("Connection refused");
-      }) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => {
+        throw new realModule.DaemonUnavailableError("Connection refused");
+      };
 
       const tool = createGoopDaemonStatusTool(ctx);
       const result = await tool.execute({}, toolContext);
@@ -103,9 +120,9 @@ describe("goop_daemon_status tool", () => {
 
   describe("daemon error", () => {
     it("returns error message on non-2xx response", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response("Internal Server Error", { status: 500 }),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => {
+        throw new realModule.DaemonApiError(500, "Internal Server Error");
+      };
 
       const tool = createGoopDaemonStatusTool(ctx);
       const result = await tool.execute({}, toolContext);

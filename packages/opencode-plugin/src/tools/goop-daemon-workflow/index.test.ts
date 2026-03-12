@@ -4,7 +4,6 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
-import { createGoopDaemonWorkflowTool } from "./index.js";
 import {
   createMockPluginContext,
   createMockToolContext,
@@ -50,22 +49,48 @@ const MOCK_SESSIONS = [
   },
 ];
 
+// Mock response holder — set per test
+let mockGetResponse: ((_path: string) => Promise<unknown>) | undefined;
+
+const realModule = await import("../../features/daemon/client.js");
+mock.module("../../features/daemon/client.js", () => ({
+  ...realModule,
+  DaemonClient: class MockDaemonClient {
+    getBaseUrl() { return "http://localhost:7331"; }
+    async isAvailable() {
+      try { await this.get("/health"); return true; } catch { return false; }
+    }
+    async get<T>(path: string): Promise<T> {
+      if (!mockGetResponse) throw new realModule.DaemonUnavailableError("No mock set");
+      return mockGetResponse(path) as Promise<T>;
+    }
+    async post<T>(_path: string, _body: unknown): Promise<T> {
+      return {} as T;
+    }
+    async put<T>(_path: string, _body: unknown): Promise<T> {
+      return {} as T;
+    }
+    async delete(_path: string): Promise<void> {}
+  },
+}));
+
+const { createGoopDaemonWorkflowTool } = await import("./index.js");
+
 describe("goop_daemon_workflow tool", () => {
   let ctx: PluginContext;
   let toolContext: ReturnType<typeof createMockToolContext>;
   let cleanup: () => void;
-  let originalFetch: typeof globalThis.fetch;
 
   beforeEach(() => {
     const env = setupTestEnvironment("daemon-workflow-test");
     cleanup = env.cleanup;
     ctx = createMockPluginContext({ testDir: env.testDir });
     toolContext = createMockToolContext({ directory: env.testDir });
-    originalFetch = globalThis.fetch;
+    mockGetResponse = undefined;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    mockGetResponse = undefined;
     cleanup();
   });
 
@@ -83,12 +108,7 @@ describe("goop_daemon_workflow tool", () => {
 
   describe("status action", () => {
     it("returns active workflow sessions", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({ sessions: MOCK_SESSIONS }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => ({ sessions: MOCK_SESSIONS });
 
       const tool = createGoopDaemonWorkflowTool(ctx);
       const result = await tool.execute({ action: "status" }, toolContext);
@@ -101,14 +121,9 @@ describe("goop_daemon_workflow tool", () => {
     });
 
     it("returns message when no active sessions", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({
-            sessions: MOCK_SESSIONS.filter((s) => s.status === "completed"),
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => ({
+        sessions: MOCK_SESSIONS.filter((s) => s.status === "completed"),
+      });
 
       const tool = createGoopDaemonWorkflowTool(ctx);
       const result = await tool.execute({ action: "status" }, toolContext);
@@ -117,12 +132,7 @@ describe("goop_daemon_workflow tool", () => {
     });
 
     it("filters by projectId", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({ sessions: MOCK_SESSIONS }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => ({ sessions: MOCK_SESSIONS });
 
       const tool = createGoopDaemonWorkflowTool(ctx);
       const result = await tool.execute(
@@ -137,12 +147,7 @@ describe("goop_daemon_workflow tool", () => {
 
   describe("history action", () => {
     it("returns all sessions in table format", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({ sessions: MOCK_SESSIONS }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => ({ sessions: MOCK_SESSIONS });
 
       const tool = createGoopDaemonWorkflowTool(ctx);
       const result = await tool.execute({ action: "history" }, toolContext);
@@ -154,12 +159,7 @@ describe("goop_daemon_workflow tool", () => {
     });
 
     it("returns message when no sessions", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({ sessions: [] }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => ({ sessions: [] });
 
       const tool = createGoopDaemonWorkflowTool(ctx);
       const result = await tool.execute({ action: "history" }, toolContext);
@@ -170,12 +170,7 @@ describe("goop_daemon_workflow tool", () => {
 
   describe("get action", () => {
     it("returns specific session details", async () => {
-      globalThis.fetch = mock(async () =>
-        new Response(
-          JSON.stringify({ session: MOCK_SESSIONS[0] }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as unknown as typeof globalThis.fetch;
+      mockGetResponse = async () => ({ session: MOCK_SESSIONS[0] });
 
       const tool = createGoopDaemonWorkflowTool(ctx);
       const result = await tool.execute(
@@ -201,9 +196,7 @@ describe("goop_daemon_workflow tool", () => {
 
   describe("daemon unavailable", () => {
     it("returns helpful message", async () => {
-      globalThis.fetch = mock(async () => {
-        throw new Error("Connection refused");
-      }) as unknown as typeof globalThis.fetch;
+      // mockGetResponse is undefined, so DaemonUnavailableError is thrown
 
       const tool = createGoopDaemonWorkflowTool(ctx);
       const result = await tool.execute({ action: "status" }, toolContext);
