@@ -84,7 +84,7 @@ export function WorkItemCard({
   return (
     <div
       className={cn(
-        "group rounded-md border bg-card p-3 shadow-sm transition-colors hover:border-primary/30",
+        "group w-full min-w-0 rounded-md border bg-card p-3 shadow-sm transition-colors hover:border-primary/30",
         isUpdating && "opacity-60",
       )}
     >

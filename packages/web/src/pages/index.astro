@@ -76,7 +76,7 @@ const activeWorkflows = recentSessions.filter(
     ) : (
       <>
         {/* Summary cards */}
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div class="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
             <h3 class="text-sm font-medium text-muted-foreground">Projects</h3>
             <p class="mt-2 text-2xl font-bold">{projects.length}</p>
@@ -100,11 +100,11 @@ const activeWorkflows = recentSessions.filter(
             </p>
           </div>
         ) : (
-          <div class="grid gap-6 lg:grid-cols-3">
+          <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Project list */}
             <div class="lg:col-span-2 space-y-4">
               <h2 class="text-lg font-semibold">Projects</h2>
-              <div class="grid gap-4 sm:grid-cols-2">
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {projects.map((project) => (
                   <ProjectCard
                     id={project.id}

@@ -1,6 +1,7 @@
 ---
 import Layout from "./Layout.astro";
 import { HeaderControls } from "../components/header-controls";
+import BottomNav from "../components/bottom-nav.astro";
 import "../styles/globals.css";
 
 interface Props {
@@ -101,9 +102,12 @@ const navItems = [
       </aside>
 
       <!-- Main content — pure SSR, no hydration wrapper -->
-      <main class="flex-1 overflow-auto p-4 md:p-6">
+      <main class="flex-1 overflow-auto p-4 pb-20 md:p-6 md:pb-6">
         <slot />
       </main>
+
+      <!-- Bottom navigation for mobile (hidden on md+) -->
+      <BottomNav currentPath={currentPath} />
 
     </div>
   </div>

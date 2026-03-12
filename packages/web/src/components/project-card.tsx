@@ -52,7 +52,7 @@ export function ProjectCard({
   return (
     <a
       href={`/projects/${encodeURIComponent(id)}`}
-      className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg"
+      className="group block w-full min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg"
     >
       <Card className="h-full transition-colors group-hover:border-primary/50">
         <CardHeader className="pb-3">
