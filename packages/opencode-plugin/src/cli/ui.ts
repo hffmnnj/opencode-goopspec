@@ -5,6 +5,7 @@ import {
   isCancel,
   multiselect,
   outro,
+  password,
   select,
   spinner,
   text,
@@ -312,4 +313,4 @@ export function formatTable(headers: string[], rows: string[][]): string {
 // Re-exports from @clack/prompts
 // ---------------------------------------------------------------------------
 
-export { intro, outro, text, select, confirm, multiselect, spinner, isCancel, cancel };
+export { intro, outro, text, select, confirm, multiselect, password, spinner, isCancel, cancel };

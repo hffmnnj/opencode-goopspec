@@ -186,8 +186,13 @@ export async function main(): Promise<void> {
     if (parsed.command) {
       switch (parsed.command) {
         case "init": {
-          const { runInit } = await import("./commands/init.js");
-          await runInit();
+          if (parsed.flags["reset-password"]) {
+            const { runResetPassword } = await import("./commands/init.js");
+            await runResetPassword();
+          } else {
+            const { runInit } = await import("./commands/init.js");
+            await runInit();
+          }
           break;
         }
         case "register": {

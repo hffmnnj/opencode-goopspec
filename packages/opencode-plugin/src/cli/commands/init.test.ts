@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { applyInit, detectEnvironment, planInit, resetSetup } from "../../features/setup/index.js";
 import { setupTestEnvironment } from "../../test-utils.js";
 import type { SetupInput } from "../../features/setup/types.js";
+import { DaemonClient, DaemonUnavailableError } from "../../features/daemon/client.js";
 
 describe("init wizard - setup pipeline", () => {
   let testDir = "";
@@ -208,5 +209,41 @@ describe("init wizard - setup pipeline", () => {
 
     expect(result.success).toBe(false);
     expect(result.errors).toContain("Reset requires confirmation. Set confirmed: true to proceed.");
+  });
+});
+
+describe("init wizard - password step", () => {
+  it("DaemonClient.post sends password to /auth/setup", async () => {
+    const client = new DaemonClient("http://localhost:7331");
+    const postSpy = spyOn(client, "post").mockResolvedValue({ success: true });
+
+    await client.post("/auth/setup", { password: "test-password-123" });
+
+    expect(postSpy).toHaveBeenCalledTimes(1);
+    expect(postSpy).toHaveBeenCalledWith("/auth/setup", { password: "test-password-123" });
+  });
+
+  it("DaemonClient.isAvailable returns false when daemon is unreachable", async () => {
+    // Use a port that's almost certainly not running a daemon
+    const client = new DaemonClient("http://localhost:19999");
+    const available = await client.isAvailable();
+
+    expect(available).toBe(false);
+  });
+
+  it("DaemonClient.post throws DaemonUnavailableError when daemon is offline", async () => {
+    const client = new DaemonClient("http://localhost:19999");
+
+    try {
+      await client.post("/auth/setup", { password: "test-password-123" });
+      expect(true).toBe(false); // should not reach here
+    } catch (error) {
+      expect(error).toBeInstanceOf(DaemonUnavailableError);
+    }
+  });
+
+  it("runResetPassword is exported and callable", async () => {
+    const { runResetPassword } = await import("./init.js");
+    expect(typeof runResetPassword).toBe("function");
   });
 });

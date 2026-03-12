@@ -12,6 +12,7 @@ import {
   intro,
   isCancel,
   outro,
+  password,
   sectionHeader,
   select,
   showBanner,
@@ -32,6 +33,7 @@ import { AGENT_MODEL_SUGGESTIONS, ALL_AGENTS } from "../../features/setup/model-
 import { MCP_PRESETS } from "../../features/setup/types.js";
 import type { MemorySetupInput, SetupInput } from "../../features/setup/types.js";
 import { getGlobalConfigPath } from "../../shared/paths.js";
+import { DaemonClient, DaemonUnavailableError } from "../../features/daemon/client.js";
 
 type SetupScope = SetupInput["scope"];
 type McpPreset = SetupInput["mcpPreset"];
@@ -123,6 +125,91 @@ function formatSearchProvider(provider: SearchProvider): string {
     return "Brave Search";
   }
   return "Exa";
+}
+
+/**
+ * Prompt the user for a password with confirmation.
+ * Returns the password string, or null if the user skips (empty input).
+ * Throws if the user cancels.
+ */
+async function promptPassword(message: string): Promise<string | null> {
+  const pw = resolveText(
+    await password({
+      message,
+      validate: (value) => {
+        if (!value) return undefined; // allow empty to skip
+        if (value.length < 8) return "Password must be at least 8 characters";
+        return undefined;
+      },
+    }),
+  );
+
+  if (!pw.trim()) return null;
+
+  const confirmPw = resolveText(
+    await password({
+      message: "Confirm password:",
+      validate: (value) => {
+        if (!value) return "Please confirm your password";
+        return undefined;
+      },
+    }),
+  );
+
+  if (pw !== confirmPw) {
+    showError("Passwords do not match");
+    return null;
+  }
+
+  return pw;
+}
+
+/**
+ * Send a password to the daemon's /auth/setup endpoint.
+ * Returns true on success, false on failure.
+ */
+async function sendPasswordToDaemon(pw: string, client?: DaemonClient): Promise<boolean> {
+  const daemon = client ?? new DaemonClient();
+  try {
+    await daemon.post("/auth/setup", { password: pw });
+    return true;
+  } catch (error) {
+    if (error instanceof DaemonUnavailableError) {
+      showError("Daemon is not reachable — password was not saved");
+      showInfo("Start the daemon and run: goopspec init --reset-password");
+      return false;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    showError(`Failed to set password: ${message}`);
+    return false;
+  }
+}
+
+/**
+ * Standalone reset-password flow.
+ * Called via `goopspec init --reset-password`.
+ */
+export async function runResetPassword(): Promise<void> {
+  showBanner();
+  console.log();
+  intro("Reset Web Panel Password 🔐");
+
+  const pw = await promptPassword("New web panel password (min 8 chars):");
+  if (!pw) {
+    outro("Password reset cancelled");
+    return;
+  }
+
+  const setupSpinner = spinner();
+  setupSpinner.start("Setting password...");
+  const ok = await sendPasswordToDaemon(pw);
+  setupSpinner.stop(ok ? "Password updated" : "Password update failed");
+
+  if (ok) {
+    showSuccess("Web panel password has been updated");
+  }
+
+  outro(ok ? "Done" : "Password reset failed — check daemon status");
 }
 
 export async function runInit(): Promise<void> {
@@ -381,6 +468,40 @@ export async function runInit(): Promise<void> {
       }
     }
 
+    // Optional: Web Panel Password
+    let passwordSet = false;
+    sectionHeader("Optional: Web Panel Password", "🔐");
+    const daemon = new DaemonClient();
+    let daemonAvailable = false;
+    try {
+      daemonAvailable = await daemon.isAvailable();
+    } catch {
+      // daemon unreachable
+    }
+
+    if (!daemonAvailable) {
+      showInfo("Daemon is not running — skipping password setup");
+      showInfo("Set a password later with: goopspec init --reset-password");
+    } else {
+      const wantPassword = resolveBoolean(
+        await confirm({
+          message: "Set a web panel password? (optional, can be set later)",
+          initialValue: false,
+        }),
+      );
+
+      if (wantPassword) {
+        const pw = await promptPassword("Web panel password (min 8 chars):");
+        if (pw) {
+          const ok = await sendPasswordToDaemon(pw, daemon);
+          if (ok) {
+            showSuccess("Web panel password set");
+            passwordSet = true;
+          }
+        }
+      }
+    }
+
     const input: SetupInput = {
       scope,
       projectName,
@@ -409,6 +530,7 @@ export async function runInit(): Promise<void> {
     if (orchestratorModel) {
       console.log(pc.dim(`  Orchestrator model: ${orchestratorModel}`));
     }
+    console.log(pc.dim(`  Web panel password: ${passwordSet ? "Set" : "Not set"}`));
     if (memoryPreview?.distillation.enabled) {
       console.log(pc.dim(`  Distillation model: ${memoryPreview.distillation.model ?? "default"}`));
     }
