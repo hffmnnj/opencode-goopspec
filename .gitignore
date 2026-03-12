@@ -101,6 +101,9 @@ dist
 .temp
 .cache
 
+# Astro generated types
+.astro/
+
 # Sveltekit cache directory
 .svelte-kit/
 
