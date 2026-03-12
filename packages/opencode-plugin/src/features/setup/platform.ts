@@ -1,11 +1,16 @@
 /**
  * Platform Detection Utilities
- * Detects OS, architecture, and runtime environment for native extension installation
+ * Detects OS, architecture, runtime environment, WSL status, and service manager
  * @module features/setup/platform
  */
 
+import { readFileSync, existsSync } from "node:fs";
+
+/** Available system service managers */
+export type ServiceManager = "systemd" | "launchd" | "scm" | "none";
+
 /**
- * Platform information for native extension installation
+ * Platform information for native extension installation and service management
  */
 export interface PlatformInfo {
   /** Operating system: linux, darwin (macOS), or win32 (Windows) */
@@ -18,6 +23,10 @@ export interface PlatformInfo {
   packageSuffix: string;
   /** Human-readable platform description */
   description: string;
+  /** Whether running inside Windows Subsystem for Linux */
+  isWSL: boolean;
+  /** Detected system service manager */
+  serviceManager: ServiceManager;
 }
 
 /**
@@ -32,6 +41,75 @@ export const SUPPORTED_PLATFORMS = [
 ] as const;
 
 export type SupportedPlatform = (typeof SUPPORTED_PLATFORMS)[number];
+
+/**
+ * Detect whether the current environment is Windows Subsystem for Linux.
+ * Reads /proc/version and checks for "microsoft" or "WSL" (case-insensitive).
+ * Returns false on non-Linux platforms or if /proc/version cannot be read.
+ */
+export function isWSL(): boolean {
+  if (process.platform !== "linux") {
+    return false;
+  }
+  try {
+    const version = readFileSync("/proc/version", "utf-8");
+    return /microsoft|wsl/i.test(version);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Detect the available system service manager for the current platform.
+ * - macOS: always "launchd"
+ * - Windows: always "scm"
+ * - Linux/WSL: "systemd" if systemd is running, otherwise "none"
+ */
+export function detectServiceManager(): ServiceManager {
+  const platform = process.platform;
+
+  if (platform === "darwin") {
+    return "launchd";
+  }
+
+  if (platform === "win32") {
+    return "scm";
+  }
+
+  if (platform === "linux") {
+    // Check for systemd by looking for its runtime socket
+    try {
+      if (existsSync("/run/systemd/system") || existsSync("/run/systemd/private")) {
+        return "systemd";
+      }
+    } catch {
+      // Filesystem check failed — fall through to "none"
+    }
+    return "none";
+  }
+
+  return "none";
+}
+
+/**
+ * Check whether the Bun runtime is available, which is required to run the daemon.
+ * Returns true if running under Bun or if the `bun` binary is on PATH.
+ */
+export function canRunDaemon(): boolean {
+  // Fast path: already running in Bun
+  if (typeof Bun !== "undefined") {
+    return true;
+  }
+
+  // Fallback: check if bun binary exists on PATH
+  try {
+    const { execSync } = require("node:child_process");
+    execSync("bun --version", { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Detect current platform information
@@ -58,7 +136,15 @@ export function detectPlatform(): PlatformInfo {
   
   const description = `${osNames[os] ?? os} ${archNames[arch] ?? arch}`;
   
-  return { os, arch, runtime, packageSuffix, description };
+  return {
+    os,
+    arch,
+    runtime,
+    packageSuffix,
+    description,
+    isWSL: isWSL(),
+    serviceManager: detectServiceManager(),
+  };
 }
 
 /**
