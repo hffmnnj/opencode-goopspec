@@ -20,8 +20,8 @@ try {
     api.projects.get(id),
     api.items.get(id, itemId),
   ]);
-  project = projectRes.project;
-  item = itemRes.item;
+  project = projectRes;
+  item = itemRes;
 } catch (err) {
   if (err instanceof ApiError && err.status === 404) {
     return Astro.redirect(`/projects/${id}`);

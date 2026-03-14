@@ -175,7 +175,7 @@ export function WorkflowStatusPanel({
     let cancelled = false;
     api.workflows
       .get(sessionId)
-      .then(({ session }) => {
+      .then((session) => {
         if (!cancelled) setFetchedSession(session);
       })
       .catch((err) => {

@@ -156,7 +156,7 @@ export const api = {
       return apiFetch<{ projects: Project[] }>("/api/projects");
     },
     get(id: string) {
-      return apiFetch<{ project: Project }>(`/api/projects/${encodeURIComponent(id)}`);
+      return apiFetch<Project>(`/api/projects/${encodeURIComponent(id)}`);
     },
   },
 
@@ -175,18 +175,18 @@ export const api = {
       );
     },
     get(projectId: string, itemId: string) {
-      return apiFetch<{ item: WorkItem }>(
+      return apiFetch<WorkItem>(
         `/api/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(itemId)}`,
       );
     },
     create(projectId: string, body: CreateItemBody) {
-      return apiFetch<{ item: WorkItem }>(
+      return apiFetch<WorkItem>(
         `/api/projects/${encodeURIComponent(projectId)}/items`,
         { method: "POST", body: JSON.stringify(body) },
       );
     },
     update(projectId: string, itemId: string, body: UpdateItemBody) {
-      return apiFetch<{ item: WorkItem }>(
+      return apiFetch<WorkItem>(
         `/api/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(itemId)}`,
         { method: "PUT", body: JSON.stringify(body) },
       );
@@ -209,7 +209,7 @@ export const api = {
       );
     },
     get(id: string) {
-      return apiFetch<{ session: WorkflowSession }>(
+      return apiFetch<WorkflowSession>(
         `/api/workflows/${encodeURIComponent(id)}`,
       );
     },
@@ -219,7 +219,7 @@ export const api = {
       prompt?: string;
       workflowId?: string;
     }) {
-      return apiFetch<{ session: WorkflowSession }>(
+      return apiFetch<WorkflowSession>(
         "/api/workflows/spawn",
         { method: "POST", body: JSON.stringify(body) },
       );

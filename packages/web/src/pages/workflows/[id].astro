@@ -21,12 +21,12 @@ let error: string | null = null;
 
 try {
   const sessionRes = await api.workflows.get(id);
-  session = sessionRes.session;
+  session = sessionRes;
 
   // Fetch project name for breadcrumb
   try {
     const projectRes = await api.projects.get(session.projectId);
-    projectName = projectRes.project.name;
+    projectName = projectRes.name;
   } catch {
     // Non-critical — breadcrumb will use project ID
   }

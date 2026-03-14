@@ -87,7 +87,7 @@ export function CreateItemDialog({
     setError(null);
 
     try {
-      const { item } = await api.items.create(projectId, {
+      const item = await api.items.create(projectId, {
         title: trimmedTitle,
         description: description.trim() || undefined,
         type,

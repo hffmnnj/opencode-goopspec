@@ -30,7 +30,7 @@ export function SpawnWorkflowButton({
   async function handleConfirm() {
     setSubmitting(true);
     try {
-      const { session } = await api.workflows.spawn({ projectId, workItemId });
+      const session = await api.workflows.spawn({ projectId, workItemId });
       setDialogOpen(false);
       addToast("success", "Workflow started successfully.");
       // Navigate to the workflow detail page

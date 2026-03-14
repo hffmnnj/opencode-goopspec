@@ -74,7 +74,7 @@ export function EditItemDialog({
     setError(null);
 
     try {
-      const { item: updated } = await api.items.update(projectId, item.id, {
+      const updated = await api.items.update(projectId, item.id, {
         title: trimmedTitle,
         description: description.trim() || undefined,
         type,

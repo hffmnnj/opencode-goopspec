@@ -29,7 +29,7 @@ try {
       sort: filters.sort,
     }),
   ]);
-  project = projectRes.project;
+  project = projectRes;
   items = itemsRes.items;
 } catch (err) {
   if (err instanceof ApiError && err.status === 404) {
